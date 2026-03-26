@@ -105,46 +105,66 @@ def render_primary_filters() -> dict[str, Any]:
     }
 
 
+def get_previous_workweeks(end_ww: str, count: int = 10) -> tuple[str, str]:
+    """Calculate start workweek that is 'count' weeks before end_ww.
+
+    Args:
+        end_ww: End workweek in YYYYWW format
+        count: Number of weeks to include (default 10)
+
+    Returns:
+        Tuple of (start_ww, end_ww) in YYYYWW format
+    """
+    year = int(end_ww[:4])
+    week = int(end_ww[4:])
+
+    # Go back (count - 1) weeks to get start
+    weeks_back = count - 1
+    while weeks_back > 0:
+        week -= 1
+        if week < 1:
+            year -= 1
+            week = 52
+        weeks_back -= 1
+
+    return f"{year}{week:02d}", end_ww
+
+
 def render_workweek_filters() -> dict[str, str]:
-    """Render work week range filter widgets."""
+    """Render work week filter widget (single workweek input)."""
     st.sidebar.divider()
-    st.sidebar.subheader("Work Week Range")
+    st.sidebar.subheader("Work Week")
 
     current_ww = get_current_workweek()
     current_year = int(current_ww[:4])
     current_week = min(int(current_ww[4:]), MAX_WEEKS_PER_YEAR)
 
+    st.sidebar.caption("Select target workweek (will show 10 weeks of data)")
+
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        start_year = st.number_input(
-            "Start Year",
+        selected_year = st.number_input(
+            "Year",
             min_value=MIN_YEAR,
             max_value=MAX_YEAR,
             value=current_year,
-        )
-        start_week = st.number_input(
-            "Start Week",
-            min_value=1,
-            max_value=MAX_WEEKS_PER_YEAR,
-            value=1,
         )
     with col2:
-        end_year = st.number_input(
-            "End Year",
-            min_value=MIN_YEAR,
-            max_value=MAX_YEAR,
-            value=current_year,
-        )
-        end_week = st.number_input(
-            "End Week",
+        selected_week = st.number_input(
+            "Week",
             min_value=1,
             max_value=MAX_WEEKS_PER_YEAR,
             value=current_week,
         )
 
+    selected_ww = f"{selected_year}{selected_week:02d}"
+    start_ww, end_ww = get_previous_workweeks(selected_ww, count=10)
+
+    st.sidebar.caption(f"Range: WW{start_ww} to WW{end_ww}")
+
     return {
-        "start_ww": f"{start_year}{start_week:02d}",
-        "end_ww": f"{end_year}{end_week:02d}",
+        "start_ww": start_ww,
+        "end_ww": end_ww,
     }
 
 
@@ -186,12 +206,6 @@ def validate_filters(filters: dict[str, Any]) -> Optional[str]:
         return "Please select at least one Form Factor"
     if not filters["test_steps"]:
         return "Please select at least one Test Step"
-
-    # Validate workweek range
-    start_ww = filters["start_ww"]
-    end_ww = filters["end_ww"]
-    if start_ww > end_ww:
-        return "Start work week must be before or equal to end work week"
 
     return None
 
@@ -332,6 +346,12 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         trend_data = trend_data.copy()
         trend_data["series"] = trend_data["step"] + " - " + trend_data["form_factor"]
 
+        # Ensure workweek is string for proper categorical display (YYYYWW format)
+        trend_data["workweek"] = trend_data["workweek"].astype(str)
+
+        # Sort by workweek to ensure correct order
+        trend_data = trend_data.sort_values("workweek")
+
         fig = px.line(
             trend_data,
             x="workweek",
@@ -340,18 +360,19 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
             markers=True,
             title="Yield % by Work Week",
             labels={
-                "workweek": "Work Week",
+                "workweek": "Work Week (YYYYWW)",
                 "yield_pct": "Yield %",
                 "series": "Step / Form Factor",
             },
         )
 
         fig.update_layout(
-            xaxis_title="Work Week",
+            xaxis_title="Work Week (YYYYWW)",
             yaxis_title="Yield %",
             yaxis_range=[0, 100],
             legend_title="Step / Form Factor",
             hovermode="x unified",
+            xaxis_type="category",  # Force categorical x-axis for proper YYYYWW display
         )
 
         fig.update_traces(line={"width": 2}, marker={"size": 8})
@@ -496,9 +517,15 @@ def render_density_speed_heatmap(processor: DataProcessor) -> None:
 
 def render_dashboard(processor: DataProcessor) -> None:
     """Render all dashboard components."""
+    # Summary metrics at top
     render_summary_metrics(processor)
     st.divider()
 
+    # Summary table (moved to top per user request)
+    render_summary_table(processor)
+    st.divider()
+
+    # Charts in two columns
     col1, col2 = st.columns(2)
     with col1:
         render_yield_trend_chart(processor)
@@ -507,9 +534,6 @@ def render_dashboard(processor: DataProcessor) -> None:
 
     st.divider()
     render_density_speed_heatmap(processor)
-
-    st.divider()
-    render_summary_table(processor)
 
 
 def main() -> None:
@@ -561,7 +585,8 @@ def main() -> None:
         # With 4 parallel workers, time is ~ceil(total/4) * 3 minutes
         parallel_batches = (total_calls + 3) // 4  # ceil division
         estimated_time = max(parallel_batches * 3, 3)  # at least 3 min
-        st.sidebar.caption(f"Queries: {total_calls} (parallel) ~{estimated_time} min")
+        st.sidebar.caption(f"{len(workweeks)} weeks x {len(filters['test_steps'])} steps x {len(filters['form_factors'])} forms = {total_calls} queries")
+        st.sidebar.caption(f"Estimated time: ~{estimated_time} min (parallel)")
     except Exception:
         pass
 
