@@ -83,11 +83,11 @@ def render_primary_filters() -> dict[str, Any]:
         help="Select one or more test steps",
     )
 
-    design_id = st.sidebar.selectbox(
+    design_ids = st.sidebar.multiselect(
         "Design ID",
         options=Settings.DESIGN_IDS,
-        index=0,
-        help="Select design ID (DBASE parameter)",
+        default=[Settings.DESIGN_IDS[0]],
+        help="Select one or more design IDs (DBASE parameter)",
     )
 
     facility = st.sidebar.selectbox(
@@ -100,7 +100,7 @@ def render_primary_filters() -> dict[str, Any]:
     return {
         "form_factors": form_factors,
         "test_steps": test_steps,
-        "design_id": design_id,
+        "design_ids": design_ids,
         "facility": facility,
     }
 
@@ -206,6 +206,8 @@ def validate_filters(filters: dict[str, Any]) -> Optional[str]:
         return "Please select at least one Form Factor"
     if not filters["test_steps"]:
         return "Please select at least one Test Step"
+    if not filters["design_ids"]:
+        return "Please select at least one Design ID"
 
     return None
 
@@ -248,22 +250,23 @@ def fetch_data(filters: dict[str, Any], use_cache: bool = True) -> pd.DataFrame:
         logger.error("Failed to generate workweek range: %s", e)
         raise RuntimeError(f"Invalid workweek range: {e}") from e
 
-    # Build all commands first
+    # Build all commands first (iterate over all combinations including design_ids)
     commands = []
-    for step in filters["test_steps"]:
-        for form_factor in filters["form_factors"]:
-            for workweek in workweeks:
-                try:
-                    command = FrptCommand(
-                        step=step,
-                        form_factor=form_factor,
-                        workweek=workweek,
-                        dbase=filters["design_id"],
-                        facility=filters["facility"],
-                    )
-                    commands.append(command)
-                except ValueError as e:
-                    logger.warning(f"Invalid command parameters: {e}")
+    for design_id in filters["design_ids"]:
+        for step in filters["test_steps"]:
+            for form_factor in filters["form_factors"]:
+                for workweek in workweeks:
+                    try:
+                        command = FrptCommand(
+                            step=step,
+                            form_factor=form_factor,
+                            workweek=workweek,
+                            dbase=design_id,
+                            facility=filters["facility"],
+                        )
+                        commands.append(command)
+                    except ValueError as e:
+                        logger.warning(f"Invalid command parameters: {e}")
 
     total_calls = len(commands)
     logger.info(f"Total frpt calls to make: {total_calls} (running in parallel)")
@@ -369,7 +372,7 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         fig.update_layout(
             xaxis_title="Work Week (YYYYWW)",
             yaxis_title="Yield %",
-            yaxis_range=[0, 100],
+            yaxis_range=[95, 100],
             legend_title="Step / Form Factor",
             hovermode="x unified",
             xaxis_type="category",  # Force categorical x-axis for proper YYYYWW display
@@ -581,11 +584,11 @@ def main() -> None:
     # Estimate number of calls (with parallel execution)
     try:
         workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
-        total_calls = len(filters["test_steps"]) * len(filters["form_factors"]) * len(workweeks)
+        total_calls = len(filters["design_ids"]) * len(filters["test_steps"]) * len(filters["form_factors"]) * len(workweeks)
         # With 4 parallel workers, time is ~ceil(total/4) * 3 minutes
         parallel_batches = (total_calls + 3) // 4  # ceil division
         estimated_time = max(parallel_batches * 3, 3)  # at least 3 min
-        st.sidebar.caption(f"{len(workweeks)} weeks x {len(filters['test_steps'])} steps x {len(filters['form_factors'])} forms = {total_calls} queries")
+        st.sidebar.caption(f"{len(filters['design_ids'])} designs x {len(workweeks)} weeks x {len(filters['test_steps'])} steps x {len(filters['form_factors'])} forms = {total_calls} queries")
         st.sidebar.caption(f"Estimated time: ~{estimated_time} min (parallel)")
     except Exception:
         pass
