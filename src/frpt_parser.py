@@ -125,28 +125,51 @@ class FrptParser:
         return None
 
     def _parse_header(self, header_line: str) -> list[str]:
-        """Parse header line into column names."""
-        # Split on multiple spaces (columns are space-separated)
-        columns = header_line.split()
-        return [col.strip().upper() for col in columns if col.strip()]
+        """Parse header line into column names.
+
+        The frpt output has a specific format with MYQUICK as first column
+        followed by UIN, UPASS values. We use fixed column names.
+        """
+        # Use standardized column names for frpt output
+        return ["MYQUICK", "UIN_RAW", "UPASS_RAW", "UIN", "UPASS", "YIELD%", "|", "BIN1"]
 
     def _parse_data_row(self, line: str, columns: list[str]) -> Optional[dict]:
         """Parse a single data row."""
+        # Skip summary rows (Avg, ALL, TOT)
+        line_upper = line.strip().upper()
+        if line_upper.startswith("AVG") or line_upper.startswith("ALL") or line_upper.startswith("TOT"):
+            return None
+
         values = line.split()
-        if len(values) < len(columns):
+        if len(values) < 5:  # Need at least MYQUICK + some values
             return None
 
         row = {}
-        for i, col in enumerate(columns):
-            if i < len(values):
-                value = values[i].strip()
-                # Convert numeric values
-                if col in ["UIN", "UPASS"]:
-                    row[col] = self._parse_int(value)
-                elif col == "YIELD%" or col.startswith("BIN"):
-                    row[col] = self._parse_float(value)
-                else:
-                    row[col] = value
+        # First value is always MYQUICK identifier
+        row["MYQUICK"] = values[0]
+
+        # Parse numeric values - handle variable column counts
+        numeric_values = []
+        for v in values[1:]:
+            if v == "|":
+                continue
+            try:
+                numeric_values.append(float(v.replace(",", "")))
+            except ValueError:
+                continue
+
+        # Map numeric values to columns based on position
+        if len(numeric_values) >= 5:
+            row["UIN"] = int(numeric_values[2]) if len(numeric_values) > 2 else 0  # adj UIN
+            row["UPASS"] = int(numeric_values[3]) if len(numeric_values) > 3 else 0  # adj UPASS
+            row["YIELD%"] = numeric_values[4] if len(numeric_values) > 4 else 0.0
+        elif len(numeric_values) >= 3:
+            row["UIN"] = int(numeric_values[0])
+            row["UPASS"] = int(numeric_values[1])
+            row["YIELD%"] = numeric_values[2]
+        else:
+            return None
+
         return row
 
     def _parse_int(self, value: str) -> int:
