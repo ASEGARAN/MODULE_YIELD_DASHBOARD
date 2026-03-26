@@ -12,8 +12,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.settings import Settings
 
 
-# Validation pattern for safe parameter values
-SAFE_PARAM_PATTERN = re.compile(r"^[A-Za-z0-9_\-]+$")
+# Validation pattern for safe parameter values (allows ~, %, alphanumeric, underscore, hyphen)
+SAFE_PARAM_PATTERN = re.compile(r"^[A-Za-z0-9_\-~%]+$")
 
 
 def validate_param(value: str, param_name: str) -> str:
@@ -53,8 +53,9 @@ class FrptCommand:
         validate_param(self.facility, "facility")
 
     def build(self) -> str:
-        """Build the frpt command string."""
-        return Settings.FRPT_COMMAND_TEMPLATE.format(
+        """Build the frpt command string based on step type."""
+        template = Settings.get_command_template(self.step)
+        return template.format(
             dbase=self.dbase,
             step=self.step,
             form_factor=self.form_factor,

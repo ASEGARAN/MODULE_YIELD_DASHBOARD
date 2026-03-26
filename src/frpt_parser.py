@@ -12,17 +12,24 @@ class ParsedMyquick:
     """Parsed MYQUICK identifier components."""
 
     workweek: str
-    dbase: str
     form_factor: str
     density: str
     speed: str
+    dbase: Optional[str] = None
+    design_id: Optional[str] = None
 
     @classmethod
-    def from_string(cls, myquick: str) -> Optional["ParsedMyquick"]:
+    def from_string(cls, myquick: str, step: str = "") -> Optional["ParsedMyquick"]:
         """Parse MYQUICK string into components.
 
         Args:
-            myquick: MYQUICK string like "202611_Y6CP_SOCAMM2_192GB_7500MTPS"
+            myquick: MYQUICK string
+            step: Test step name to determine format
+
+        Format for HMB1: "202602_DESIGNID_SOCAMM_7500MTPS_192GB"
+            (workweek, design_id, form_factor, speed, density)
+        Format for others: "202611_Y6CP_SOCAMM2_192GB_7500MTPS"
+            (workweek, dbase, form_factor, density, speed)
 
         Returns:
             ParsedMyquick or None if parsing fails
@@ -30,13 +37,27 @@ class ParsedMyquick:
         parts = myquick.split("_")
         if len(parts) < 5:
             return None
-        return cls(
-            workweek=parts[0],
-            dbase=parts[1],
-            form_factor=parts[2],
-            density=parts[3],
-            speed=parts[4],
-        )
+
+        if step.upper() == "HMB1":
+            # HMB1 format: workweek, design_id, form_factor, speed, density
+            return cls(
+                workweek=parts[0],
+                design_id=parts[1],
+                form_factor=parts[2],
+                speed=parts[3],
+                density=parts[4],
+                dbase=None,
+            )
+        else:
+            # Default format: workweek, dbase, form_factor, density, speed
+            return cls(
+                workweek=parts[0],
+                dbase=parts[1],
+                form_factor=parts[2],
+                density=parts[3],
+                speed=parts[4],
+                design_id=None,
+            )
 
 
 class FrptParser:
@@ -91,7 +112,7 @@ class FrptParser:
             return pd.DataFrame()
 
         df = pd.DataFrame(data_rows)
-        return self._enrich_dataframe(df)
+        return self._enrich_dataframe(df, step)
 
     def _find_header_index(self, lines: list[str]) -> Optional[int]:
         """Find the index of the header line.
@@ -147,20 +168,29 @@ class FrptParser:
         except (ValueError, TypeError):
             return 0.0
 
-    def _enrich_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Enrich DataFrame with parsed MYQUICK components."""
+    def _enrich_dataframe(self, df: pd.DataFrame, step: str) -> pd.DataFrame:
+        """Enrich DataFrame with parsed MYQUICK components.
+
+        Args:
+            df: DataFrame with MYQUICK column
+            step: Test step name to determine MYQUICK format
+
+        Returns:
+            DataFrame with additional parsed columns
+        """
         if "MYQUICK" not in df.columns:
             return df
 
-        # Parse MYQUICK into components
+        # Parse MYQUICK into components (pass step for format detection)
         parsed = df["MYQUICK"].apply(
-            lambda x: ParsedMyquick.from_string(x) if isinstance(x, str) else None
+            lambda x: ParsedMyquick.from_string(x, step) if isinstance(x, str) else None
         )
 
         # Add component columns
         df = df.copy()
         df["workweek"] = parsed.apply(lambda p: p.workweek if p else None)
         df["dbase"] = parsed.apply(lambda p: p.dbase if p else None)
+        df["design_id"] = parsed.apply(lambda p: p.design_id if p else None)
         df["form_factor"] = parsed.apply(lambda p: p.form_factor if p else None)
         df["density"] = parsed.apply(lambda p: p.density if p else None)
         df["speed"] = parsed.apply(lambda p: p.speed if p else None)
