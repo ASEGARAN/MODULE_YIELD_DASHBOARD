@@ -26,9 +26,9 @@ class ParsedMyquick:
             myquick: MYQUICK string
             step: Test step name to determine format
 
-        Format for HMB1: "202602_DESIGNID_SOCAMM_7500MTPS_192GB"
+        Format for HMB1/QMON: "202602_DESIGNID_SOCAMM_7500MTPS_192GB"
             (workweek, design_id, form_factor, speed, density)
-        Format for others: "202611_Y6CP_SOCAMM2_192GB_7500MTPS"
+        Format for HMFN: "202611_Y6CP_SOCAMM2_192GB_7500MTPS"
             (workweek, dbase, form_factor, density, speed)
 
         Returns:
@@ -38,8 +38,9 @@ class ParsedMyquick:
         if len(parts) < 5:
             return None
 
-        if step.upper() == "HMB1":
-            # HMB1 format: workweek, design_id, form_factor, speed, density
+        step_upper = step.upper()
+        if step_upper in ("HMB1", "QMON"):
+            # HMB1/QMON format: workweek, design_id, form_factor, speed, density
             return cls(
                 workweek=parts[0],
                 design_id=parts[1],

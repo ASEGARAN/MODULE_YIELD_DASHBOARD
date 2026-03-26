@@ -15,7 +15,7 @@ class Settings:
     TEST_STEPS: ClassVar[list[str]] = ["HMFN", "HMB1", "QMON"]
 
     # Available databases
-    DATABASES: ClassVar[list[str]] = ["y6cp", "y6ck", "y6cn", "y42m"]
+    DATABASES: ClassVar[list[str]] = ["y6cp", "y6ck", "y6cn", "y42m", "y63n"]
 
     # Module densities
     DENSITIES: ClassVar[list[str]] = ["48GB", "96GB", "192GB", "384GB"]
@@ -30,22 +30,31 @@ class Settings:
     DEFAULT_DATABASE: ClassVar[str] = "y6cp"
     DEFAULT_FACILITY: ClassVar[str] = "PENANG"
 
-    # frpt command template (default for HMFN, QMON)
-    FRPT_COMMAND_TEMPLATE: ClassVar[str] = (
+    # frpt command template for HMFN step (soft bins)
+    FRPT_COMMAND_TEMPLATE_HMFN: ClassVar[str] = (
         "frpt -xf -bin=soft "
         "-myquick=/MFG_WORKWEEK,DBASE,MODULE_FORM_FACTOR,MODULE_DENSITY,MODULE_SPEED/ "
         "-quick=/MFG_WORKWEEK,myquick/ -sort=// +nowrap +echo +regwidth +module "
-        "-dbase={dbase} -step={step} -all -n -r +imesh "
+        "-dbase={dbase} -step=hmfn -all -n -r +imesh "
         "-nonshippable=N/A -eng_summary=N/A -standard_flow=yes "
         "-machine_id=~SMT6 +# -module_form_factor={form_factor} "
         "-mfg_workweek={workweek} -test_facility={facility} +% +debug"
     )
 
-    # frpt command template for HMB1 step
+    # frpt command template for HMB1 step (hard bins)
     FRPT_COMMAND_TEMPLATE_HMB1: ClassVar[str] = (
         "frpt +regwidth +% +# -test_facility=all -dbase={dbase} +% +module -xf +# "
         "-sort=// -myquick=/MFG_WORKWEEK,DESIGN_ID,MODULE_FORM_FACTOR,MODULE_SPEED,MODULE_DENSITY/ "
         "+quick=/myquick,step/ +echo -bin=hard -step=hmb1 -eng_summary=N/A "
+        "-standard_flow=YES -module_form_factor={form_factor} "
+        "-mfg_workweek={workweek} -n -r +imesh -nonshippable=N/A +debug -top5"
+    )
+
+    # frpt command template for QMON step (hard bins, same as HMB1)
+    FRPT_COMMAND_TEMPLATE_QMON: ClassVar[str] = (
+        "frpt +regwidth +% +# -test_facility=all -dbase={dbase} +% +module -xf +# "
+        "-sort=// -myquick=/MFG_WORKWEEK,DESIGN_ID,MODULE_FORM_FACTOR,MODULE_SPEED,MODULE_DENSITY/ "
+        "+quick=/myquick,step/ +echo -bin=hard -step=qmon -eng_summary=N/A "
         "-standard_flow=YES -module_form_factor={form_factor} "
         "-mfg_workweek={workweek} -n -r +imesh -nonshippable=N/A +debug -top5"
     )
@@ -60,9 +69,15 @@ class Settings:
         Returns:
             Command template string
         """
-        if step.upper() == "HMB1":
+        step_upper = step.upper()
+        if step_upper == "HMFN":
+            return cls.FRPT_COMMAND_TEMPLATE_HMFN
+        elif step_upper == "HMB1":
             return cls.FRPT_COMMAND_TEMPLATE_HMB1
-        return cls.FRPT_COMMAND_TEMPLATE
+        elif step_upper == "QMON":
+            return cls.FRPT_COMMAND_TEMPLATE_QMON
+        # Fallback to HMFN template
+        return cls.FRPT_COMMAND_TEMPLATE_HMFN
 
     # Bin columns to extract (common soft bins)
     BIN_COLUMNS: ClassVar[list[str]] = [

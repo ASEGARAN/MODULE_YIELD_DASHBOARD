@@ -75,7 +75,7 @@ def render_primary_filters() -> dict[str, Any]:
     )
 
     facility = st.sidebar.selectbox(
-        "Test Facility",
+        "Test Facility (HMFN only)",
         options=Settings.FACILITIES,
         index=0,
         help="Select test facility",
