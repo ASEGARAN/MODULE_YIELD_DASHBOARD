@@ -144,9 +144,16 @@ class FrptParser:
         if len(values) < 5:  # Need at least MYQUICK + some values
             return None
 
-        row = {}
         # First value is always MYQUICK identifier
-        row["MYQUICK"] = values[0]
+        myquick = values[0]
+
+        # Only accept MYQUICK rows that start with a workweek (6 digits like 202611)
+        # This filters out register failure details at the bottom
+        if not myquick[:6].isdigit():
+            return None
+
+        row = {}
+        row["MYQUICK"] = myquick
 
         # Parse numeric values - handle variable column counts
         numeric_values = []

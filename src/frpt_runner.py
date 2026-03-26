@@ -107,7 +107,7 @@ class FrptResult:
 class FrptRunner:
     """Execute frpt commands."""
 
-    DEFAULT_TIMEOUT_SECONDS = 300
+    DEFAULT_TIMEOUT_SECONDS = 600  # 10 minutes - frpt can take 60+ seconds per query
 
     def __init__(self, timeout: int = DEFAULT_TIMEOUT_SECONDS):
         """Initialize runner with timeout.
@@ -127,11 +127,12 @@ class FrptRunner:
             FrptResult with command output
         """
         cmd_str = command.build()
-        cmd_args = command.build_args()
         try:
+            # Use shell=True because frpt command relies on shell features
+            # Input validation is done in FrptCommand.__post_init__
             process = subprocess.run(
-                cmd_args,
-                shell=False,
+                cmd_str,
+                shell=True,
                 capture_output=True,
                 text=True,
                 timeout=self._timeout,
