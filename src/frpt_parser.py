@@ -25,11 +25,12 @@ class ParsedMyquick:
             myquick: MYQUICK string
             step: Test step name to determine format
 
-        Format for HMB1/QMON: "202602_DESIGNID_SOCAMM_7500MTPS_192GB"
-            (workweek, design_id, form_factor, speed, density)
-        Format for HMFN: "202611_DESIGNID_SOCAMM2_192GB_7500MTPS"
+        Format for HMB1/QMON: "202610_Y6CP_SOCAMM2_7500MTPS_192GB_HMB1"
+            (workweek, design_id, form_factor, speed, density, step)
+            Note: Has 6 parts - step name appended at end
+        Format for HMFN: "202611_Y6CP_SOCAMM2_192GB_7500MTPS"
             (workweek, design_id, form_factor, density, speed)
-            Note: DBASE field in HMFN myquick is actually design_id
+            Note: Has 5 parts - no step name appended
 
         Returns:
             ParsedMyquick or None if parsing fails
@@ -40,7 +41,8 @@ class ParsedMyquick:
 
         step_upper = step.upper()
         if step_upper in ("HMB1", "QMON"):
-            # HMB1/QMON format: workweek, design_id, form_factor, speed, density
+            # HMB1/QMON format: workweek, design_id, form_factor, speed, density[, step]
+            # May have 5 or 6 parts (step name sometimes appended)
             return cls(
                 workweek=parts[0],
                 design_id=parts[1],
@@ -117,10 +119,13 @@ class FrptParser:
         """Find the index of the header line.
 
         The header is typically followed by a separator line of dashes.
+        Looks for MYQUICK (HMFN) or MULTI- (HMB1/QMON) in header.
         """
         for i, line in enumerate(lines[:-1]):
             next_line = lines[i + 1] if i + 1 < len(lines) else ""
-            if self.SEPARATOR_PATTERN.match(next_line) and "MYQUICK" in line.upper():
+            line_upper = line.upper()
+            # Check for both MYQUICK (HMFN format) and MULTI- (HMB1/QMON format)
+            if self.SEPARATOR_PATTERN.match(next_line) and ("MYQUICK" in line_upper or "MULTI-" in line_upper):
                 return i
         return None
 
