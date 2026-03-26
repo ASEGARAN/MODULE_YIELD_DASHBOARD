@@ -194,9 +194,14 @@ class DataProcessor:
         if self._df.empty:
             return pd.DataFrame()
 
+        # Determine groupby columns based on available data
+        group_cols = ["workweek", "step", "form_factor", "density", "speed"]
+        if "design_id" in self._df.columns:
+            group_cols.insert(2, "design_id")
+
         # Group by key dimensions
         grouped = (
-            self._df.groupby(["workweek", "step", "form_factor", "density", "speed"])
+            self._df.groupby(group_cols)
             .agg({"UIN": "sum", "UPASS": "sum"})
             .reset_index()
         )
@@ -205,18 +210,18 @@ class DataProcessor:
         grouped = grouped.sort_values(["workweek", "step", "form_factor"])
 
         # Rename columns for display
-        grouped = grouped.rename(
-            columns={
-                "workweek": "Work Week",
-                "step": "Test Step",
-                "form_factor": "Form Factor",
-                "density": "Density",
-                "speed": "Speed",
-                "UIN": "Units In",
-                "UPASS": "Units Pass",
-                "yield_pct": "Yield %",
-            }
-        )
+        rename_map = {
+            "workweek": "Work Week",
+            "step": "Test Step",
+            "design_id": "Design ID",
+            "form_factor": "Form Factor",
+            "density": "Density",
+            "speed": "Speed",
+            "UIN": "Units In",
+            "UPASS": "Units Pass",
+            "yield_pct": "Yield %",
+        }
+        grouped = grouped.rename(columns=rename_map)
 
         return grouped
 

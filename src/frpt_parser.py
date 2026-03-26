@@ -12,11 +12,10 @@ class ParsedMyquick:
     """Parsed MYQUICK identifier components."""
 
     workweek: str
+    design_id: str
     form_factor: str
     density: str
     speed: str
-    dbase: Optional[str] = None
-    design_id: Optional[str] = None
 
     @classmethod
     def from_string(cls, myquick: str, step: str = "") -> Optional["ParsedMyquick"]:
@@ -28,8 +27,9 @@ class ParsedMyquick:
 
         Format for HMB1/QMON: "202602_DESIGNID_SOCAMM_7500MTPS_192GB"
             (workweek, design_id, form_factor, speed, density)
-        Format for HMFN: "202611_Y6CP_SOCAMM2_192GB_7500MTPS"
-            (workweek, dbase, form_factor, density, speed)
+        Format for HMFN: "202611_DESIGNID_SOCAMM2_192GB_7500MTPS"
+            (workweek, design_id, form_factor, density, speed)
+            Note: DBASE field in HMFN myquick is actually design_id
 
         Returns:
             ParsedMyquick or None if parsing fails
@@ -47,17 +47,15 @@ class ParsedMyquick:
                 form_factor=parts[2],
                 speed=parts[3],
                 density=parts[4],
-                dbase=None,
             )
         else:
-            # Default format: workweek, dbase, form_factor, density, speed
+            # HMFN format: workweek, design_id (DBASE), form_factor, density, speed
             return cls(
                 workweek=parts[0],
-                dbase=parts[1],
+                design_id=parts[1],  # DBASE field is actually design_id
                 form_factor=parts[2],
                 density=parts[3],
                 speed=parts[4],
-                design_id=None,
             )
 
 
@@ -190,7 +188,6 @@ class FrptParser:
         # Add component columns
         df = df.copy()
         df["workweek"] = parsed.apply(lambda p: p.workweek if p else None)
-        df["dbase"] = parsed.apply(lambda p: p.dbase if p else None)
         df["design_id"] = parsed.apply(lambda p: p.design_id if p else None)
         df["form_factor"] = parsed.apply(lambda p: p.form_factor if p else None)
         df["density"] = parsed.apply(lambda p: p.density if p else None)
