@@ -11,12 +11,22 @@ import streamlit as st
 from src.frpt_runner import FrptRunner, FrptCommand
 from src.frpt_parser import FrptParser
 from src.data_processor import DataProcessor
+from src.cache import FrptCache
 from config.settings import Settings
 
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging to file for debugging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('/home/asegaran/MODULE_YIELD_DASHBOARD/dashboard.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
+# Suppress noisy loggers
+logging.getLogger('watchdog').setLevel(logging.WARNING)
 
 # Constants
 MAX_WEEKS_PER_YEAR = 52
@@ -37,6 +47,12 @@ def init_session_state() -> None:
         st.session_state.data = pd.DataFrame()
     if "last_error" not in st.session_state:
         st.session_state.last_error = None
+    if "fetch_in_progress" not in st.session_state:
+        st.session_state.fetch_in_progress = False
+    if "last_fetch_time" not in st.session_state:
+        st.session_state.last_fetch_time = None
+    if "last_fetch_filters" not in st.session_state:
+        st.session_state.last_fetch_filters = None
 
 
 def setup_page() -> None:
@@ -191,11 +207,12 @@ def render_sidebar() -> dict[str, Any]:
     return {**primary, **workweek, **optional}
 
 
-def fetch_data(filters: dict[str, Any]) -> pd.DataFrame:
-    """Fetch data from frpt commands based on filters.
+def fetch_data(filters: dict[str, Any], use_cache: bool = True) -> pd.DataFrame:
+    """Fetch data from frpt commands based on filters using parallel execution.
 
     Args:
         filters: Filter parameters
+        use_cache: Whether to use cached results
 
     Returns:
         DataFrame with yield data
@@ -203,34 +220,25 @@ def fetch_data(filters: dict[str, Any]) -> pd.DataFrame:
     Raises:
         RuntimeError: If data fetching fails
     """
-    runner = FrptRunner()
+    logger.info("="*60)
+    logger.info(f"FETCH DATA STARTED (PARALLEL, cache={'ON' if use_cache else 'OFF'})")
+    logger.info(f"Filters: {filters}")
+
+    runner = FrptRunner(max_workers=4, use_cache=use_cache)  # Run up to 4 queries in parallel
     parser = FrptParser()
 
     try:
         workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
+        logger.info(f"Workweeks to fetch: {workweeks}")
     except Exception as e:
         logger.error("Failed to generate workweek range: %s", e)
         raise RuntimeError(f"Invalid workweek range: {e}") from e
 
-    results = []
-    total_calls = len(filters["test_steps"]) * len(filters["form_factors"]) * len(workweeks)
-
-    if total_calls == 0:
-        return pd.DataFrame()
-
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    call_count = 0
-    errors = []
-
+    # Build all commands first
+    commands = []
     for step in filters["test_steps"]:
         for form_factor in filters["form_factors"]:
             for workweek in workweeks:
-                call_count += 1
-                status_text.text(f"Fetching {step} / {form_factor} / WW{workweek}...")
-                progress_bar.progress(call_count / total_calls)
-
                 try:
                     command = FrptCommand(
                         step=step,
@@ -239,29 +247,75 @@ def fetch_data(filters: dict[str, Any]) -> pd.DataFrame:
                         dbase=filters["design_id"],
                         facility=filters["facility"],
                     )
-                    result = runner.run(command)
-
-                    if result.success and result.stdout:
-                        results.append((result.stdout, step, form_factor))
-                    elif not result.success:
-                        errors.append(f"{step}/{form_factor}/WW{workweek}: {result.stderr}")
+                    commands.append(command)
                 except ValueError as e:
-                    errors.append(f"{step}/{form_factor}/WW{workweek}: {e}")
-                    logger.warning("Invalid parameters: %s", e)
+                    logger.warning(f"Invalid command parameters: {e}")
+
+    total_calls = len(commands)
+    logger.info(f"Total frpt calls to make: {total_calls} (running in parallel)")
+
+    if total_calls == 0:
+        logger.warning("No calls to make (empty filters)")
+        return pd.DataFrame()
+
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    cache_hits_text = st.empty()
+
+    cache_mode = "with cache" if use_cache else "no cache"
+    status_text.text(f"Running {total_calls} queries in parallel ({cache_mode})...")
+
+    # Progress callback for UI updates
+    completed_count = [0]  # Use list for mutable closure
+    cache_hits = [0]
+
+    def progress_callback(completed: int, total: int, cmd: FrptCommand) -> None:
+        completed_count[0] = completed
+        progress_bar.progress(completed / total)
+        status_text.text(
+            f"Completed {completed}/{total}: {cmd.step}/{cmd.form_factor}/WW{cmd.workweek}"
+        )
+
+    # Run commands in parallel
+    results = []
+    errors = []
+
+    try:
+        parallel_results = runner.run_parallel(commands, progress_callback)
+
+        for command, result in parallel_results:
+            if result.success and result.stdout:
+                results.append((result.stdout, command.step, command.form_factor))
+                logger.info(f"Added result for {command.step}/{command.form_factor}/WW{command.workweek}")
+            elif not result.success:
+                err_msg = f"{command.step}/{command.form_factor}/WW{command.workweek}: {result.stderr[:200]}"
+                errors.append(err_msg)
+                logger.error(f"Command failed: {err_msg}")
+
+    except Exception as e:
+        logger.error(f"Parallel execution error: {e}", exc_info=True)
+        raise RuntimeError(f"Parallel execution failed: {e}") from e
 
     progress_bar.empty()
     status_text.empty()
+    cache_hits_text.empty()
 
+    logger.info(f"Fetch complete. Results collected: {len(results)}, Errors: {len(errors)}")
     if errors:
         logger.warning("Fetch errors: %s", errors[:5])
 
     if not results:
+        logger.warning("No results to parse")
         return pd.DataFrame()
 
     try:
-        return parser.parse_multiple(results)
+        df = parser.parse_multiple(results)
+        logger.info(f"Parsed DataFrame: {len(df)} rows, columns={list(df.columns) if not df.empty else []}")
+        if not df.empty:
+            logger.debug(f"First few rows:\n{df.head()}")
+        return df
     except Exception as e:
-        logger.error("Failed to parse results: %s", e)
+        logger.error("Failed to parse results: %s", e, exc_info=True)
         raise RuntimeError(f"Failed to parse frpt output: {e}") from e
 
 
@@ -471,35 +525,91 @@ def main() -> None:
         st.warning(validation_error)
         return
 
+    # Display last fetch info
+    if st.session_state.last_fetch_time:
+        st.sidebar.info(f"Last fetch: {st.session_state.last_fetch_time}")
+
+    # Cache controls
+    st.sidebar.divider()
+    st.sidebar.subheader("Cache Settings")
+
+    cache = FrptCache()
+    cache_stats = cache.get_stats()
+    st.sidebar.caption(
+        f"Cached: {cache_stats['valid_entries']} queries | "
+        f"Size: {cache_stats['total_size_mb']:.1f} MB"
+    )
+
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        if st.button("Clear Cache", use_container_width=True):
+            cleared = cache.clear()
+            st.sidebar.success(f"Cleared {cleared} entries")
+    with col2:
+        use_cache = st.checkbox("Use Cache", value=True, help="Uncheck to force fresh data fetch")
+
+    # Store cache preference in session state
+    st.session_state.use_cache = use_cache
+
     # Fetch data button
     st.sidebar.divider()
+
+    # Estimate number of calls (with parallel execution)
+    try:
+        workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
+        total_calls = len(filters["test_steps"]) * len(filters["form_factors"]) * len(workweeks)
+        # With 4 parallel workers, time is ~ceil(total/4) * 3 minutes
+        parallel_batches = (total_calls + 3) // 4  # ceil division
+        estimated_time = max(parallel_batches * 3, 3)  # at least 3 min
+        st.sidebar.caption(f"Queries: {total_calls} (parallel) ~{estimated_time} min")
+    except Exception:
+        pass
+
     fetch_button = st.sidebar.button(
         "Fetch Data",
         type="primary",
         use_container_width=True,
+        disabled=st.session_state.fetch_in_progress,
     )
 
     if fetch_button:
+        st.session_state.fetch_in_progress = True
+        logger.info("Fetch button clicked")
+
         try:
-            with st.spinner("Fetching data from frpt..."):
-                st.session_state.data = fetch_data(filters)
-                st.session_state.last_error = None
+            use_cache = st.session_state.get("use_cache", True)
+            if use_cache:
+                st.info("Fetching data... Cached results will be used when available (instant). Fresh queries may take a few minutes.")
+            else:
+                st.warning("Fetching fresh data (cache disabled)... This may take several minutes. Please wait.")
 
-            if st.session_state.data.empty:
-                st.error("No data returned. Check your filter parameters.")
-                return
+            data = fetch_data(filters, use_cache=use_cache)
+            st.session_state.data = data
+            st.session_state.last_error = None
+            st.session_state.last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.session_state.last_fetch_filters = str(filters)
 
-            st.success(f"Loaded {len(st.session_state.data)} records")
+            if data.empty:
+                st.error("No data returned. Check your filter parameters or try different workweeks.")
+                logger.warning("Fetch returned empty DataFrame")
+            else:
+                st.success(f"Loaded {len(data)} records successfully!")
+                logger.info(f"Fetch successful: {len(data)} records")
+
         except RuntimeError as e:
             st.session_state.last_error = str(e)
             st.error(f"Failed to fetch data: {e}")
             logger.error("Fetch error: %s", e)
-            return
         except Exception as e:
             st.session_state.last_error = str(e)
             st.error(f"Unexpected error: {e}")
             logger.exception("Unexpected fetch error")
-            return
+        finally:
+            st.session_state.fetch_in_progress = False
+
+    # Show last error if any
+    if st.session_state.last_error:
+        st.error(f"Last error: {st.session_state.last_error}")
 
     # Display dashboard if data exists
     if not st.session_state.data.empty:
@@ -512,7 +622,7 @@ def main() -> None:
         )
         render_dashboard(processor)
     else:
-        st.info("Click 'Fetch Data' to load yield data")
+        st.info("Click 'Fetch Data' to load yield data. Note: Each workweek may take 2-5 minutes to fetch.")
 
 
 if __name__ == "__main__":

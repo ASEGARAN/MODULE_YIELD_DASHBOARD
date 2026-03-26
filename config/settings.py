@@ -30,9 +30,12 @@ class Settings:
     DEFAULT_DESIGN_ID: ClassVar[str] = "Y6CP"
     DEFAULT_FACILITY: ClassVar[str] = "all"
 
+    # Full path to frpt command
+    FRPT_PATH: ClassVar[str] = "/u/summary/bin/frpt"
+
     # frpt command template for HMFN step (soft bins)
     FRPT_COMMAND_TEMPLATE_HMFN: ClassVar[str] = (
-        "frpt -xf -bin=soft "
+        "/u/summary/bin/frpt -xf -bin=soft "
         "-myquick=/MFG_WORKWEEK,DBASE,MODULE_FORM_FACTOR,MODULE_DENSITY,MODULE_SPEED/ "
         "-quick=/MFG_WORKWEEK,myquick/ -sort=// +nowrap +echo +regwidth +module "
         "-dbase={dbase} -step=hmfn -all -n -r +imesh "
@@ -43,7 +46,7 @@ class Settings:
 
     # frpt command template for HMB1 step (hard bins)
     FRPT_COMMAND_TEMPLATE_HMB1: ClassVar[str] = (
-        "frpt +regwidth +% +# -test_facility={facility} -dbase={dbase} +% +module -xf +# "
+        "/u/summary/bin/frpt +regwidth +% +# -test_facility={facility} -dbase={dbase} +% +module -xf +# "
         "-sort=// -myquick=/MFG_WORKWEEK,DESIGN_ID,MODULE_FORM_FACTOR,MODULE_SPEED,MODULE_DENSITY/ "
         "+quick=/myquick,step/ +echo -bin=hard -step=hmb1 -eng_summary=N/A "
         "-standard_flow=YES -module_form_factor={form_factor} "
@@ -52,7 +55,7 @@ class Settings:
 
     # frpt command template for QMON step (hard bins, same as HMB1)
     FRPT_COMMAND_TEMPLATE_QMON: ClassVar[str] = (
-        "frpt +regwidth +% +# -test_facility={facility} -dbase={dbase} +% +module -xf +# "
+        "/u/summary/bin/frpt +regwidth +% +# -test_facility={facility} -dbase={dbase} +% +module -xf +# "
         "-sort=// -myquick=/MFG_WORKWEEK,DESIGN_ID,MODULE_FORM_FACTOR,MODULE_SPEED,MODULE_DENSITY/ "
         "+quick=/myquick,step/ +echo -bin=hard -step=qmon -eng_summary=N/A "
         "-standard_flow=YES -module_form_factor={form_factor} "
