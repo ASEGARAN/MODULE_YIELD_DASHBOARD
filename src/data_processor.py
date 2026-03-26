@@ -65,14 +65,18 @@ class DataProcessor:
         """Get yield trend data grouped by workweek.
 
         Returns:
-            DataFrame with columns: workweek, step, form_factor, UIN, UPASS, yield_pct
+            DataFrame with columns: workweek, design_id, form_factor, speed, density, step, UIN, UPASS, yield_pct
         """
         if self._df.empty:
             return pd.DataFrame()
 
-        # Group by workweek, step, and form_factor
+        # Group by workweek, design_id, form_factor, speed, density, step
+        group_cols = ["workweek", "design_id", "form_factor", "speed", "density", "step"]
+        # Filter to only columns that exist in dataframe
+        group_cols = [col for col in group_cols if col in self._df.columns]
+
         grouped = (
-            self._df.groupby(["workweek", "step", "form_factor"])
+            self._df.groupby(group_cols)
             .agg({"UIN": "sum", "UPASS": "sum"})
             .reset_index()
         )
@@ -235,9 +239,14 @@ class DataProcessor:
         if trend.empty:
             return pd.DataFrame()
 
+        # Determine grouping columns (all except workweek and metrics)
+        group_cols = ["design_id", "form_factor", "speed", "density", "step"]
+        group_cols = [col for col in group_cols if col in trend.columns]
+
         # Sort and calculate diff
-        trend = trend.sort_values(["step", "form_factor", "workweek"])
-        trend["wow_change"] = trend.groupby(["step", "form_factor"])["yield_pct"].diff()
+        sort_cols = group_cols + ["workweek"]
+        trend = trend.sort_values(sort_cols)
+        trend["wow_change"] = trend.groupby(group_cols)["yield_pct"].diff()
         trend["wow_change"] = trend["wow_change"].round(2)
 
         return trend

@@ -347,7 +347,14 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
             return
 
         trend_data = trend_data.copy()
-        trend_data["series"] = trend_data["step"] + " - " + trend_data["form_factor"]
+        # Series: design_id, form_factor, speed, density, step
+        trend_data["series"] = (
+            trend_data["design_id"].fillna("") + "_" +
+            trend_data["form_factor"].fillna("") + "_" +
+            trend_data["speed"].fillna("") + "_" +
+            trend_data["density"].fillna("") + "_" +
+            trend_data["step"].fillna("")
+        )
 
         # Ensure workweek is string for proper categorical display (YYYYWW format)
         trend_data["workweek"] = trend_data["workweek"].astype(str)
