@@ -52,7 +52,7 @@ def setup_page() -> None:
 
 
 def render_primary_filters() -> dict[str, Any]:
-    """Render primary filter widgets (form factor, step, database, facility)."""
+    """Render primary filter widgets (form factor, step, design_id, facility)."""
     form_factors = st.sidebar.multiselect(
         "Module Form Factor",
         options=Settings.FORM_FACTORS,
@@ -67,15 +67,15 @@ def render_primary_filters() -> dict[str, Any]:
         help="Select one or more test steps",
     )
 
-    database = st.sidebar.selectbox(
-        "Database",
-        options=Settings.DATABASES,
+    design_id = st.sidebar.selectbox(
+        "Design ID",
+        options=Settings.DESIGN_IDS,
         index=0,
-        help="Select database",
+        help="Select design ID (DBASE parameter)",
     )
 
     facility = st.sidebar.selectbox(
-        "Test Facility (HMFN only)",
+        "Test Facility",
         options=Settings.FACILITIES,
         index=0,
         help="Select test facility",
@@ -84,7 +84,7 @@ def render_primary_filters() -> dict[str, Any]:
     return {
         "form_factors": form_factors,
         "test_steps": test_steps,
-        "database": database,
+        "design_id": design_id,
         "facility": facility,
     }
 
@@ -236,7 +236,7 @@ def fetch_data(filters: dict[str, Any]) -> pd.DataFrame:
                         step=step,
                         form_factor=form_factor,
                         workweek=workweek,
-                        dbase=filters["database"],
+                        dbase=filters["design_id"],
                         facility=filters["facility"],
                     )
                     result = runner.run(command)

@@ -14,21 +14,21 @@ class Settings:
     # Test steps
     TEST_STEPS: ClassVar[list[str]] = ["HMFN", "HMB1", "QMON"]
 
-    # Available databases
-    DATABASES: ClassVar[list[str]] = ["y6cp", "y6ck", "y6cn", "y42m", "y63n"]
+    # Design IDs (DBASE parameter in frpt)
+    DESIGN_IDS: ClassVar[list[str]] = ["Y42M", "Y62P", "Y6CP", "Y63N"]
 
     # Module densities
-    DENSITIES: ClassVar[list[str]] = ["48GB", "96GB", "192GB", "384GB"]
+    DENSITIES: ClassVar[list[str]] = ["32GB", "48GB", "64GB", "96GB", "128GB", "192GB", "256GB"]
 
     # Module speeds
-    SPEEDS: ClassVar[list[str]] = ["7500MTPS", "9600MTPS", "8000MTPS", "8800MTPS"]
+    SPEEDS: ClassVar[list[str]] = ["6400", "7500", "8533", "9600"]
 
     # Test facilities
-    FACILITIES: ClassVar[list[str]] = ["PENANG", "SUZHOU", "XIAN"]
+    FACILITIES: ClassVar[list[str]] = ["all", "PENANG", "SUZHOU", "XIAN"]
 
     # Default values
-    DEFAULT_DATABASE: ClassVar[str] = "y6cp"
-    DEFAULT_FACILITY: ClassVar[str] = "PENANG"
+    DEFAULT_DESIGN_ID: ClassVar[str] = "Y6CP"
+    DEFAULT_FACILITY: ClassVar[str] = "all"
 
     # frpt command template for HMFN step (soft bins)
     FRPT_COMMAND_TEMPLATE_HMFN: ClassVar[str] = (
@@ -43,7 +43,7 @@ class Settings:
 
     # frpt command template for HMB1 step (hard bins)
     FRPT_COMMAND_TEMPLATE_HMB1: ClassVar[str] = (
-        "frpt +regwidth +% +# -test_facility=all -dbase={dbase} +% +module -xf +# "
+        "frpt +regwidth +% +# -test_facility={facility} -dbase={dbase} +% +module -xf +# "
         "-sort=// -myquick=/MFG_WORKWEEK,DESIGN_ID,MODULE_FORM_FACTOR,MODULE_SPEED,MODULE_DENSITY/ "
         "+quick=/myquick,step/ +echo -bin=hard -step=hmb1 -eng_summary=N/A "
         "-standard_flow=YES -module_form_factor={form_factor} "
@@ -52,7 +52,7 @@ class Settings:
 
     # frpt command template for QMON step (hard bins, same as HMB1)
     FRPT_COMMAND_TEMPLATE_QMON: ClassVar[str] = (
-        "frpt +regwidth +% +# -test_facility=all -dbase={dbase} +% +module -xf +# "
+        "frpt +regwidth +% +# -test_facility={facility} -dbase={dbase} +% +module -xf +# "
         "-sort=// -myquick=/MFG_WORKWEEK,DESIGN_ID,MODULE_FORM_FACTOR,MODULE_SPEED,MODULE_DENSITY/ "
         "+quick=/myquick,step/ +echo -bin=hard -step=qmon -eng_summary=N/A "
         "-standard_flow=YES -module_form_factor={form_factor} "

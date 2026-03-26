@@ -41,7 +41,7 @@ class FrptCommand:
     step: str
     form_factor: str
     workweek: str
-    dbase: str = Settings.DEFAULT_DATABASE
+    dbase: str = Settings.DEFAULT_DESIGN_ID
     facility: str = Settings.DEFAULT_FACILITY
 
     def __post_init__(self) -> None:
@@ -147,7 +147,7 @@ class FrptRunner:
         steps: list[str],
         form_factors: list[str],
         workweeks: list[str],
-        dbase: str = Settings.DEFAULT_DATABASE,
+        dbase: str = Settings.DEFAULT_DESIGN_ID,
         facility: str = Settings.DEFAULT_FACILITY,
     ) -> list[FrptResult]:
         """Execute multiple frpt commands for all combinations.
