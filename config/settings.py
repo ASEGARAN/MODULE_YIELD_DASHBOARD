@@ -20,8 +20,8 @@ class Settings:
     # Module densities
     DENSITIES: ClassVar[list[str]] = ["32GB", "48GB", "64GB", "96GB", "128GB", "192GB", "256GB"]
 
-    # Module speeds
-    SPEEDS: ClassVar[list[str]] = ["6400", "7500", "8533", "9600"]
+    # Module speeds (with MTPS suffix to match frpt output format)
+    SPEEDS: ClassVar[list[str]] = ["6400MTPS", "7500MTPS", "8533MTPS", "9600MTPS"]
 
     # Test facilities
     FACILITIES: ClassVar[list[str]] = ["all", "PENANG", "SUZHOU", "XIAN"]

@@ -1,10 +1,13 @@
 """Parse frpt command output into structured data."""
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Optional
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -99,15 +102,24 @@ class FrptParser:
 
         # Parse data rows
         data_rows = []
+        lines_with_pipe = 0
+        lines_without_pipe = 0
         for line in lines[header_idx + 2:]:  # Skip header and separator
             if not line.strip():
                 continue
             if self.SEPARATOR_PATTERN.match(line):
                 continue
+            # Track lines with/without pipe for debugging
+            if "|" in line:
+                lines_with_pipe += 1
+            else:
+                lines_without_pipe += 1
             row = self._parse_data_row(line, columns)
             if row:
                 row["step"] = step
                 data_rows.append(row)
+
+        logger.info(f"Parser [{step}]: lines_with_pipe={lines_with_pipe}, lines_without_pipe={lines_without_pipe}")
 
         if not data_rows:
             return pd.DataFrame()
@@ -188,11 +200,14 @@ class FrptParser:
         # Parse bin values from bin part (after the pipe)
         if bin_part:
             bin_values = bin_part.split()
+            logger.debug(f"Parser: Found bin_part='{bin_part}', values={bin_values}")
             for i, bv in enumerate(bin_values):
                 try:
                     row[f"BIN{i+1}"] = float(bv.replace(",", ""))
                 except ValueError:
                     continue
+        else:
+            logger.debug(f"Parser: No bin_part found in line for MYQUICK={myquick}")
 
         return row
 

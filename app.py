@@ -361,8 +361,15 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         # Ensure workweek is string for proper categorical display (YYYYWW format)
         trend_data["workweek"] = trend_data["workweek"].astype(str)
 
-        # Sort by workweek to ensure correct order
-        trend_data = trend_data.sort_values("workweek")
+        # Sort by workweek to ensure correct chronological order
+        # Convert to int for proper numeric sorting, then back to string
+        trend_data = trend_data.copy()
+        trend_data["_ww_sort"] = trend_data["workweek"].astype(int)
+        trend_data = trend_data.sort_values("_ww_sort")
+        trend_data = trend_data.drop(columns=["_ww_sort"])
+
+        # Get sorted unique workweeks for explicit category order
+        sorted_workweeks = sorted(trend_data["workweek"].unique().tolist(), key=int)
 
         # Get unique series for filter
         all_series = sorted(trend_data["series"].unique().tolist())
@@ -420,12 +427,16 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
                 secondary_y=True,
             )
 
-        # Update layout
+        # Update layout with explicit category order for workweeks
         fig.update_layout(
             title="Yield % and Volume by Work Week",
             xaxis_title="Work Week (YYYYWW)",
             hovermode="x unified",
-            xaxis_type="category",
+            xaxis=dict(
+                type="category",
+                categoryorder="array",
+                categoryarray=sorted_workweeks,
+            ),
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
@@ -511,13 +522,26 @@ def render_bin_distribution_chart(processor: DataProcessor) -> None:
         df = processor.dataframe
         if df.empty:
             st.info("No bin distribution data available")
+            logger.warning("Bin chart: DataFrame is empty")
             return
 
-        # Find BIN columns
+        # Find BIN columns (parser creates BIN1, BIN2, etc.)
         bin_cols = [col for col in df.columns if col.startswith("BIN")]
+        logger.info(f"Bin chart: Found columns={list(df.columns)}")
+        logger.info(f"Bin chart: BIN columns found={bin_cols}")
+
         if not bin_cols:
             st.info("No bin data available in the dataset")
+            logger.warning("Bin chart: No BIN columns found in data")
             return
+
+        # Check if bins have actual data (not all zeros/NaN)
+        bin_data_sample = df[bin_cols].head()
+        logger.info(f"Bin chart: Sample bin data:\n{bin_data_sample}")
+
+        # Check for non-zero values
+        total_non_zero = (df[bin_cols] > 0).sum().sum()
+        logger.info(f"Bin chart: Total non-zero bin values={total_non_zero}")
 
         # Create series column
         df = df.copy()
@@ -557,10 +581,13 @@ def render_bin_distribution_chart(processor: DataProcessor) -> None:
         )
 
         # Drop NaN values
+        logger.info(f"Bin chart: Melted data rows before dropna={len(bin_data)}")
         bin_data = bin_data.dropna(subset=["percentage"])
+        logger.info(f"Bin chart: Melted data rows after dropna={len(bin_data)}")
 
         if bin_data.empty:
             st.info("No bin data available for selected series")
+            logger.warning("Bin chart: All bin data was NaN")
             return
 
         # Group by series and bin, take mean
