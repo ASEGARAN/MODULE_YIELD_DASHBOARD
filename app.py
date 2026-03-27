@@ -6,6 +6,8 @@ from typing import Any, Optional
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import streamlit as st
 
 from src.frpt_runner import FrptRunner, FrptCommand
@@ -337,7 +339,7 @@ def fetch_data(filters: dict[str, Any], use_cache: bool = True) -> pd.DataFrame:
 
 
 def render_yield_trend_chart(processor: DataProcessor) -> None:
-    """Render weekly yield trend line chart."""
+    """Render weekly yield trend line chart with volume bars."""
     st.subheader("Weekly Yield Trend")
 
     try:
@@ -362,30 +364,82 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         # Sort by workweek to ensure correct order
         trend_data = trend_data.sort_values("workweek")
 
-        fig = px.line(
-            trend_data,
-            x="workweek",
-            y="yield_pct",
-            color="series",
-            markers=True,
-            title="Yield % by Work Week",
-            labels={
-                "workweek": "Work Week (YYYYWW)",
-                "yield_pct": "Yield %",
-                "series": "Step / Form Factor",
-            },
+        # Get unique series for filter
+        all_series = sorted(trend_data["series"].unique().tolist())
+
+        # Series filter
+        selected_series = st.multiselect(
+            "Select Series to Display",
+            options=all_series,
+            default=all_series,
+            key="trend_series_filter",
+            help="Filter which product combinations to show in the chart"
         )
 
+        if not selected_series:
+            st.warning("Please select at least one series to display")
+            return
+
+        # Filter data by selected series
+        filtered_data = trend_data[trend_data["series"].isin(selected_series)]
+
+        # Create figure with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Color palette for series
+        colors = px.colors.qualitative.Set1
+
+        # Add traces for each series
+        for i, series_name in enumerate(selected_series):
+            series_data = filtered_data[filtered_data["series"] == series_name]
+            color = colors[i % len(colors)]
+
+            # Add yield line (primary y-axis)
+            fig.add_trace(
+                go.Scatter(
+                    x=series_data["workweek"],
+                    y=series_data["yield_pct"],
+                    mode="lines+markers",
+                    name=f"{series_name} (Yield)",
+                    line=dict(color=color, width=2),
+                    marker=dict(size=8),
+                    hovertemplate="WW%{x}<br>Yield: %{y:.2f}%<extra></extra>",
+                ),
+                secondary_y=False,
+            )
+
+            # Add volume bars (secondary y-axis)
+            fig.add_trace(
+                go.Bar(
+                    x=series_data["workweek"],
+                    y=series_data["UIN"],
+                    name=f"{series_name} (Volume)",
+                    marker=dict(color=color, opacity=0.3),
+                    hovertemplate="WW%{x}<br>Volume: %{y:,}<extra></extra>",
+                ),
+                secondary_y=True,
+            )
+
+        # Update layout
         fig.update_layout(
+            title="Yield % and Volume by Work Week",
             xaxis_title="Work Week (YYYYWW)",
-            yaxis_title="Yield %",
-            yaxis_range=[95, 100],
-            legend_title="Step / Form Factor",
             hovermode="x unified",
-            xaxis_type="category",  # Force categorical x-axis for proper YYYYWW display
+            xaxis_type="category",
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            barmode="group",
         )
 
-        fig.update_traces(line={"width": 2}, marker={"size": 8})
+        # Update y-axes
+        fig.update_yaxes(title_text="Yield %", range=[95, 100], secondary_y=False)
+        fig.update_yaxes(title_text="Volume (UIN)", secondary_y=True)
+
         st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         logger.error("Failed to render trend chart: %s", e)

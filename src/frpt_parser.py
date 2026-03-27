@@ -145,7 +145,12 @@ class FrptParser:
         if line_upper.startswith("AVG") or line_upper.startswith("ALL") or line_upper.startswith("TOT"):
             return None
 
-        values = line.split()
+        # Split by pipe to separate main data from bin data
+        parts = line.split("|")
+        main_part = parts[0].strip()
+        bin_part = parts[1].strip() if len(parts) > 1 else ""
+
+        values = main_part.split()
         if len(values) < 5:  # Need at least MYQUICK + some values
             return None
 
@@ -160,11 +165,9 @@ class FrptParser:
         row = {}
         row["MYQUICK"] = myquick
 
-        # Parse numeric values - handle variable column counts
+        # Parse numeric values from main part
         numeric_values = []
         for v in values[1:]:
-            if v == "|":
-                continue
             try:
                 numeric_values.append(float(v.replace(",", "")))
             except ValueError:
@@ -181,6 +184,15 @@ class FrptParser:
             row["YIELD%"] = numeric_values[2]
         else:
             return None
+
+        # Parse bin values from bin part (after the pipe)
+        if bin_part:
+            bin_values = bin_part.split()
+            for i, bv in enumerate(bin_values):
+                try:
+                    row[f"BIN{i+1}"] = float(bv.replace(",", ""))
+                except ValueError:
+                    continue
 
         return row
 
