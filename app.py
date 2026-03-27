@@ -503,33 +503,98 @@ def render_summary_table(processor: DataProcessor) -> None:
 
 
 def render_bin_distribution_chart(processor: DataProcessor) -> None:
-    """Render bin distribution bar chart."""
+    """Render bin distribution bar chart with series filter."""
     st.subheader("Bin Distribution")
 
     try:
-        bin_data = processor.get_bin_distribution_by_step()
-        if bin_data.empty:
+        # Get raw data to build series
+        df = processor.dataframe
+        if df.empty:
             st.info("No bin distribution data available")
             return
+
+        # Find BIN columns
+        bin_cols = [col for col in df.columns if col.startswith("BIN")]
+        if not bin_cols:
+            st.info("No bin data available in the dataset")
+            return
+
+        # Create series column
+        df = df.copy()
+        df["series"] = (
+            df["design_id"].fillna("") + "_" +
+            df["form_factor"].fillna("") + "_" +
+            df["speed"].fillna("") + "_" +
+            df["density"].fillna("") + "_" +
+            df["step"].fillna("")
+        )
+
+        # Get unique series for filter
+        all_series = sorted(df["series"].unique().tolist())
+
+        # Series filter
+        selected_series = st.multiselect(
+            "Select Series to Display",
+            options=all_series,
+            default=all_series,
+            key="bin_series_filter",
+            help="Filter which product combinations to show"
+        )
+
+        if not selected_series:
+            st.warning("Please select at least one series to display")
+            return
+
+        # Filter data by selected series
+        filtered_df = df[df["series"].isin(selected_series)]
+
+        # Melt bin columns to long format
+        bin_data = filtered_df.melt(
+            id_vars=["series", "step"],
+            value_vars=bin_cols,
+            var_name="bin",
+            value_name="percentage"
+        )
+
+        # Drop NaN values
+        bin_data = bin_data.dropna(subset=["percentage"])
+
+        if bin_data.empty:
+            st.info("No bin data available for selected series")
+            return
+
+        # Group by series and bin, take mean
+        bin_data = bin_data.groupby(["series", "bin"])["percentage"].mean().reset_index()
+
+        # Sort bins naturally (BIN1, BIN2, ...)
+        bin_data["bin_num"] = bin_data["bin"].str.extract(r"(\d+)").astype(int)
+        bin_data = bin_data.sort_values(["bin_num", "series"])
 
         fig = px.bar(
             bin_data,
             x="bin",
             y="percentage",
-            color="step",
+            color="series",
             barmode="group",
-            title="Bin Distribution by Test Step",
+            title="Bin Distribution by Series",
             labels={
                 "bin": "Bin",
                 "percentage": "Percentage %",
-                "step": "Test Step",
+                "series": "Series",
             },
         )
 
         fig.update_layout(
             xaxis_title="Bin",
             yaxis_title="Percentage %",
-            legend_title="Test Step",
+            legend_title="Series",
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
         )
 
         st.plotly_chart(fig, use_container_width=True)
