@@ -1256,18 +1256,22 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                         # Determine trace mode based on show_labels
                         trace_mode = "lines+markers+text" if show_elc_labels else "lines+markers"
 
+                        # Convert to lists for plotly
+                        x_vals = series_data["workweek"].tolist()
+                        y_vals = series_data["Yield %"].tolist()
+                        text_vals = series_data["label_text"].tolist() if show_elc_labels else None
+
                         fig.add_trace(
                             go.Scatter(
-                                x=series_data["workweek"],
-                                y=series_data["Yield %"],
+                                x=x_vals,
+                                y=y_vals,
                                 mode=trace_mode,
                                 name=f"{yield_type} ({series_name})" if series_name != "All" else yield_type,
-                                text=series_data["label_text"] if show_elc_labels else None,
+                                text=text_vals,
                                 textposition="top center",
                                 textfont=dict(size=9),
                                 line=dict(color=colors.get(yield_type, "#636EFA")),
                                 marker=dict(size=8),
-                                customdata=[[series_name, yield_type]] * len(series_data),
                                 hovertemplate="<b>Work Week:</b> %{x}<br>" +
                                               f"<b>Yield Type:</b> {yield_type}<br>" +
                                               "<b>Yield:</b> %{y:.2f}%<br>" +
@@ -1276,30 +1280,31 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                             )
                         )
 
-                # Add HMFN yield target marker (99% dotted line)
-                # Applies to all design_id regardless of speed and density
-                fig.add_hline(
-                    y=99,
-                    line_dash="dot",
-                    line_color="red",
-                    line_width=2,
-                    annotation_text="HMFN Target: 99%",
-                    annotation_position="right",
-                    annotation_font_size=10,
-                    annotation_font_color="red",
-                )
-
                 fig.update_layout(
                     title="HMFN, SLT & ELC Yield Trend",
                     xaxis_title="Work Week (YYYYWW)",
                     yaxis_title="Yield %",
-                    yaxis=dict(range=[y_min, 101]),
+                    yaxis=dict(range=[y_min, 102]),  # Extended to 102 for label visibility
                     legend_title="Yield Type",
                     hovermode="x unified",
                     xaxis=dict(
                         type="category",
                         categoryorder="array",
                         categoryarray=sorted_workweeks
+                    )
+                )
+
+                # Add HMFN yield target marker (99% dotted line) as a trace for legend
+                # Applies to all design_id regardless of speed and density
+                fig.add_trace(
+                    go.Scatter(
+                        x=[sorted_workweeks[0], sorted_workweeks[-1]],
+                        y=[99, 99],
+                        mode="lines",
+                        name="HMFN Target: 99%",
+                        line=dict(color="red", width=3, dash="dot"),
+                        showlegend=True,
+                        hoverinfo="skip",
                     )
                 )
 
