@@ -1191,8 +1191,22 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
         if "workweek" in elc_df.columns:
             st.subheader("ELC Yield Trend")
 
-            # Option to pin data labels on chart
-            show_elc_labels = st.checkbox("Show data labels on chart", value=False, key="elc_trend_show_labels")
+            # Chart options
+            col1, col2 = st.columns(2)
+            with col1:
+                # Option to pin data labels on chart
+                show_elc_labels = st.checkbox("Show data labels on chart", value=False, key="elc_trend_show_labels")
+            with col2:
+                # Y-axis scale adjustment
+                y_min = st.slider(
+                    "Y-axis minimum (%)",
+                    min_value=0,
+                    max_value=98,
+                    value=90,
+                    step=1,
+                    key="elc_yaxis_min",
+                    help="Adjust to zoom in on data points close together"
+                )
 
             # Create series identifier
             series_cols = [c for c in ["design_id", "form_factor", "density", "speed"] if c in elc_df.columns]
@@ -1224,33 +1238,62 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                 # Add text column for labels
                 plot_df["label_text"] = plot_df["Yield %"].apply(lambda x: f"{x:.1f}%")
 
-                fig = px.line(
-                    plot_df,
-                    x="workweek",
-                    y="Yield %",
-                    color="Yield Type",
-                    line_dash="series",
-                    markers=True,
-                    title="HMFN, SLT & ELC Yield Trend",
-                    custom_data=["series", "Yield Type"],
-                    text="label_text" if show_elc_labels else None
-                )
+                # Build chart using graph objects for better control
+                fig = go.Figure()
 
-                # Enhanced hover template and text positioning
-                fig.update_traces(
-                    hovertemplate="<b>Work Week:</b> %{x}<br>" +
-                                  "<b>Yield Type:</b> %{customdata[1]}<br>" +
-                                  "<b>Yield:</b> %{y:.2f}%<br>" +
-                                  "<b>Series:</b> %{customdata[0]}<br>" +
-                                  "<extra></extra>",
-                    textposition="top center" if show_elc_labels else None,
-                    textfont=dict(size=9) if show_elc_labels else None
+                # Color map for yield types
+                colors = {"HMFN": "#636EFA", "SLT": "#EF553B", "ELC": "#00CC96"}
+
+                # Group by series and yield type
+                for series_name in plot_df["series"].unique():
+                    for yield_type in plot_cols:
+                        mask = (plot_df["series"] == series_name) & (plot_df["Yield Type"] == yield_type)
+                        series_data = plot_df[mask].sort_values("workweek")
+
+                        if series_data.empty:
+                            continue
+
+                        # Determine trace mode based on show_labels
+                        trace_mode = "lines+markers+text" if show_elc_labels else "lines+markers"
+
+                        fig.add_trace(
+                            go.Scatter(
+                                x=series_data["workweek"],
+                                y=series_data["Yield %"],
+                                mode=trace_mode,
+                                name=f"{yield_type} ({series_name})" if series_name != "All" else yield_type,
+                                text=series_data["label_text"] if show_elc_labels else None,
+                                textposition="top center",
+                                textfont=dict(size=9),
+                                line=dict(color=colors.get(yield_type, "#636EFA")),
+                                marker=dict(size=8),
+                                customdata=[[series_name, yield_type]] * len(series_data),
+                                hovertemplate="<b>Work Week:</b> %{x}<br>" +
+                                              f"<b>Yield Type:</b> {yield_type}<br>" +
+                                              "<b>Yield:</b> %{y:.2f}%<br>" +
+                                              f"<b>Series:</b> {series_name}<br>" +
+                                              "<extra></extra>",
+                            )
+                        )
+
+                # Add HMFN yield target marker (99% dotted line)
+                # Applies to all design_id regardless of speed and density
+                fig.add_hline(
+                    y=99,
+                    line_dash="dot",
+                    line_color="red",
+                    line_width=2,
+                    annotation_text="HMFN Target: 99%",
+                    annotation_position="right",
+                    annotation_font_size=10,
+                    annotation_font_color="red",
                 )
 
                 fig.update_layout(
+                    title="HMFN, SLT & ELC Yield Trend",
                     xaxis_title="Work Week (YYYYWW)",
                     yaxis_title="Yield %",
-                    yaxis=dict(range=[50, 105]),
+                    yaxis=dict(range=[y_min, 101]),
                     legend_title="Yield Type",
                     hovermode="x unified",
                     xaxis=dict(
@@ -1258,33 +1301,6 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                         categoryorder="array",
                         categoryarray=sorted_workweeks
                     )
-                )
-
-                # Add HMFN yield target marker (99% dotted line)
-                # Applies to all design_id regardless of speed and density
-                fig.add_shape(
-                    type="line",
-                    x0=0,
-                    x1=1,
-                    y0=99,
-                    y1=99,
-                    xref="paper",
-                    yref="y",
-                    line=dict(
-                        color="red",
-                        width=2,
-                        dash="dot",
-                    ),
-                )
-                fig.add_annotation(
-                    x=1.02,
-                    y=99,
-                    xref="paper",
-                    yref="y",
-                    text="HMFN Target: 99%",
-                    showarrow=False,
-                    font=dict(size=10, color="red"),
-                    xanchor="left",
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
