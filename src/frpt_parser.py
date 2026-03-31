@@ -270,9 +270,14 @@ class FrptParser:
         for output, step, form_factor in results:
             df = self.parse(output, step)
             if not df.empty:
+                bin_cols = [c for c in df.columns if c.startswith('BIN')]
+                logger.info(f"parse_multiple: {step}/{form_factor} -> {len(df)} rows, BINs={bin_cols}")
                 dfs.append(df)
 
         if not dfs:
             return pd.DataFrame()
 
-        return pd.concat(dfs, ignore_index=True)
+        combined = pd.concat(dfs, ignore_index=True)
+        bin_cols_combined = [c for c in combined.columns if c.startswith('BIN')]
+        logger.info(f"parse_multiple: Combined {len(dfs)} DataFrames -> {len(combined)} rows, BINs={bin_cols_combined}")
+        return combined
