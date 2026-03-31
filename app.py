@@ -1247,18 +1247,6 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     textfont=dict(size=9) if show_elc_labels else None
                 )
 
-                # Add HMFN yield target marker (99% dotted line)
-                fig.add_hline(
-                    y=99,
-                    line_dash="dot",
-                    line_color="red",
-                    line_width=2,
-                    annotation_text="HMFN Target: 99%",
-                    annotation_position="right",
-                    annotation_font_size=10,
-                    annotation_font_color="red",
-                )
-
                 fig.update_layout(
                     xaxis_title="Work Week (YYYYWW)",
                     yaxis_title="Yield %",
@@ -1270,6 +1258,33 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                         categoryorder="array",
                         categoryarray=sorted_workweeks
                     )
+                )
+
+                # Add HMFN yield target marker (99% dotted line)
+                # Applies to all design_id regardless of speed and density
+                fig.add_shape(
+                    type="line",
+                    x0=0,
+                    x1=1,
+                    y0=99,
+                    y1=99,
+                    xref="paper",
+                    yref="y",
+                    line=dict(
+                        color="red",
+                        width=2,
+                        dash="dot",
+                    ),
+                )
+                fig.add_annotation(
+                    x=1.02,
+                    y=99,
+                    xref="paper",
+                    yref="y",
+                    text="HMFN Target: 99%",
+                    showarrow=False,
+                    font=dict(size=10, color="red"),
+                    xanchor="left",
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
