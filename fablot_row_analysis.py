@@ -457,9 +457,12 @@ full_html = f'''<!DOCTYPE html>
 <head>
     <title>SOCAMM2 FABLOT vs ROW CDPM Analysis</title>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
     <style>
         body {{
@@ -516,6 +519,21 @@ full_html = f'''<!DOCTYPE html>
         .dataTables_filter {{
             margin-bottom: 10px;
         }}
+        .dt-buttons {{
+            margin-bottom: 15px;
+        }}
+        .dt-button {{
+            background-color: #4472C4 !important;
+            color: white !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+            font-weight: bold !important;
+        }}
+        .dt-button:hover {{
+            background-color: #3461b3 !important;
+        }}
     </style>
 </head>
 <body>
@@ -545,7 +563,15 @@ full_html = f'''<!DOCTYPE html>
                 pageLength: 25,
                 scrollX: true,
                 dom: 'Bfrtip',
-                order: [[0, 'asc']]
+                order: [[0, 'asc']],
+                buttons: [
+                    {{
+                        extend: 'csv',
+                        text: 'Download CSV',
+                        filename: 'FABLOT_ROW_Failure_Data_WW202612',
+                        title: null
+                    }}
+                ]
             }});
 
             // Apply the filter
