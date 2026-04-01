@@ -191,7 +191,7 @@ cdpm_data = """FABLOT,Row
 806702L,0
 """
 
-# Failure Details Data
+# Failure Details Data (simple for chart processing)
 failure_data = """FID,SUMMARY,MSN,FID_STATUS2,MSN_STATUS,FAILCRAWLER,DRAMFAIL,ULOC,ADDRMASK,ADDRCNT,BITCNT,ROWCNT,COLCNT,DQCNT
 786640L:08:P05:28,JAB/AY/SH/001NB~2,56BFF062,MB,Row,SINGLE_BURST_SINGLE_ROW,YES,U3D2,2C0DC0:::,5,5,1,2,4
 791152L:09:P14:15,JAB/AX/MN/001NB~3,56BE3CB3,MB,Row,SINGLE_BURST_SINGLE_ROW,NO,U3D3,D10:::,4,4,1,2,3
@@ -200,6 +200,17 @@ failure_data = """FID,SUMMARY,MSN,FID_STATUS2,MSN_STATUS,FAILCRAWLER,DRAMFAIL,UL
 791891L:12:N03:19,JAB/AX/MN/001NB~4,56BDED99,MB,Row,SINGLE_BURST_SINGLE_ROW,NO,U1D2,200D60:::,5,5,1,2,4
 804017L:04:N17:13,JAB/AR/ZW/001NB~84,56A40286,TB,Row,SINGLE_BURST_SINGLE_ROW,NO,U2D3,100C40:::,3,3,1,2,2
 804017L:13:N02:15,JAB/AR/ZW/001NB~125,56A41088,MB,Row,SINGLE_BURST_SINGLE_ROW,NO,U3D3,280D30:::,5,5,1,2,4
+"""
+
+# Full detailed table data
+detailed_table_data = """FID,STEP,SUMMARY,MSN,MFG_WORKWEEK,TEST_FACILITY,ISLATEST,PCB,MCQ,MODFF,PROCESSCODE,FID_STATUS,FID_STATUS2,MSN_STATUS,VERIFIED,FAILCRAWLER,DRAMFAIL,ULOC,ADDRMASK,ADDRCNT,BITCNT,ROWCNT,COLCNT,DQCNT,False Failure Script
+786640L:08:P05:28,HMB1,JAB/AY/SH/001NB~2,56BFF062,202612,PENANG,Y,3957,64,SOCAMM2,CAE,Row,MB,Row,,SINGLE_BURST_SINGLE_ROW,YES,U3D2,2C0DC0:::,5,5,1,2,4,True Match
+791152L:09:P14:15,HMB1,JAB/AX/MN/001NB~3,56BE3CB3,202612,PENANG,Y,3957,64,SOCAMM2,CAE,Row,MB,Row,,SINGLE_BURST_SINGLE_ROW,NO,U3D3,D10:::,4,4,1,2,3,True Match
+791385L:17:P08:14,HMB1,JAB/AX/MN/001NB~2,56BDFEA9,202612,PENANG,Y,3957,64,SOCAMM2,CAE,Row,DB,Row,,DB,YES,U2D3,C0810:::,2,2,1,2,2,True Match
+791648L:13:P18:20,HMB1,JAB/AY/2W/001NB~30,56C0D75E,202612,PENANG,Y,3957,64,SOCAMM2,CAE,Row,MB,Row,,SINGLE_BURST_SINGLE_ROW,NO,U1D2,200D60:::,5,5,1,2,4,True Match
+791891L:12:N03:19,HMB1,JAB/AX/MN/001NB~4,56BDED99,202612,PENANG,Y,3957,64,SOCAMM2,CAE,Row,MB,Row,,SINGLE_BURST_SINGLE_ROW,NO,U1D2,200D60:::,5,5,1,2,4,True Match
+804017L:04:N17:13,HMB1,JAB/AR/ZW/001NB~84,56A40286,202612,PENANG,Y,3957,64,SOCAMM2,CAE,Row,TB,Row,,SINGLE_BURST_SINGLE_ROW,NO,U2D3,100C40:::,3,3,1,2,2,True Match
+804017L:13:N02:15,HMB1,JAB/AR/ZW/001NB~125,56A41088,202612,PENANG,Y,3957,64,SOCAMM2,CAE,Row,MB,Row,,SINGLE_BURST_SINGLE_ROW,NO,U3D3,280D30:::,5,5,1,2,4,True Match
 """
 
 # Parse data
@@ -421,8 +432,140 @@ fig.update_yaxes(title_text="Failure Count", row=3, col=1)
 fig.update_xaxes(title_text="ULOC (Unit Location)", row=4, col=1)
 fig.update_yaxes(title_text="FABLOT", row=4, col=1)
 
+# Parse detailed table data
+df_detailed = pd.read_csv(StringIO(detailed_table_data))
+
+# Generate Plotly chart HTML
+chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+# Generate table rows HTML
+table_rows = ""
+for _, row in df_detailed.iterrows():
+    table_rows += "<tr>"
+    for col in df_detailed.columns:
+        val = row[col] if pd.notna(row[col]) else ""
+        table_rows += f"<td>{val}</td>"
+    table_rows += "</tr>\n"
+
+# Generate table headers
+table_headers = "".join([f"<th>{col}</th>" for col in df_detailed.columns])
+filter_headers = "".join([f'<th><input type="text" placeholder="Filter {col}" style="width:100%; box-sizing:border-box; font-size:11px;"/></th>' for col in df_detailed.columns])
+
+# Create full HTML with DataTables
+full_html = f'''<!DOCTYPE html>
+<html>
+<head>
+    <title>SOCAMM2 FABLOT vs ROW CDPM Analysis</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }}
+        .chart-container {{
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }}
+        .table-container {{
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .table-title {{
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }}
+        #failureTable {{
+            font-size: 12px;
+            width: 100% !important;
+        }}
+        #failureTable thead th {{
+            background-color: #4472C4;
+            color: white;
+            padding: 8px;
+            text-align: left;
+        }}
+        #failureTable thead tr:nth-child(2) th {{
+            background-color: #f0f0f0;
+            padding: 5px;
+        }}
+        #failureTable tbody td {{
+            padding: 6px 8px;
+            border-bottom: 1px solid #ddd;
+        }}
+        #failureTable tbody tr:hover {{
+            background-color: #f5f5f5;
+        }}
+        #failureTable tbody tr:nth-child(even) {{
+            background-color: #fafafa;
+        }}
+        .dataTables_wrapper {{
+            font-size: 12px;
+        }}
+        .dataTables_filter {{
+            margin-bottom: 10px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        {chart_html}
+    </div>
+
+    <div class="table-container">
+        <div class="table-title">Detailed Failure Data - Filterable Table</div>
+        <table id="failureTable" class="display" style="width:100%">
+            <thead>
+                <tr>{table_headers}</tr>
+                <tr>{filter_headers}</tr>
+            </thead>
+            <tbody>
+                {table_rows}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        $(document).ready(function() {{
+            // Setup - add a text input to each header cell for filtering
+            var table = $('#failureTable').DataTable({{
+                orderCellsTop: true,
+                fixedHeader: true,
+                pageLength: 25,
+                scrollX: true,
+                dom: 'Bfrtip',
+                order: [[0, 'asc']]
+            }});
+
+            // Apply the filter
+            $('#failureTable thead tr:eq(1) th').each(function(i) {{
+                $('input', this).on('keyup change', function() {{
+                    if (table.column(i).search() !== this.value) {{
+                        table.column(i).search(this.value).draw();
+                    }}
+                }});
+            }});
+        }});
+    </script>
+</body>
+</html>
+'''
+
 # Save to HTML
-fig.write_html("/home/asegaran/MODULE_YIELD_DASHBOARD/fablot_row_chart.html")
+with open("/home/asegaran/MODULE_YIELD_DASHBOARD/fablot_row_chart.html", "w") as f:
+    f.write(full_html)
+
 print(f"\nChart saved to: /home/asegaran/MODULE_YIELD_DASHBOARD/fablot_row_chart.html")
 
 # Create detailed failure table
