@@ -247,15 +247,16 @@ print(merged_df[['FABLOT', 'Row', 'Fail_Count']].to_string(index=False))
 
 # Create visualization
 fig = make_subplots(
-    rows=3, cols=1,
+    rows=4, cols=1,
     subplot_titles=(
         "FABLOT vs ROW CDPM (All Lots - WW202612)",
         "FABLOTs with Non-Zero ROW CDPM & Failure Counts",
-        "Failure Breakdown by FABLOTs - FAILCRAWLER & DRAMFAIL"
+        "Failure Breakdown by FABLOTs - FAILCRAWLER & DRAMFAIL",
+        "ULOC Commonality Heatmap - Failure Location Analysis"
     ),
-    vertical_spacing=0.12,
-    row_heights=[0.3, 0.35, 0.35],
-    specs=[[{"secondary_y": False}], [{"secondary_y": True}], [{"secondary_y": False}]]
+    vertical_spacing=0.08,
+    row_heights=[0.22, 0.26, 0.26, 0.26],
+    specs=[[{"secondary_y": False}], [{"secondary_y": True}], [{"secondary_y": False}], [{"secondary_y": False}]]
 )
 
 # Plot 1: All FABLOTs - bar chart
@@ -341,18 +342,64 @@ for category in fail_by_category.columns:
         row=3, col=1
     )
 
+# Plot 4: ULOC Commonality Heatmap
+# Create pivot table: FABLOT vs ULOC
+uloc_pivot = df_fail.pivot_table(
+    index='FABLOT',
+    columns='ULOC',
+    aggfunc='size',
+    fill_value=0
+)
+
+# Sort FABLOTs by ROW CDPM (highest first)
+uloc_pivot = uloc_pivot.reindex(sorted_fablots)
+uloc_pivot = uloc_pivot.fillna(0)
+
+# Create heatmap
+fig.add_trace(
+    go.Heatmap(
+        z=uloc_pivot.values,
+        x=uloc_pivot.columns.tolist(),
+        y=uloc_pivot.index.tolist(),
+        colorscale='YlOrRd',
+        showscale=True,
+        colorbar=dict(
+            title="Fail Count",
+            len=0.2,
+            y=0.12,
+        ),
+        hovertemplate="<b>FABLOT:</b> %{y}<br><b>ULOC:</b> %{x}<br><b>Fail Count:</b> %{z}<extra></extra>",
+    ),
+    row=4, col=1
+)
+
+# Add text annotations on heatmap cells
+for i, fablot in enumerate(uloc_pivot.index):
+    for j, uloc in enumerate(uloc_pivot.columns):
+        val = uloc_pivot.loc[fablot, uloc]
+        if val > 0:
+            fig.add_annotation(
+                x=uloc,
+                y=fablot,
+                text=str(int(val)),
+                showarrow=False,
+                font=dict(color='white', size=12, weight='bold'),
+                xref='x4',
+                yref='y4',
+            )
+
 # Update layout
 fig.update_layout(
     title=dict(
         text="SOCAMM2 FABLOT vs ROW CDPM Correlation Analysis (MFG_WW 202612)",
         font=dict(size=16)
     ),
-    height=1100,
+    height=1400,
     barmode='stack',
     legend=dict(
         orientation="h",
         yanchor="top",
-        y=-0.05,
+        y=-0.03,
         xanchor="center",
         x=0.5,
         bgcolor="rgba(255,255,255,0.8)",
@@ -371,6 +418,8 @@ fig.update_yaxes(title_text="ROW CDPM", row=1, col=1)
 fig.update_yaxes(title_text="ROW CDPM", row=2, col=1, secondary_y=False)
 fig.update_yaxes(title_text="Fail Count", row=2, col=1, secondary_y=True, range=[0, 3])
 fig.update_yaxes(title_text="Failure Count", row=3, col=1)
+fig.update_xaxes(title_text="ULOC (Unit Location)", row=4, col=1)
+fig.update_yaxes(title_text="FABLOT", row=4, col=1)
 
 # Save to HTML
 fig.write_html("/home/asegaran/MODULE_YIELD_DASHBOARD/fablot_row_chart.html")
@@ -395,3 +444,11 @@ print(f"\n--- Correlation Analysis ---")
 corr_df = merged_df[['Row', 'Fail_Count']].copy()
 correlation = corr_df['Row'].corr(corr_df['Fail_Count'])
 print(f"Correlation between ROW CDPM and Fail Count: {correlation:.3f}")
+
+# ULOC analysis
+print(f"\n--- ULOC Commonality Analysis ---")
+uloc_counts = df_fail['ULOC'].value_counts()
+print("ULOC Frequency:")
+for uloc, count in uloc_counts.items():
+    fablots = df_fail[df_fail['ULOC'] == uloc]['FABLOT'].tolist()
+    print(f"  {uloc}: {count} failures - FABLOTs: {', '.join(fablots)}")
