@@ -1737,13 +1737,13 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
         with col1:
             test_summary = st.text_input(
                 "Test Summary",
-                placeholder="e.g., 235420000",
-                help="Enter the test summary number"
+                placeholder="e.g., JAB/AY/S9/001NB",
+                help="Enter the test summary (e.g., JAB/AY/S9/001NB)"
             )
         with col2:
             fid = st.text_input(
                 "FID",
-                placeholder="e.g., 083371K:01:16:06",
+                placeholder="e.g., 785322L:14:P15:04",
                 help="Enter the FID (FABLOT:WW:XPOS:YPOS)"
             )
 
@@ -1755,7 +1755,34 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                     try:
                         import subprocess
 
-                        # Build the fdat95 command - filter only lines with valid hex addresses
+                        # Step 1: Auto-detect DID using mtsums
+                        detected_did = None
+                        mtsums_cmd = f'mtsums {test_summary} -fid=/{fid}/ -format+=fid_status2 +quiet 2>/dev/null | grep -v "^~" | grep -v "^FID" | head -1'
+                        mtsums_result = subprocess.run(
+                            mtsums_cmd,
+                            shell=True,
+                            capture_output=True,
+                            text=True,
+                            timeout=60
+                        )
+
+                        if mtsums_result.stdout.strip():
+                            # Parse mtsums output to get DESIGN column (column index may vary)
+                            # Format: FID ULOC WREG MSN ... DESIGN FAB STEP ...
+                            fields = mtsums_result.stdout.strip().split()
+                            # Find DESIGN field - it's typically after SUMMARY
+                            for i, field in enumerate(fields):
+                                if field.upper() in ['Y62P', 'Y6CP', 'Y63N']:
+                                    detected_did = field.lower()
+                                    break
+
+                        if detected_did:
+                            st.session_state.fail_viewer_part_type = detected_did
+                            st.info(f"Auto-detected DID: **{detected_did.upper()}**")
+                        else:
+                            st.warning("Could not auto-detect DID, using selected Part Type")
+
+                        # Step 2: Build the fdat95 command - filter only lines with valid hex addresses
                         cmd = f"fdat95 {test_summary} -fgrp=/{fid}/ +faregonly +archive 2>/dev/null | tr ' ' '\\n' | awk -F ':' '$1 ~ /^[0-9A-Fa-f]+$/ && $2 ~ /^[0-9A-Fa-f]+$/ && $3 ~ /^[0-9]+$/ {{print $1\",\"$2\",\"$3}}'"
 
                         # Run the command
@@ -1793,8 +1820,9 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                             if data:
                                 fail_df = pd.DataFrame(data)
                                 st.session_state.fail_viewer_data = fail_df
-                                st.session_state.fail_viewer_source = f"Module BE: {fid}"
-                                st.success(f"Loaded {len(fail_df)} fail addresses from FID {fid}")
+                                did_label = detected_did.upper() if detected_did else part_type.upper()
+                                st.session_state.fail_viewer_source = f"Module BE: {fid} ({did_label})"
+                                st.success(f"Loaded {len(fail_df)} fail addresses from FID {fid} ({did_label})")
                             else:
                                 st.warning("No valid fail addresses found in the output")
                                 if result.stdout:
@@ -1930,9 +1958,16 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
     if fail_df is not None and not fail_df.empty:
         st.markdown("---")
 
+        # Use auto-detected part type from Module BE if available, otherwise use dropdown selection
+        effective_part_type = st.session_state.get('fail_viewer_part_type', part_type)
+
+        # Show which part type is being used
+        if 'fail_viewer_part_type' in st.session_state and st.session_state.fail_viewer_part_type != part_type:
+            st.info(f"Using auto-detected DID: **{effective_part_type.upper()}** (from Module BE)")
+
         # Process data for physical coordinates
         try:
-            geometry = load_geometry(part_type)
+            geometry = load_geometry(effective_part_type)
             processed_df = process_fail_data(fail_df, geometry)
 
             # Show data summary
@@ -1959,8 +1994,8 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
 
                 fig = create_fail_viewer(
                     processed_df,
-                    part_type=part_type,
-                    title=f"Fail Viewer - {part_type.upper()}",
+                    part_type=effective_part_type,
+                    title=f"Fail Viewer - {effective_part_type.upper()}",
                     show_bank_grid=show_grid,
                     show_bank_labels=show_labels,
                     color_by=color_by if color_by != "none" else None,
@@ -1976,8 +2011,8 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
 
                 fig = create_fail_heatmap(
                     processed_df,
-                    part_type=part_type,
-                    title=f"Fail Density - {part_type.upper()}",
+                    part_type=effective_part_type,
+                    title=f"Fail Density - {effective_part_type.upper()}",
                     bin_size=bin_size,
                     width=900,
                     height=700
@@ -1991,7 +2026,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
 
             with viz_tab4:
                 st.markdown("### Fail Distribution by Bank")
-                fig = create_bank_distribution(processed_df, part_type=part_type, title="Fails per Bank")
+                fig = create_bank_distribution(processed_df, part_type=effective_part_type, title="Fails per Bank")
                 st.plotly_chart(fig, use_container_width=True)
 
             # Data table
