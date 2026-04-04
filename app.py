@@ -1765,7 +1765,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
 
                         # Step 1: Auto-detect DID using mtsums
                         detected_did = None
-                        mtsums_cmd = f'mtsums {test_summary} -fid=/{fid}/ -format+=fid_status2 +quiet 2>/dev/null | grep -v "^~" | grep -v "^FID" | head -1'
+                        mtsums_cmd = f'mtsums -FORCEAPI {test_summary} -fid=/{fid}/ -format+=fid_status2 +quiet 2>&1 | grep -v "^~" | grep -v "^FID" | head -1'
                         mtsums_result = subprocess.run(
                             mtsums_cmd,
                             shell=True,
@@ -1780,7 +1780,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                             fields = mtsums_result.stdout.strip().split()
                             # Find DESIGN field - it's typically after SUMMARY
                             for i, field in enumerate(fields):
-                                if field.upper() in ['Y62P', 'Y6CP', 'Y63N']:
+                                if field.upper() in ['Y62P', 'Y6CP', 'Y63N', 'Y42M']:
                                     detected_did = field.lower()
                                     break
 
@@ -1792,7 +1792,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
 
                         # Step 2: Use mtsums +fa to get fail addresses
                         # Format: FID,DESIGN_ID,ROW,COL,DQ
-                        cmd = f"mtsums -FORCEAPI +quiet +csv {test_summary} -fid=/{fid}/ -format=FID,DESIGN_ID,ROW,COL,DQ +fa 2>/dev/null"
+                        cmd = f"mtsums -FORCEAPI +quiet +csv {test_summary} -fid=/{fid}/ -format=FID,DESIGN_ID,ROW,COL,DQ +fa"
 
                         # Run the command
                         result = subprocess.run(
@@ -1825,7 +1825,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                                         data.append({'row': row, 'col': col, 'dq': dq})
 
                                         # Also auto-detect DID from first row if not already detected
-                                        if not detected_did and parts[1].upper() in ['Y62P', 'Y6CP', 'Y63N']:
+                                        if not detected_did and parts[1].upper() in ['Y62P', 'Y6CP', 'Y63N', 'Y42M']:
                                             detected_did = parts[1].lower()
                                             st.session_state.fail_viewer_part_type = detected_did
                                     except ValueError:
