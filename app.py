@@ -16,6 +16,17 @@ from src.data_processor import DataProcessor
 from src.cache import FrptCache
 from config.settings import Settings
 
+# Fail Viewer module
+from fail_viewer import (
+    create_fail_viewer,
+    create_fail_heatmap,
+    create_dq_distribution,
+    create_bank_distribution,
+    load_fail_csv,
+    process_fail_data,
+    load_geometry
+)
+
 
 # Configure logging to file for debugging
 logging.basicConfig(
@@ -1679,6 +1690,324 @@ def render_pareto_tab(filters: dict[str, Any]) -> None:
         st.info("Click 'Fetch Pareto Data' to load failed register data for HMFN, HMB1, and QMON.")
 
 
+def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
+    """Render the Fail Viewer tab for visualizing fail address patterns."""
+    import os
+    import numpy as np
+
+    st.subheader("Fail Viewer")
+    st.markdown("""
+    Visualize raw fail address data from ATE testing. Upload a CSV file with fail addresses
+    or generate sample data to explore the viewer.
+    """)
+
+    # Part type selection
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        part_type = st.selectbox(
+            "Part Type",
+            options=["y62p", "y6cp", "y63n"],
+            index=0,
+            help="Select the part type for die geometry"
+        )
+    with col2:
+        color_by = st.selectbox(
+            "Color By",
+            options=["dq", "bank", "none"],
+            index=0,
+            help="Color fail points by DQ, Bank, or single color"
+        )
+    with col3:
+        marker_size = st.slider("Marker Size", min_value=1, max_value=10, value=3)
+
+    # File upload or sample data
+    st.markdown("---")
+    data_source = st.radio(
+        "Data Source",
+        options=["Upload CSV", "Module BE", "Generate Sample Data"],
+        horizontal=True
+    )
+
+    fail_df = None
+
+    if data_source == "Module BE":
+        st.markdown("**Fetch fail addresses from Module Backend using fdat95**")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            test_summary = st.text_input(
+                "Test Summary",
+                placeholder="e.g., 235420000",
+                help="Enter the test summary number"
+            )
+        with col2:
+            fid = st.text_input(
+                "FID",
+                placeholder="e.g., 083371K:01:16:06",
+                help="Enter the FID (FABLOT:WW:XPOS:YPOS)"
+            )
+
+        if st.button("Fetch Fail Data", type="primary", key="fetch_fdat95"):
+            if not test_summary or not fid:
+                st.error("Please enter both Test Summary and FID")
+            else:
+                with st.spinner(f"Fetching fail data for FID {fid}..."):
+                    try:
+                        import subprocess
+
+                        # Build the fdat95 command - filter only lines with valid hex addresses
+                        cmd = f"fdat95 {test_summary} -fgrp=/{fid}/ +faregonly +archive 2>/dev/null | tr ' ' '\\n' | awk -F ':' '$1 ~ /^[0-9A-Fa-f]+$/ && $2 ~ /^[0-9A-Fa-f]+$/ && $3 ~ /^[0-9]+$/ {{print $1\",\"$2\",\"$3}}'"
+
+                        # Run the command
+                        result = subprocess.run(
+                            cmd,
+                            shell=True,
+                            capture_output=True,
+                            text=True,
+                            timeout=120
+                        )
+
+                        if result.returncode != 0 and not result.stdout:
+                            st.error(f"fdat95 command failed: {result.stderr}")
+                        else:
+                            # Parse the output - each line is ROW,COL,DQ (hex values)
+                            lines = result.stdout.strip().split('\n')
+                            data = []
+
+                            for line in lines:
+                                line = line.strip()
+                                if not line or ',' not in line:
+                                    continue
+
+                                parts = line.split(',')
+                                if len(parts) >= 3:
+                                    try:
+                                        # Convert hex to int (row and col are hex, dq is decimal)
+                                        row = int(parts[0], 16)
+                                        col = int(parts[1], 16)
+                                        dq = int(parts[2])
+                                        data.append({'row': row, 'col': col, 'dq': dq})
+                                    except ValueError:
+                                        continue
+
+                            if data:
+                                fail_df = pd.DataFrame(data)
+                                st.session_state.fail_viewer_data = fail_df
+                                st.session_state.fail_viewer_source = f"Module BE: {fid}"
+                                st.success(f"Loaded {len(fail_df)} fail addresses from FID {fid}")
+                            else:
+                                st.warning("No valid fail addresses found in the output")
+                                if result.stdout:
+                                    with st.expander("Raw output"):
+                                        st.code(result.stdout[:2000])
+                    except subprocess.TimeoutExpired:
+                        st.error("Command timed out after 120 seconds")
+                    except Exception as e:
+                        st.error(f"Error fetching data: {e}")
+
+        # Use stored data if available
+        if "fail_viewer_data" in st.session_state:
+            fail_df = st.session_state.fail_viewer_data
+            if "fail_viewer_source" in st.session_state:
+                st.info(f"Using data from: {st.session_state.fail_viewer_source}")
+
+    elif data_source == "Upload CSV":
+        uploaded_file = st.file_uploader(
+            "Upload Fail CSV",
+            type=["csv"],
+            help="CSV format: row,col,dq (no header) or with header columns named 'row', 'col', 'dq'"
+        )
+
+        if uploaded_file is not None:
+            try:
+                # Try to detect if file has header
+                content = uploaded_file.getvalue().decode('utf-8')
+                first_line = content.split('\n')[0]
+                has_header = not first_line.replace(',', '').replace('.', '').replace('-', '').isdigit()
+
+                uploaded_file.seek(0)
+                if has_header:
+                    fail_df = pd.read_csv(uploaded_file)
+                    fail_df.columns = [c.lower().strip() for c in fail_df.columns]
+                else:
+                    fail_df = pd.read_csv(uploaded_file, header=None, names=['row', 'col', 'dq'])
+
+                # Ensure numeric
+                fail_df['row'] = pd.to_numeric(fail_df['row'], errors='coerce')
+                fail_df['col'] = pd.to_numeric(fail_df['col'], errors='coerce')
+                fail_df['dq'] = pd.to_numeric(fail_df['dq'], errors='coerce')
+                fail_df = fail_df.dropna()
+
+                st.success(f"Loaded {len(fail_df)} fail addresses")
+            except Exception as e:
+                st.error(f"Error loading CSV: {e}")
+
+    else:  # Generate Sample Data
+        col1, col2 = st.columns(2)
+        with col1:
+            n_fails = st.number_input("Number of Fails", min_value=100, max_value=50000, value=2000, step=500)
+        with col2:
+            pattern_type = st.selectbox(
+                "Pattern Type",
+                options=["Random + Column Plane", "Random + Row Pattern", "Random Only", "Block Pattern"],
+                index=0
+            )
+
+        if st.button("Generate Sample Data", type="primary"):
+            try:
+                geometry = load_geometry(part_type)
+                row_per_bank = getattr(geometry, 'ROW_PER_BANK', 68340)
+                col_per_bank = getattr(geometry, 'COL_PER_BANK', 17808)
+
+                np.random.seed(42)
+                data = []
+
+                if pattern_type == "Random Only":
+                    for _ in range(n_fails):
+                        data.append({
+                            'row': np.random.randint(0, row_per_bank),
+                            'col': np.random.randint(0, col_per_bank),
+                            'dq': np.random.randint(0, 16)
+                        })
+                elif pattern_type == "Random + Column Plane":
+                    # 60% random, 40% column plane
+                    for _ in range(int(n_fails * 0.6)):
+                        data.append({
+                            'row': np.random.randint(0, row_per_bank),
+                            'col': np.random.randint(0, col_per_bank),
+                            'dq': np.random.randint(0, 16)
+                        })
+                    col_plane = np.random.randint(1000, col_per_bank - 1000)
+                    for _ in range(int(n_fails * 0.4)):
+                        data.append({
+                            'row': np.random.randint(0, row_per_bank),
+                            'col': col_plane + np.random.randint(-50, 50),
+                            'dq': np.random.choice([3, 7])
+                        })
+                elif pattern_type == "Random + Row Pattern":
+                    # 60% random, 40% row pattern
+                    for _ in range(int(n_fails * 0.6)):
+                        data.append({
+                            'row': np.random.randint(0, row_per_bank),
+                            'col': np.random.randint(0, col_per_bank),
+                            'dq': np.random.randint(0, 16)
+                        })
+                    row_fail = np.random.randint(10000, row_per_bank - 10000)
+                    for _ in range(int(n_fails * 0.4)):
+                        data.append({
+                            'row': row_fail + np.random.randint(-20, 20),
+                            'col': np.random.randint(0, col_per_bank),
+                            'dq': np.random.randint(0, 16)
+                        })
+                else:  # Block Pattern
+                    # 50% random, 50% block
+                    for _ in range(int(n_fails * 0.5)):
+                        data.append({
+                            'row': np.random.randint(0, row_per_bank),
+                            'col': np.random.randint(0, col_per_bank),
+                            'dq': np.random.randint(0, 16)
+                        })
+                    block_row = np.random.randint(5000, row_per_bank - 10000)
+                    block_col = np.random.randint(1000, col_per_bank - 5000)
+                    for _ in range(int(n_fails * 0.5)):
+                        data.append({
+                            'row': block_row + np.random.randint(0, 5000),
+                            'col': block_col + np.random.randint(0, 3000),
+                            'dq': np.random.choice([0, 1, 2, 3])
+                        })
+
+                fail_df = pd.DataFrame(data)
+                st.session_state.fail_viewer_data = fail_df
+                st.success(f"Generated {len(fail_df)} fail addresses with '{pattern_type}' pattern")
+            except Exception as e:
+                st.error(f"Error generating data: {e}")
+
+        # Use stored data if available
+        if "fail_viewer_data" in st.session_state:
+            fail_df = st.session_state.fail_viewer_data
+
+    # Render visualizations if data is available
+    if fail_df is not None and not fail_df.empty:
+        st.markdown("---")
+
+        # Process data for physical coordinates
+        try:
+            geometry = load_geometry(part_type)
+            processed_df = process_fail_data(fail_df, geometry)
+
+            # Show data summary
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Fails", len(processed_df))
+            with col2:
+                st.metric("Unique DQs", processed_df['dq'].nunique())
+            with col3:
+                st.metric("Unique Banks", processed_df['bank'].nunique())
+            with col4:
+                top_dq = processed_df['dq'].mode().iloc[0] if len(processed_df) > 0 else "N/A"
+                st.metric("Top DQ", f"DQ{int(top_dq)}" if top_dq != "N/A" else "N/A")
+
+            # Visualization tabs
+            viz_tab1, viz_tab2, viz_tab3, viz_tab4 = st.tabs([
+                "Die Map", "Heatmap", "DQ Distribution", "Bank Distribution"
+            ])
+
+            with viz_tab1:
+                st.markdown("### Fail Map (Die View)")
+                show_grid = st.checkbox("Show Bank Grid", value=True, key="fv_grid")
+                show_labels = st.checkbox("Show Bank Labels", value=True, key="fv_labels")
+
+                fig = create_fail_viewer(
+                    processed_df,
+                    part_type=part_type,
+                    title=f"Fail Viewer - {part_type.upper()}",
+                    show_bank_grid=show_grid,
+                    show_bank_labels=show_labels,
+                    color_by=color_by if color_by != "none" else None,
+                    marker_size=marker_size,
+                    width=900,
+                    height=700
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            with viz_tab2:
+                st.markdown("### Fail Density Heatmap")
+                bin_size = st.slider("Bin Size", min_value=50, max_value=1000, value=200, step=50, key="fv_bin")
+
+                fig = create_fail_heatmap(
+                    processed_df,
+                    part_type=part_type,
+                    title=f"Fail Density - {part_type.upper()}",
+                    bin_size=bin_size,
+                    width=900,
+                    height=700
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            with viz_tab3:
+                st.markdown("### Fail Distribution by DQ")
+                fig = create_dq_distribution(fail_df, title="Fails per DQ")
+                st.plotly_chart(fig, use_container_width=True)
+
+            with viz_tab4:
+                st.markdown("### Fail Distribution by Bank")
+                fig = create_bank_distribution(processed_df, part_type=part_type, title="Fails per Bank")
+                st.plotly_chart(fig, use_container_width=True)
+
+            # Data table
+            with st.expander("View Raw Data"):
+                st.dataframe(processed_df.head(1000), use_container_width=True)
+                if len(processed_df) > 1000:
+                    st.caption(f"Showing first 1000 of {len(processed_df)} rows")
+
+        except Exception as e:
+            st.error(f"Error processing fail data: {e}")
+            logger.exception("Fail viewer error")
+
+    else:
+        st.info("Upload a CSV file or generate sample data to visualize fail patterns.")
+
+
 def main() -> None:
     """Main application entry point."""
     setup_page()
@@ -1715,7 +2044,7 @@ def main() -> None:
     st.session_state.use_cache = use_cache
 
     # Create tabs
-    tab1, tab2, tab3 = st.tabs(["Yield Analysis", "Module ELC Yield", "Pareto Analysis"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Yield Analysis", "Module ELC Yield", "Pareto Analysis", "Fail Viewer"])
 
     with tab1:
         # Fetch button for Module Yield data
@@ -1796,6 +2125,9 @@ def main() -> None:
 
     with tab3:
         render_pareto_tab(filters)
+
+    with tab4:
+        render_fail_viewer_tab(filters)
 
 
 if __name__ == "__main__":
