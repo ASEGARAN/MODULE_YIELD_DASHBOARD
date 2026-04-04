@@ -290,7 +290,7 @@ def get_repair_info_from_mtsums(test_summary: str, fid: str, timeout: int = 60) 
         Dict with repair metadata
     """
     try:
-        cmd = f'mtsums {test_summary} -fid=/{fid}/ +quiet -format=FID,DESIGN,STEP,FAILCRAWLER,ADDRMASK,ADDRCNT,ROWCNT,COLCNT 2>/dev/null | grep -v "^FID" | grep -v "^~" | head -1'
+        cmd = f'/u/dramsoft/bin/mtsums {test_summary} -fid=/{fid}/ +quiet -format=FID,DESIGN,STEP,FAILCRAWLER,ADDRMASK,ADDRCNT,ROWCNT,COLCNT 2>/dev/null | grep -v "^FID" | grep -v "^~" | head -1'
 
         result = subprocess.run(
             cmd, shell=True, capture_output=True, text=True, timeout=timeout

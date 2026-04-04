@@ -1765,7 +1765,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
 
                         # Step 1: Auto-detect DID using mtsums
                         detected_did = None
-                        mtsums_cmd = f'mtsums -FORCEAPI {test_summary} -fid=/{fid}/ -format+=fid_status2 +quiet 2>&1 | grep -v "^~" | grep -v "^FID" | head -1'
+                        mtsums_cmd = f'/u/dramsoft/bin/mtsums -FORCEAPI {test_summary} -fid=/{fid}/ -format+=fid_status2 +quiet 2>&1 | grep -v "^~" | grep -v "^FID" | head -1'
                         mtsums_result = subprocess.run(
                             mtsums_cmd,
                             shell=True,
@@ -1792,7 +1792,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
 
                         # Step 2: Use mtsums +fa to get fail addresses
                         # Format: FID,DESIGN_ID,ROW,COL,DQ
-                        cmd = f"mtsums -FORCEAPI +quiet +csv {test_summary} -fid=/{fid}/ -format=FID,DESIGN_ID,ROW,COL,DQ +fa"
+                        cmd = f"/u/dramsoft/bin/mtsums -FORCEAPI +quiet +csv {test_summary} -fid=/{fid}/ -format=FID,DESIGN_ID,ROW,COL,DQ +fa"
 
                         # Run the command
                         result = subprocess.run(
