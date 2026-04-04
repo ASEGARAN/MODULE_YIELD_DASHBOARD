@@ -1790,8 +1790,9 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                         else:
                             st.warning("Could not auto-detect DID, using selected Part Type")
 
-                        # Step 2: Build the fdat95 command - filter only lines with valid hex addresses
-                        cmd = f"fdat95 {test_summary} -fgrp=/{fid}/ +faregonly +archive 2>/dev/null | tr ' ' '\\n' | awk -F ':' '$1 ~ /^[0-9A-Fa-f]+$/ && $2 ~ /^[0-9A-Fa-f]+$/ && $3 ~ /^[0-9]+$/ {{print $1\",\"$2\",\"$3}}'"
+                        # Step 2: Use mtsums +fa to get fail addresses
+                        # Format: FID,DESIGN_ID,ROW,COL,DQ
+                        cmd = f"mtsums -FORCEAPI +quiet +csv {test_summary} -fid=/{fid}/ -format=FID,DESIGN_ID,ROW,COL,DQ +fa 2>/dev/null"
 
                         # Run the command
                         result = subprocess.run(
@@ -1803,25 +1804,30 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                         )
 
                         if result.returncode != 0 and not result.stdout:
-                            st.error(f"fdat95 command failed: {result.stderr}")
+                            st.error(f"mtsums +fa command failed: {result.stderr}")
                         else:
-                            # Parse the output - each line is ROW,COL,DQ (hex values)
+                            # Parse CSV output - skip header, extract ROW,COL,DQ
                             lines = result.stdout.strip().split('\n')
                             data = []
 
-                            for line in lines:
+                            for line in lines[1:]:  # Skip header
                                 line = line.strip()
                                 if not line or ',' not in line:
                                     continue
 
                                 parts = line.split(',')
-                                if len(parts) >= 3:
+                                # Format: FID,DESIGN_ID,ROW,COL,DQ
+                                if len(parts) >= 5:
                                     try:
-                                        # Convert hex to int (row and col are hex, dq is decimal)
-                                        row = int(parts[0], 16)
-                                        col = int(parts[1], 16)
-                                        dq = int(parts[2])
+                                        row = int(parts[2])  # ROW (decimal from mtsums)
+                                        col = int(parts[3])  # COL (decimal from mtsums)
+                                        dq = int(parts[4])   # DQ
                                         data.append({'row': row, 'col': col, 'dq': dq})
+
+                                        # Also auto-detect DID from first row if not already detected
+                                        if not detected_did and parts[1].upper() in ['Y62P', 'Y6CP', 'Y63N']:
+                                            detected_did = parts[1].lower()
+                                            st.session_state.fail_viewer_part_type = detected_did
                                     except ValueError:
                                         continue
 
