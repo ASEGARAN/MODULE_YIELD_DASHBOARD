@@ -378,3 +378,118 @@ def render_fail_map(csv_path: str = None, df: pd.DataFrame = None, part_type: st
         return create_fail_viewer(df, part_type=part_type, **kwargs)
     else:
         raise ValueError("Either csv_path or df must be provided")
+
+
+def add_repair_overlay(
+    fig: go.Figure,
+    repair_data,
+    part_type: str = 'y62p',
+    line_width: int = 2
+) -> go.Figure:
+    """
+    Add repair overlay traces to an existing fail viewer figure.
+
+    Supports both new and legacy schema:
+    - PhysicalRepairOverlay: New schema with overlay_repairs (already converted)
+    - LogicalRepairData: Legacy schema that needs equation application
+
+    Args:
+        fig: Existing Plotly Figure (from create_fail_viewer)
+        repair_data: PhysicalRepairOverlay or LogicalRepairData object
+        part_type: Part type for geometry (used if equations need to be applied)
+        line_width: Width of repair lines
+
+    Returns:
+        Updated Plotly Figure with repair traces
+    """
+    from .repair import (
+        apply_did_equations,
+        generate_repair_traces,
+        PhysicalRepairOverlay,
+        LogicalRepairData,
+    )
+
+    # Determine which schema we have
+    if isinstance(repair_data, PhysicalRepairOverlay):
+        # New schema - already has physical coordinates
+        physical_overlay = repair_data
+    elif hasattr(repair_data, 'overlay_repairs'):
+        # Duck typing for PhysicalRepairOverlay
+        physical_overlay = repair_data
+    elif hasattr(repair_data, 'repairs'):
+        # Legacy LogicalRepairData - needs equation application
+        geometry = load_geometry(part_type)
+        physical_overlay = apply_did_equations(repair_data, geometry)
+    else:
+        raise ValueError(f"Unknown repair_data type: {type(repair_data)}")
+
+    # Generate repair traces from physical overlay
+    repair_traces = generate_repair_traces(physical_overlay)
+
+    # Add traces to figure
+    for trace_dict in repair_traces:
+        # Apply line_width override
+        line_props = trace_dict.get('line', {}).copy()
+        line_props['width'] = line_width
+
+        fig.add_trace(go.Scatter(
+            x=trace_dict['x'],
+            y=trace_dict['y'],
+            mode=trace_dict['mode'],
+            line=line_props,
+            name=trace_dict.get('name'),
+            showlegend=trace_dict.get('showlegend', True),
+            legendgroup=trace_dict.get('legendgroup'),
+            hovertemplate=trace_dict.get('hovertemplate'),
+            opacity=trace_dict.get('opacity', 0.9)
+        ))
+
+    return fig
+
+
+def create_fail_viewer_with_repairs(
+    fail_data: pd.DataFrame,
+    repair_data,
+    part_type: str = 'y62p',
+    title: str = 'Fail Viewer with Repairs',
+    repair_line_width: int = 2,
+    **kwargs
+) -> go.Figure:
+    """
+    Create fail viewer with repair overlay in one call.
+
+    Args:
+        fail_data: DataFrame with row, col, dq columns
+        repair_data: RepairData object
+        part_type: Part type for geometry
+        title: Plot title
+        repair_line_width: Width of repair lines
+        **kwargs: Additional arguments for create_fail_viewer
+
+    Returns:
+        Plotly Figure with fails and repairs
+    """
+    from .repair import apply_did_equations, get_repair_summary
+
+    # Create base fail viewer
+    fig = create_fail_viewer(fail_data, part_type=part_type, title=title, **kwargs)
+
+    # Load geometry
+    geometry = load_geometry(part_type)
+
+    # Apply DID equations to repair data
+    repair_data = apply_did_equations(repair_data, geometry)
+
+    # Add repair overlay
+    fig = add_repair_overlay(fig, repair_data, part_type=part_type, line_width=repair_line_width)
+
+    # Update title with repair count
+    summary = get_repair_summary(repair_data)
+    full_title = (
+        f"{title}<br>"
+        f"<sub>Repairs: {summary['row_repairs']} Row, {summary['column_repairs']} Column | "
+        f"DID: {summary['did'].upper()}</sub>"
+    )
+    fig.update_layout(title=dict(text=full_title, x=0.5))
+
+    return fig

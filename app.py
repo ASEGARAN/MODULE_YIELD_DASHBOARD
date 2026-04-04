@@ -24,7 +24,15 @@ from fail_viewer import (
     create_bank_distribution,
     load_fail_csv,
     process_fail_data,
-    load_geometry
+    load_geometry,
+    add_repair_overlay,
+    create_mock_repair_data,
+    apply_did_equations,
+    get_repair_summary,
+    # Real repair loading
+    load_repair_data,
+    get_available_repair_sources,
+    get_repair_info_from_mtsums,
 )
 
 
@@ -1822,6 +1830,9 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                                 st.session_state.fail_viewer_data = fail_df
                                 did_label = detected_did.upper() if detected_did else part_type.upper()
                                 st.session_state.fail_viewer_source = f"Module BE: {fid} ({did_label})"
+                                # Store test summary and FID for repair loading
+                                st.session_state.fail_viewer_test_summary = test_summary
+                                st.session_state.fail_viewer_fid = fid
                                 st.success(f"Loaded {len(fail_df)} fail addresses from FID {fid} ({did_label})")
                             else:
                                 st.warning("No valid fail addresses found in the output")
@@ -1989,9 +2000,25 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
 
             with viz_tab1:
                 st.markdown("### Fail Map (Die View)")
-                show_grid = st.checkbox("Show Bank Grid", value=True, key="fv_grid")
-                show_labels = st.checkbox("Show Bank Labels", value=True, key="fv_labels")
 
+                # Display options
+                opt_col1, opt_col2, opt_col3 = st.columns(3)
+                with opt_col1:
+                    show_grid = st.checkbox("Show Bank Grid", value=True, key="fv_grid")
+                    show_labels = st.checkbox("Show Bank Labels", value=True, key="fv_labels")
+                with opt_col2:
+                    show_repairs = st.checkbox("Show Repair Overlay", value=False, key="fv_repairs")
+                with opt_col3:
+                    if show_repairs:
+                        repair_source = st.selectbox(
+                            "Repair Source",
+                            options=["Mock Data (Demo)", "From Test Artifacts"],
+                            index=0,
+                            key="fv_repair_source",
+                            help="Select repair data source"
+                        )
+
+                # Create base fail viewer
                 fig = create_fail_viewer(
                     processed_df,
                     part_type=effective_part_type,
@@ -2003,6 +2030,115 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                     width=900,
                     height=700
                 )
+
+                # Add repair overlay if enabled
+                if show_repairs:
+                    try:
+                        # Extract FID from session state
+                        fid = None
+                        test_summary = None
+                        source_info = st.session_state.get('fail_viewer_source', '')
+
+                        if 'Module BE' in source_info:
+                            # Parse FID from source info like "Module BE: 785322L:14:P15:04 (Y6CP)"
+                            parts = source_info.replace('Module BE: ', '').split(' ')
+                            if parts:
+                                fid = parts[0]
+                            # Get test summary from session state if available
+                            test_summary = st.session_state.get('fail_viewer_test_summary')
+
+                        if repair_source == "Mock Data (Demo)":
+                            # Generate mock repair data for demonstration
+                            mock_fid = fid or 'SAMPLE:00:P00:00'
+                            repair_data = create_mock_repair_data(
+                                fid=mock_fid,
+                                did=effective_part_type.upper(),
+                                test_step="HMFN"
+                            )
+                            repair_data = apply_did_equations(repair_data, geometry)
+
+                            # Add repair overlay to figure
+                            fig = add_repair_overlay(fig, repair_data, part_type=effective_part_type, line_width=2)
+
+                            # Show repair summary
+                            summary = get_repair_summary(repair_data)
+                            st.caption(
+                                f"Repair Overlay: {summary['row_repairs']} Row repairs (blue), "
+                                f"{summary['column_repairs']} Column repairs (green) | "
+                                f"Source: Mock Data"
+                            )
+                        else:
+                            # Try to load real repair data from artifacts
+                            if fid:
+                                # Check available sources
+                                sources = get_available_repair_sources(fid, effective_part_type.upper())
+
+                                if sources.get('stress_fail_artifact'):
+                                    st.info(f"Found artifact: {sources['stress_fail_path']}")
+
+                                # Try to load repair data
+                                repair_data = load_repair_data(
+                                    fid=fid,
+                                    did=effective_part_type.upper(),
+                                    test_step="HMFN",
+                                    test_summary=test_summary
+                                )
+
+                                if repair_data and repair_data.repairs:
+                                    # Check if we have actual coordinate data or just metadata
+                                    has_real_coords = any(
+                                        r.logical_address.row is not None or r.logical_address.column is not None
+                                        for r in repair_data.repairs
+                                    )
+
+                                    if has_real_coords:
+                                        repair_overlay = apply_did_equations(repair_data, geometry)
+                                        fig = add_repair_overlay(fig, repair_overlay, part_type=effective_part_type, line_width=2)
+                                        summary = get_repair_summary(repair_overlay)
+                                        st.success(
+                                            f"Loaded {summary['total_repairs']} repairs from artifacts | "
+                                            f"Row: {summary['row_repairs']}, Column: {summary['column_repairs']}"
+                                        )
+                                    else:
+                                        # Got metadata but no coordinates - show info and use mock
+                                        meta_repair = repair_data.repairs[0] if repair_data.repairs else None
+                                        if meta_repair and meta_repair.metadata.get('source') == 'mtsums_metadata':
+                                            st.warning(
+                                                f"Repair metadata found (ROWCNT={meta_repair.metadata.get('rowcnt', 0)}, "
+                                                f"COLCNT={meta_repair.metadata.get('colcnt', 0)}) but full coordinates "
+                                                f"require .bin artifact parsing. Using mock overlay for visualization."
+                                            )
+
+                                        # Fall back to mock data with real FID
+                                        repair_data = create_mock_repair_data(
+                                            fid=fid,
+                                            did=effective_part_type.upper(),
+                                            test_step="HMFN"
+                                        )
+                                        repair_data = apply_did_equations(repair_data, geometry)
+                                        fig = add_repair_overlay(fig, repair_data, part_type=effective_part_type, line_width=2)
+                                        st.caption("Showing mock repair overlay (metadata available but full parsing not yet implemented)")
+                                else:
+                                    st.info(
+                                        f"No repair artifacts found for FID {fid}. "
+                                        f"Recommendations: {', '.join(sources.get('recommendations', []))}"
+                                    )
+                                    # Use mock data as fallback
+                                    repair_data = create_mock_repair_data(
+                                        fid=fid,
+                                        did=effective_part_type.upper(),
+                                        test_step="HMFN"
+                                    )
+                                    repair_data = apply_did_equations(repair_data, geometry)
+                                    fig = add_repair_overlay(fig, repair_data, part_type=effective_part_type, line_width=2)
+                                    st.caption("Showing mock repair overlay (no artifacts found)")
+                            else:
+                                st.warning("No FID available - upload data via Module BE to enable real repair loading")
+
+                    except Exception as e:
+                        st.warning(f"Could not load repair data: {e}")
+                        logger.exception("Repair loading error")
+
                 st.plotly_chart(fig, use_container_width=True)
 
             with viz_tab2:
