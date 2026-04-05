@@ -1405,14 +1405,14 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     elc_target_x.append(ww)
                     elc_target_y.append(target)
 
-                # Add ELC yield target marker (stepped line) - orange neon
+                # Add ELC yield target marker (stepped line) - green neon dashed
                 fig.add_trace(
                     go.Scatter(
                         x=elc_target_x,
                         y=elc_target_y,
                         mode="lines",
                         name="ELC Target",
-                        line=dict(color="#FF9100", width=3, dash="dot", shape="hv"),
+                        line=dict(color="#39FF14", width=3, dash="dash", shape="hv"),
                         showlegend=True,
                         hovertemplate="<b>ELC Target:</b> %{y:.2f}%<extra></extra>",
                     )
