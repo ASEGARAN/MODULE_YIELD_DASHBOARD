@@ -41,7 +41,7 @@ class FrptCache:
     """File-based cache for frpt query results."""
 
     DEFAULT_CACHE_DIR = Path.home() / ".cache" / "module_yield_dashboard"
-    DEFAULT_TTL_SECONDS = 3600  # 1 hour default TTL
+    DEFAULT_TTL_SECONDS = 86400  # 24 hours default TTL
 
     def __init__(
         self,
