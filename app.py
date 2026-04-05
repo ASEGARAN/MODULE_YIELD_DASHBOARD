@@ -1376,6 +1376,48 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     )
                 )
 
+                # ELC target schedule by month (C2 Y6CP 7.5Gbps)
+                # Format: {(year, month): target_pct}
+                elc_target_schedule = {
+                    (2025, 12): 95.54,  # Dec'25
+                    (2026, 1): 95.54,   # Jan'26
+                    (2026, 2): 94.57,   # Feb'26
+                    (2026, 3): 96.03,   # Mar'26
+                    (2026, 4): 96.03,   # Apr'26
+                    (2026, 5): 96.03,   # May'26
+                    (2026, 6): 96.03,   # Jun'26 (default forward)
+                }
+
+                def get_elc_target(ww_str):
+                    """Get ELC target for a given workweek using Micron fiscal calendar."""
+                    year, month = get_calendar_year_month(ww_str)
+                    # Find target, default to latest known target
+                    if (year, month) in elc_target_schedule:
+                        return elc_target_schedule[(year, month)]
+                    # Default to 96.03% for future months
+                    return 96.03
+
+                # Build stepped ELC target line
+                elc_target_x = []
+                elc_target_y = []
+                for ww in sorted_workweeks:
+                    target = get_elc_target(ww)
+                    elc_target_x.append(ww)
+                    elc_target_y.append(target)
+
+                # Add ELC yield target marker (stepped line) - orange neon
+                fig.add_trace(
+                    go.Scatter(
+                        x=elc_target_x,
+                        y=elc_target_y,
+                        mode="lines",
+                        name="ELC Target",
+                        line=dict(color="#FF9100", width=3, dash="dot", shape="hv"),
+                        showlegend=True,
+                        hovertemplate="<b>ELC Target:</b> %{y:.2f}%<extra></extra>",
+                    )
+                )
+
                 # Add Micron fiscal month labels below workweek on x-axis
                 tick_labels = get_workweek_labels_with_months(sorted_workweeks)
 
