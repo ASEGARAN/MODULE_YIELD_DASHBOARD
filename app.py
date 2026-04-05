@@ -14,6 +14,7 @@ from src.frpt_runner import FrptRunner, FrptCommand
 from src.frpt_parser import FrptParser
 from src.data_processor import DataProcessor
 from src.cache import FrptCache
+from src.fiscal_calendar import get_fiscal_month, get_workweek_labels_with_months, get_calendar_year_month
 from config.settings import Settings
 
 # Fail Viewer module
@@ -585,6 +586,13 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         # Update y-axes
         fig.update_yaxes(title_text="Yield %", range=[95, 100], secondary_y=False)
         fig.update_yaxes(title_text="Volume (UIN)", secondary_y=True)
+
+        # Add Micron fiscal month labels below workweek on x-axis
+        tick_labels = get_workweek_labels_with_months(sorted_workweeks)
+        fig.update_xaxes(
+            ticktext=tick_labels,
+            tickvals=sorted_workweeks,
+        )
 
         st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
@@ -1338,20 +1346,9 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     (2026, 6): 97.00,   # Jun'26 (default forward)
                 }
 
-                def workweek_to_month(ww_str):
-                    """Convert YYYYWW to (year, month) using ISO week."""
-                    from datetime import datetime, timedelta
-                    year = int(ww_str[:4])
-                    week = int(ww_str[4:])
-                    # Get the Monday of the ISO week
-                    jan4 = datetime(year, 1, 4)
-                    start_of_week1 = jan4 - timedelta(days=jan4.isoweekday() - 1)
-                    monday = start_of_week1 + timedelta(weeks=week - 1)
-                    return (monday.year, monday.month)
-
                 def get_slt_target(ww_str):
-                    """Get SLT target for a given workweek."""
-                    year, month = workweek_to_month(ww_str)
+                    """Get SLT target for a given workweek using Micron fiscal calendar."""
+                    year, month = get_calendar_year_month(ww_str)
                     # Find target, default to latest known target
                     if (year, month) in slt_target_schedule:
                         return slt_target_schedule[(year, month)]
@@ -1379,21 +1376,8 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     )
                 )
 
-                # Add month labels below workweek on x-axis
-                month_names = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
-                               7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"}
-
-                # Build tick labels with month below workweek
-                tick_labels = []
-                prev_month = None
-                for ww in sorted_workweeks:
-                    year, month = workweek_to_month(ww)
-                    month_label = f"{month_names[month]}'{str(year)[2:]}"
-                    if month_label != prev_month:
-                        tick_labels.append(f"{ww}<br><b>{month_label}</b>")
-                        prev_month = month_label
-                    else:
-                        tick_labels.append(ww)
+                # Add Micron fiscal month labels below workweek on x-axis
+                tick_labels = get_workweek_labels_with_months(sorted_workweeks)
 
                 fig.update_xaxes(
                     ticktext=tick_labels,
