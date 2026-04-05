@@ -1326,17 +1326,78 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     )
                 )
 
-                # Add SLT yield target marker (99% dotted line) - red neon
+                # SLT target schedule by month (Y6CP 7.5Gbps)
+                # Format: {(year, month): target_pct}
+                slt_target_schedule = {
+                    (2025, 12): 96.50,  # Dec'25
+                    (2026, 1): 96.50,   # Jan'26
+                    (2026, 2): 96.50,   # Feb'26
+                    (2026, 3): 97.00,   # Mar'26
+                    (2026, 4): 97.00,   # Apr'26
+                    (2026, 5): 97.00,   # May'26
+                    (2026, 6): 97.00,   # Jun'26 (default forward)
+                }
+
+                def workweek_to_month(ww_str):
+                    """Convert YYYYWW to (year, month) using ISO week."""
+                    from datetime import datetime, timedelta
+                    year = int(ww_str[:4])
+                    week = int(ww_str[4:])
+                    # Get the Monday of the ISO week
+                    jan4 = datetime(year, 1, 4)
+                    start_of_week1 = jan4 - timedelta(days=jan4.isoweekday() - 1)
+                    monday = start_of_week1 + timedelta(weeks=week - 1)
+                    return (monday.year, monday.month)
+
+                def get_slt_target(ww_str):
+                    """Get SLT target for a given workweek."""
+                    year, month = workweek_to_month(ww_str)
+                    # Find target, default to latest known target
+                    if (year, month) in slt_target_schedule:
+                        return slt_target_schedule[(year, month)]
+                    # Default to 97% for future months
+                    return 97.00
+
+                # Build stepped SLT target line
+                slt_target_x = []
+                slt_target_y = []
+                for ww in sorted_workweeks:
+                    target = get_slt_target(ww)
+                    slt_target_x.append(ww)
+                    slt_target_y.append(target)
+
+                # Add SLT yield target marker (stepped line) - red neon
                 fig.add_trace(
                     go.Scatter(
-                        x=[sorted_workweeks[0], sorted_workweeks[-1]],
-                        y=[99, 99],
+                        x=slt_target_x,
+                        y=slt_target_y,
                         mode="lines",
-                        name="SLT Target: 99%",
-                        line=dict(color="#FF1744", width=3, dash="dot"),
+                        name="SLT Target",
+                        line=dict(color="#FF1744", width=3, dash="dot", shape="hv"),
                         showlegend=True,
-                        hoverinfo="skip",
+                        hovertemplate="<b>SLT Target:</b> %{y:.2f}%<extra></extra>",
                     )
+                )
+
+                # Add month labels below workweek on x-axis
+                month_names = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
+                               7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"}
+
+                # Build tick labels with month below workweek
+                tick_labels = []
+                prev_month = None
+                for ww in sorted_workweeks:
+                    year, month = workweek_to_month(ww)
+                    month_label = f"{month_names[month]}'{str(year)[2:]}"
+                    if month_label != prev_month:
+                        tick_labels.append(f"{ww}<br><b>{month_label}</b>")
+                        prev_month = month_label
+                    else:
+                        tick_labels.append(ww)
+
+                fig.update_xaxes(
+                    ticktext=tick_labels,
+                    tickvals=sorted_workweeks,
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
