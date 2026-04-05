@@ -1812,7 +1812,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
     fail_df = None
 
     if data_source == "Module BE":
-        st.markdown("**Fetch fail addresses from Module Backend using fdat95**")
+        st.markdown("**Fetch fail addresses from Module Backend**")
 
         col1, col2 = st.columns(2)
         with col1:

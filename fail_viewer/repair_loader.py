@@ -336,7 +336,7 @@ def get_repair_from_fdat95(test_summary: str, fid: str, timeout: int = 120) -> L
         List of partial repair records
     """
     try:
-        cmd = f"fdat95 {test_summary} -fgrp=/{fid}/ +rp +archive 2>/dev/null"
+        cmd = f"/u/pe_burn_dft/bin/fdat95x {test_summary} -fgrp=/{fid}/ +rp +archive 2>/dev/null"
 
         result = subprocess.run(
             cmd, shell=True, capture_output=True, text=True, timeout=timeout
