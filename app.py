@@ -1313,15 +1313,27 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     )
                 )
 
-                # Add HMFN yield target marker (99% dotted line) as a trace for legend
-                # Applies to all design_id regardless of speed and density
+                # Add HMFN yield target marker (99% dotted line) - blue neon
                 fig.add_trace(
                     go.Scatter(
                         x=[sorted_workweeks[0], sorted_workweeks[-1]],
                         y=[99, 99],
                         mode="lines",
                         name="HMFN Target: 99%",
-                        line=dict(color="red", width=3, dash="dot"),
+                        line=dict(color="#00BFFF", width=3, dash="dot"),
+                        showlegend=True,
+                        hoverinfo="skip",
+                    )
+                )
+
+                # Add SLT yield target marker (99% dotted line) - red neon
+                fig.add_trace(
+                    go.Scatter(
+                        x=[sorted_workweeks[0], sorted_workweeks[-1]],
+                        y=[99, 99],
+                        mode="lines",
+                        name="SLT Target: 99%",
+                        line=dict(color="#FF1744", width=3, dash="dot"),
                         showlegend=True,
                         hoverinfo="skip",
                     )
