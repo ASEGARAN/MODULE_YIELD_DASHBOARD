@@ -1,6 +1,8 @@
 """Module Yield Dashboard - Main Streamlit Application."""
 
 import logging
+import importlib
+import re
 from datetime import datetime
 from typing import Any, Optional
 
@@ -11,10 +13,54 @@ from plotly.subplots import make_subplots
 import streamlit as st
 
 from src.frpt_runner import FrptRunner, FrptCommand
+
+# Force reload frpt_parser to pick up latest bin parsing changes
+from src import frpt_parser
+importlib.reload(frpt_parser)
 from src.frpt_parser import FrptParser
+
 from src.data_processor import DataProcessor
 from src.cache import FrptCache
+
+# Force reload fiscal_calendar to pick up latest changes
+from src import fiscal_calendar
+importlib.reload(fiscal_calendar)
 from src.fiscal_calendar import get_fiscal_month, get_workweek_labels_with_months, get_calendar_year_month
+
+# Force reload failcrawler module to pick up latest changes
+from src import failcrawler
+importlib.reload(failcrawler)
+from src.failcrawler import (
+    fetch_failcrawler_data,
+    process_failcrawler_data,
+    create_failcrawler_chart,
+    create_failcrawler_summary_table,
+    create_pareto_summary_html,
+    create_weekly_cdpm_table_html,
+)
+
+# SMT6 yield module
+from src import smt6_yield
+importlib.reload(smt6_yield)
+from src.smt6_yield import (
+    fetch_smt6_yield_data,
+    fetch_smt6_site_data,
+    create_smt6_yield_chart,
+    create_smt6_summary_table,
+    create_machine_yield_cards,
+    create_site_yield_heatmap,
+    create_machine_socket_heatmap,
+    create_socket_drilldown_heatmap,
+    create_site_summary_table,
+    create_site_grid_html,
+    create_slice_channel_map_html,
+    get_slice_list,
+    clear_smt6_cache,
+    get_smt6_cache_stats,
+    analyze_site_trends,
+    create_site_trend_heatmap,
+    create_site_trend_summary_html,
+)
 from config.settings import Settings
 
 # Fail Viewer module
@@ -85,6 +131,20 @@ def init_session_state() -> None:
         st.session_state.pareto_data = pd.DataFrame()
     if "pareto_last_fetch_time" not in st.session_state:
         st.session_state.pareto_last_fetch_time = None
+    # FAILCRAWLER DPM session state
+    if "failcrawler_data" not in st.session_state:
+        st.session_state.failcrawler_data = pd.DataFrame()
+    if "failcrawler_last_fetch_time" not in st.session_state:
+        st.session_state.failcrawler_last_fetch_time = None
+    if "failcrawler_filters" not in st.session_state:
+        st.session_state.failcrawler_filters = {}
+    # SMT6 yield session state
+    if "smt6_data" not in st.session_state:
+        st.session_state.smt6_data = pd.DataFrame()
+    if "smt6_site_data" not in st.session_state:
+        st.session_state.smt6_site_data = pd.DataFrame()
+    if "smt6_last_fetch_time" not in st.session_state:
+        st.session_state.smt6_last_fetch_time = None
 
 
 def setup_page() -> None:
@@ -276,7 +336,7 @@ def fetch_data(filters: dict[str, Any], use_cache: bool = True) -> pd.DataFrame:
     logger.info(f"FETCH DATA STARTED (PARALLEL, cache={'ON' if use_cache else 'OFF'})")
     logger.info(f"Filters: {filters}")
 
-    runner = FrptRunner(max_workers=4, use_cache=use_cache)  # Run up to 4 queries in parallel
+    runner = FrptRunner(max_workers=8, use_cache=use_cache)  # Run up to 8 queries in parallel
     parser = FrptParser()
 
     try:
@@ -374,11 +434,13 @@ def fetch_data(filters: dict[str, Any], use_cache: bool = True) -> pd.DataFrame:
 
     try:
         df = parser.parse_multiple(results)
-        bin_cols = [c for c in df.columns if c.startswith('BIN')]
+        # Check for both new format (Bin_1_GOOD) and legacy format (BIN1)
+        bin_cols = [c for c in df.columns if c.startswith('BIN') or c.startswith('Bin_')]
         logger.info(f"Parsed DataFrame: {len(df)} rows, columns={list(df.columns) if not df.empty else []}")
         logger.info(f"BIN columns after parsing: {bin_cols}")
 
         # WORKAROUND: If no BIN columns, extract them manually from results
+        # This should rarely trigger now that the parser handles Bin_ columns
         if not bin_cols and not df.empty:
             logger.info("Attempting manual bin extraction...")
             bin_data = []
@@ -682,8 +744,8 @@ def render_bin_distribution_chart(processor: DataProcessor) -> None:
             if bin_descriptions:
                 st.caption(" | ".join(bin_descriptions))
 
-        # Find BIN columns (parser creates BIN1, BIN2, etc.)
-        bin_cols = [col for col in df.columns if col.startswith("BIN")]
+        # Find BIN columns (parser creates Bin_1_GOOD, Bin_20_CONT, etc. or legacy BIN1, BIN2)
+        bin_cols = [col for col in df.columns if col.startswith("BIN") or col.startswith("Bin_")]
         logger.info(f"Bin chart: Found columns={list(df.columns)}")
         logger.info(f"Bin chart: BIN columns found={bin_cols}")
 
@@ -750,19 +812,33 @@ def render_bin_distribution_chart(processor: DataProcessor) -> None:
         # Group by series and bin, take mean
         bin_data = bin_data.groupby(["series", "bin"])["percentage"].mean().reset_index()
 
-        # Sort bins naturally (BIN1, BIN2, ...)
-        bin_data["bin_num"] = bin_data["bin"].str.extract(r"(\d+)").astype(int)
+        # Sort bins naturally by bin number
+        # Handle both formats: Bin_1_GOOD (new) and BIN1 (legacy)
+        def extract_bin_num(col_name):
+            import re
+            match = re.search(r'(\d+)', col_name)
+            return int(match.group(1)) if match else 0
+
+        bin_data["bin_num"] = bin_data["bin"].apply(extract_bin_num)
         bin_data = bin_data.sort_values(["bin_num", "series"])
 
-        # Add bin names in frpt format (e.g., "Bin_1:GOOD") if available
-        bin_names = st.session_state.get("bin_names", {})
-        if bin_names:
-            bin_data["bin_label"] = bin_data["bin"].apply(
-                lambda x: f"Bin_{x[3:]}:{bin_names.get(x, '')}" if bin_names.get(x) else f"Bin_{x[3:]}"
-            )
-        else:
-            # Convert BIN1 to Bin_1 format
-            bin_data["bin_label"] = bin_data["bin"].apply(lambda x: f"Bin_{x[3:]}")
+        # Create display labels from column names
+        # New format: Bin_1_GOOD -> "Bin_1: GOOD"
+        # Legacy format: BIN1 -> "Bin_1"
+        def format_bin_label(col_name):
+            if col_name.startswith("Bin_"):
+                # New format: Bin_1_GOOD -> extract parts
+                parts = col_name.split("_", 2)  # Split into max 3 parts
+                if len(parts) >= 3:
+                    return f"Bin_{parts[1]}: {parts[2]}"
+                elif len(parts) == 2:
+                    return f"Bin_{parts[1]}"
+            elif col_name.startswith("BIN"):
+                # Legacy format: BIN1 -> Bin_1
+                return f"Bin_{col_name[3:]}"
+            return col_name
+
+        bin_data["bin_label"] = bin_data["bin"].apply(format_bin_label)
 
         # Option to pin data labels on chart
         show_bin_labels = st.checkbox("Show data labels on chart", value=False, key="bin_show_labels")
@@ -931,7 +1007,483 @@ def render_density_speed_heatmap(processor: DataProcessor) -> None:
         st.error("Failed to render density/speed heatmap")
 
 
-def render_dashboard(processor: DataProcessor) -> None:
+def render_smt6_yield_section(filters: dict[str, Any]) -> None:
+    """Render the SMT6 Machine Yield Trend section."""
+    st.subheader("SMT6 Yield Trend")
+    st.markdown("""
+    **Machine-level yield tracking** for SMT6 testers at HMFN step.
+    Shows yield trend by machine and site-level breakdown.
+    """)
+
+    import streamlit.components.v1 as components
+
+    # Fetch buttons in columns
+    col1, col2, col3 = st.columns([1, 1, 2])
+    with col1:
+        fetch_smt6 = st.button(
+            "Fetch Machine Data",
+            type="primary",
+            use_container_width=True,
+            key="fetch_smt6_btn"
+        )
+    with col2:
+        clear_cache = st.button(
+            "Clear Cache",
+            type="secondary",
+            use_container_width=True,
+            key="clear_smt6_cache_btn",
+            help="Clear cached SMT6 data to force fresh fetch"
+        )
+    with col3:
+        try:
+            workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
+            cache_stats = get_smt6_cache_stats()
+            st.caption(f"{len(filters['design_ids'])} DIDs × {len(workweeks)} weeks | Cache: {cache_stats['valid_entries']} entries")
+        except Exception:
+            st.caption("Configure workweek range in sidebar")
+
+    # Handle cache clear
+    if clear_cache:
+        count = clear_smt6_cache()
+        st.info(f"Cleared {count} cached SMT6 entries. Next fetch will query fresh data.")
+
+    # Fetch machine-level data
+    if fetch_smt6:
+        try:
+            workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
+            design_ids = filters.get("design_ids", ["Y63N", "Y6CP", "Y62P"])
+
+            with st.spinner(f"Fetching SMT6 machine data for {len(workweeks)} weeks..."):
+                smt6_df = fetch_smt6_yield_data(
+                    design_ids=design_ids,
+                    workweeks=[str(ww) for ww in workweeks],
+                    form_factor="socamm2",
+                    max_workers=8
+                )
+
+            if not smt6_df.empty:
+                st.session_state.smt6_data = smt6_df
+                st.session_state.smt6_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                st.success(f"Loaded {len(smt6_df)} SMT6 machine records!")
+            else:
+                st.warning("No SMT6 machine data returned.")
+
+        except Exception as e:
+            st.error(f"Failed to fetch SMT6 data: {e}")
+            logger.exception("SMT6 fetch error")
+
+    # Display SMT6 data if available
+    has_machine_data = not st.session_state.smt6_data.empty
+    has_site_data = not st.session_state.smt6_site_data.empty
+
+    if has_machine_data or has_site_data:
+        if st.session_state.smt6_last_fetch_time:
+            st.caption(f"Last fetched: {st.session_state.smt6_last_fetch_time}")
+
+        # Use main dashboard's design_ids filter (no redundant filter here)
+        selected_design_ids = [did.upper() for did in filters.get("design_ids", [])]
+
+        # Filter data based on main dashboard's design_ids
+        if has_machine_data:
+            if selected_design_ids:
+                filtered_machine_df = st.session_state.smt6_data[
+                    st.session_state.smt6_data['design_id'].isin(selected_design_ids)
+                ]
+            else:
+                filtered_machine_df = st.session_state.smt6_data
+        else:
+            filtered_machine_df = pd.DataFrame()
+
+        if has_site_data:
+            if selected_design_ids:
+                filtered_site_df = st.session_state.smt6_site_data[
+                    st.session_state.smt6_site_data['design_id'].isin(selected_design_ids)
+                ]
+            else:
+                filtered_site_df = st.session_state.smt6_site_data
+        else:
+            filtered_site_df = pd.DataFrame()
+
+        # =====================================================================
+        # MACHINE YIELD CARDS + TREND CHART (Side by Side)
+        # =====================================================================
+        if not filtered_machine_df.empty or not filtered_site_df.empty:
+            # Create 2-column layout: Cards on left, Trend chart on right
+            col_cards, col_chart = st.columns([1, 2])
+
+            with col_cards:
+                st.markdown("##### 🖥️ Tester Fleet")
+                cards_df = filtered_machine_df if not filtered_machine_df.empty else filtered_site_df
+                cards_html = create_machine_yield_cards(cards_df, dark_mode=True)
+                if cards_html:
+                    # Compact fit - reduced padding/margins in HTML
+                    num_machines = cards_df['machine_id'].nunique() if 'machine_id' in cards_df.columns else 1
+                    cards_per_row = 2  # Fewer cards per row in narrower column
+                    rows = (num_machines + cards_per_row - 1) // cards_per_row
+                    # Header=35px + each row of cards=215px (compact)
+                    card_height = 35 + (rows * 215)
+                    components.html(cards_html, height=min(card_height, 500), scrolling=True)
+
+            with col_chart:
+                if not filtered_machine_df.empty:
+                    st.markdown("##### 📈 Machine Yield Trend")
+
+                    # Chart options in a compact row
+                    opt_col1, opt_col2 = st.columns([1, 2])
+                    with opt_col1:
+                        show_data_labels = st.checkbox(
+                            "Data Labels",
+                            value=False,
+                            key="smt6_show_labels",
+                            help="Display yield values on data points"
+                        )
+                    with opt_col2:
+                        # Calculate data range for slider
+                        data_min = filtered_machine_df['yield_pct'].min()
+                        default_min = max(0, int(data_min - 5))
+                        y_axis_min = st.slider(
+                            "Y-Axis Start",
+                            min_value=0,
+                            max_value=95,
+                            value=default_min,
+                            step=5,
+                            key="smt6_y_min",
+                            help="Adjust the starting point of Y-axis"
+                        )
+
+                    # Use the main dashboard's design_ids filter
+                    design_ids = filters.get("design_ids", [])
+                    design_id_label = ", ".join(design_ids) if design_ids else None
+
+                    fig = create_smt6_yield_chart(
+                        filtered_machine_df,
+                        design_id=design_id_label,
+                        dark_mode=True,
+                        show_data_labels=show_data_labels,
+                        y_axis_min=float(y_axis_min)
+                    )
+                    if fig:
+                        plotly_cdn = 'https://cdn.plot.ly/plotly-2.27.0.min.js'
+                        chart_html = fig.to_html(
+                            full_html=True,
+                            include_plotlyjs=plotly_cdn,
+                            config={'displayModeBar': True, 'responsive': True}
+                        )
+                        components.html(chart_html, height=450, scrolling=False)
+
+            # Machine summary table (full width below)
+            if not filtered_machine_df.empty:
+                with st.expander("Machine Summary Table", expanded=False):
+                    summary_html = create_smt6_summary_table(filtered_machine_df, dark_mode=True)
+                    if summary_html:
+                        components.html(summary_html, height=350, scrolling=True)
+
+        # =====================================================================
+        # SOCKET/SITE ANALYSIS (All site-level content in one section)
+        # =====================================================================
+        st.divider()
+        st.markdown("#### 🔌 Socket & Site Analysis")
+
+        # Site data fetch controls
+        header_col1, header_col2, header_col3 = st.columns([2, 2, 1])
+        with header_col1:
+            st.caption("Fetch site-level data to analyze socket health per machine")
+        with header_col2:
+            # Site data range options
+            site_fetch_mode = st.radio(
+                "Site Data Range",
+                options=["Latest Week", "Full Range"],
+                key="smt6_site_fetch_mode_inline",
+                horizontal=True,
+                label_visibility="collapsed"
+            )
+        with header_col3:
+            # Inline fetch site data button
+            if st.button("📡 Fetch Site Data", key="fetch_site_inline", type="secondary", use_container_width=True):
+                st.session_state.smt6_fetch_site_inline = True
+                st.session_state.smt6_site_fetch_mode_selected = site_fetch_mode
+                st.rerun()
+
+        # Handle inline site fetch
+        if st.session_state.get('smt6_fetch_site_inline', False):
+            st.session_state.smt6_fetch_site_inline = False
+            fetch_mode = st.session_state.get('smt6_site_fetch_mode_selected', 'Latest Week')
+
+            # Determine workweeks based on fetch mode
+            if fetch_mode == "Latest Week":
+                wws = [str(filters["end_ww"])]
+                spinner_text = "Fetching site data for latest week..."
+            else:
+                wws = [str(ww) for ww in Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])]
+                spinner_text = f"Fetching site data for {len(wws)} weeks..."
+
+            with st.spinner(spinner_text):
+                design_ids_for_fetch = filters.get("design_ids", ["Y6CP"])
+                form_factor_val = filters.get("form_factor", "socamm2").lower()
+
+                site_df = fetch_smt6_site_data(
+                    design_ids=design_ids_for_fetch,
+                    workweeks=wws,
+                    form_factor=form_factor_val,
+                    progress_callback=None
+                )
+                if not site_df.empty:
+                    st.session_state.smt6_site_data = site_df
+                    st.session_state.smt6_site_fetch_mode_used = fetch_mode
+                    weeks_fetched = site_df['workweek'].nunique()
+                    st.success(f"✅ Loaded {len(site_df)} site records ({weeks_fetched} week{'s' if weeks_fetched > 1 else ''})")
+                    st.rerun()
+                else:
+                    st.warning("No site data found")
+
+        # Show site analysis if data is available
+        if not filtered_site_df.empty:
+            # Get list of machines
+            machines = sorted(filtered_site_df['machine_id'].unique())
+
+            # Machine selection header
+            st.markdown("##### 🔍 Select a Machine for Socket Health")
+
+            # Create clickable buttons for each machine
+            machine_cols = st.columns(min(len(machines), 6))
+
+            # Initialize session state for selected machine
+            if 'smt6_selected_machine' not in st.session_state:
+                st.session_state.smt6_selected_machine = None
+
+            for i, machine in enumerate(machines):
+                col_idx = i % min(len(machines), 6)
+                with machine_cols[col_idx]:
+                    # Highlight selected machine
+                    btn_type = "primary" if st.session_state.smt6_selected_machine == machine else "secondary"
+                    if st.button(
+                        machine.upper(),
+                        key=f"smt6_machine_btn_{machine}",
+                        type=btn_type,
+                        use_container_width=True
+                    ):
+                        if st.session_state.smt6_selected_machine == machine:
+                            st.session_state.smt6_selected_machine = None  # Toggle off
+                        else:
+                            st.session_state.smt6_selected_machine = machine
+                        st.rerun()
+
+            # If a machine is selected, show site-level analysis
+            if st.session_state.smt6_selected_machine:
+                selected_machine = st.session_state.smt6_selected_machine
+
+                # Filter site data for selected machine
+                machine_site_df = filtered_site_df[filtered_site_df['machine_id'] == selected_machine].copy()
+
+                if machine_site_df.empty:
+                    st.warning(f"No site data available for {selected_machine.upper()}.")
+                else:
+                    # Determine workweek label based on data
+                    ww_options = sorted(machine_site_df['workweek'].unique(), reverse=True)
+                    if len(ww_options) == 1:
+                        ww_label = f"WW{ww_options[0]}"
+                    else:
+                        ww_label = f"WW{ww_options[-1]}-{ww_options[0]}"
+
+                    # View mode selector - simplified to 2 views
+                    view_col1, view_col2 = st.columns([1, 2])
+                    with view_col1:
+                        view_mode = st.radio(
+                            "View Mode",
+                            ["Slice Map", "Socket Health"],
+                            key="smt6_view_mode",
+                            horizontal=True,
+                            help="Slice Map: Full diagnostic view with channels/positions. Socket Health: Quick monitoring view."
+                        )
+
+                    # Use all fetched data
+                    display_df = machine_site_df
+
+                    # Generate visualization based on view mode
+                    if view_mode == "Slice Map":
+                        # Always show S0-S3 and All options
+                        with view_col2:
+                            slice_options = ["All", "S0", "S1", "S2", "S3"]
+                            selected_slice_option = st.selectbox(
+                                "Filter Slice",
+                                options=slice_options,
+                                index=0,  # Default to "All"
+                                key="smt6_slice_filter",
+                                help="Show all slices or filter to a specific slice (S0-S3)"
+                            )
+                            selected_slice = None if selected_slice_option == "All" else selected_slice_option
+
+                        # Slice-based channel map showing channels inside each slice
+                        grid_html = create_slice_channel_map_html(
+                            display_df,
+                            machine_id=selected_machine,
+                            selected_slice=selected_slice
+                        )
+                        # Calculate height based on number of slices shown
+                        if selected_slice:
+                            num_slices = 1
+                        else:
+                            num_slices = display_df['site'].apply(
+                                lambda x: re.match(r'S(\d+)', x).group(1) if re.match(r'S(\d+)', x) else '0'
+                            ).nunique()
+                        num_channels = display_df['site'].apply(
+                            lambda x: re.match(r'S\d+C(\d+)', x).group(1) if re.match(r'S\d+C(\d+)', x) else '0'
+                        ).nunique()
+                        # Height: header + slice boxes (each ~200px + channels*30px)
+                        grid_height = 150 + (num_slices * (150 + num_channels * 35))
+
+                    else:  # Socket Health
+                        num_sockets = display_df['site'].apply(
+                            lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
+                        ).nunique()
+
+                        grid_html = create_site_grid_html(
+                            display_df,
+                            machine_id=selected_machine,
+                            title=f"🔧 {selected_machine.upper()} - Socket Health ({ww_label})",
+                            view_mode="socket"
+                        )
+                        if num_sockets <= 4:
+                            grid_height = 420
+                        else:
+                            rows = (num_sockets + 3) // 4
+                            grid_height = 200 + (rows * 180)
+
+                    if grid_html:
+                        components.html(grid_html, height=grid_height, scrolling=False)
+                    else:
+                        st.warning("Could not generate site grid.")
+
+            # =====================================================================
+            # SITE TREND ANALYSIS (when Full Range data is fetched)
+            # =====================================================================
+            site_mode = st.session_state.get("smt6_site_fetch_mode_used", "Latest Week")
+            weeks_in_data = filtered_site_df['workweek'].nunique()
+
+            if site_mode == "Full Range" and weeks_in_data > 1:
+                st.markdown("---")
+                st.markdown("##### 📊 Site Yield Trend Analysis")
+                st.caption(f"Analyzing {weeks_in_data} weeks of data to identify yield patterns and problem sites")
+
+                # Trend analysis tabs
+                trend_tab1, trend_tab2, trend_tab3 = st.tabs([
+                    "Trend Heatmap",
+                    "Problem Sites Summary",
+                    "Detailed Site View"
+                ])
+
+                with trend_tab1:
+                    # Site trend heatmap (weeks × sites)
+                    st.markdown("##### Yield Trend by Site Over Time")
+                    st.caption("Colors indicate yield: Green=Healthy (≥99%), Yellow=Warning (97-99%), Red=Critical (<97%)")
+
+                    # Machine filter for heatmap
+                    machines = sorted(filtered_site_df['machine_id'].unique())
+                    trend_machine = st.selectbox(
+                        "Filter by Machine (optional)",
+                        options=["All Machines"] + machines,
+                        format_func=lambda x: x.upper() if x != "All Machines" else x,
+                        key="smt6_trend_machine_select"
+                    )
+
+                    trend_heatmap = create_site_trend_heatmap(
+                        filtered_site_df,
+                        machine_id=None if trend_machine == "All Machines" else trend_machine
+                    )
+                    if trend_heatmap:
+                        chart_html = trend_heatmap.to_html(
+                            full_html=True,
+                            include_plotlyjs='https://cdn.plot.ly/plotly-2.27.0.min.js',
+                            config={'displayModeBar': True, 'responsive': True}
+                        )
+                        components.html(chart_html, height=600, scrolling=True)
+                    else:
+                        st.warning("Not enough data to generate trend heatmap.")
+
+                with trend_tab2:
+                    # Problem sites summary
+                    st.markdown("##### Site Trend Classification")
+                    st.caption("Sites classified by yield pattern: Stable Good, Stable Bad, Improving, Degrading, or Volatile")
+
+                    trend_df = analyze_site_trends(filtered_site_df, target_yield=99.0)
+                    if not trend_df.empty:
+                        # Summary metrics
+                        trend_counts = trend_df['trend_class'].value_counts()
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        with col1:
+                            st.metric("Stable Good", trend_counts.get('STABLE_GOOD', 0), help="Consistently above target")
+                        with col2:
+                            st.metric("Improving", trend_counts.get('IMPROVING', 0), delta="↑", help="Trending upward")
+                        with col3:
+                            st.metric("Volatile", trend_counts.get('VOLATILE', 0), help="High variability")
+                        with col4:
+                            st.metric("Degrading", trend_counts.get('DEGRADING', 0), delta="↓", delta_color="inverse", help="Trending downward")
+                        with col5:
+                            st.metric("Stable Bad", trend_counts.get('STABLE_BAD', 0), help="Consistently below target")
+
+                        # Problem sites HTML summary
+                        summary_html = create_site_trend_summary_html(trend_df)
+                        if summary_html:
+                            components.html(summary_html, height=500, scrolling=True)
+                    else:
+                        st.warning("Not enough data to analyze trends.")
+
+                with trend_tab3:
+                    # Detailed site view (existing functionality)
+                    st.markdown("##### Detailed Site Breakdown")
+                    col_ww, col_machine = st.columns(2)
+
+                    with col_ww:
+                        available_wws = sorted(filtered_site_df['workweek'].unique(), reverse=True)
+                        selected_site_ww = st.selectbox(
+                            "Select Workweek",
+                            options=["All"] + [str(ww) for ww in available_wws],
+                            key="smt6_site_ww_filter_trend"
+                        )
+
+                    with col_machine:
+                        selected_detail_machine = st.selectbox(
+                            "Select Machine",
+                            options=["All"] + machines,
+                            format_func=lambda x: x.upper() if x != "All" else x,
+                            key="smt6_machine_select_trend"
+                        )
+
+                    # Apply filters
+                    site_view_df = filtered_site_df.copy()
+                    if selected_site_ww != "All":
+                        site_view_df = site_view_df[site_view_df['workweek'] == int(selected_site_ww)]
+                    if selected_detail_machine != "All":
+                        site_view_df = site_view_df[site_view_df['machine_id'] == selected_detail_machine]
+
+                    if not site_view_df.empty:
+                        fig_site = create_site_yield_heatmap(
+                            site_view_df,
+                            machine_id=None if selected_detail_machine == "All" else selected_detail_machine,
+                            dark_mode=True
+                        )
+                        if fig_site:
+                            chart_html = fig_site.to_html(
+                                full_html=True,
+                                include_plotlyjs='https://cdn.plot.ly/plotly-2.27.0.min.js',
+                                config={'displayModeBar': True, 'responsive': True}
+                            )
+                            components.html(chart_html, height=500, scrolling=True)
+
+                        if selected_detail_machine != "All":
+                            site_table_html = create_site_summary_table(site_view_df, selected_detail_machine, dark_mode=True)
+                            if site_table_html:
+                                components.html(site_table_html, height=400, scrolling=True)
+                    else:
+                        st.warning("No data available for the selected filters.")
+        else:
+            st.info("👆 Click **Fetch Site Data** above to load socket-level data, then select a machine to view its Socket Health.")
+
+    else:
+        st.info("Click 'Fetch Machine Data' to load machine-level yield data, or 'Fetch Site Data' for site-level breakdown.")
+
+
+def render_dashboard(processor: DataProcessor, filters: dict[str, Any] = None) -> None:
     """Render all dashboard components."""
     # Summary metrics at top
     render_summary_metrics(processor)
@@ -950,6 +1502,11 @@ def render_dashboard(processor: DataProcessor) -> None:
 
     st.divider()
     render_density_speed_heatmap(processor)
+
+    # SMT6 Machine Yield Trend section
+    if filters:
+        st.divider()
+        render_smt6_yield_section(filters)
 
 
 def fetch_elc_data(filters: dict[str, Any], use_cache: bool = True) -> pd.DataFrame:
@@ -1609,9 +2166,153 @@ def fetch_pareto_data(filters: dict[str, Any], use_cache: bool = True) -> pd.Dat
     return df
 
 
-def render_pareto_tab(filters: dict[str, Any]) -> None:
-    """Render the Pareto Analysis tab content."""
-    st.header("Pareto Analysis")
+def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
+    """Render the FAILCRAWLER DPM sub-tab content."""
+    st.markdown("""
+    **FAILCRAWLER cDPM Analysis** by test step (HMFN, HMB1, QMON, SLT).
+    Shows failure signature patterns breakdown by workweek with volume overlay.
+    """)
+
+    use_cache = st.session_state.get("use_cache", True)
+
+    # Calculate workweeks from filters
+    try:
+        workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
+    except Exception:
+        workweeks = []
+
+    # Get steps from main dashboard filter
+    steps_to_show = filters.get("test_steps", ["HMFN", "HMB1", "QMON", "SLT"])
+
+    # Display current filter info
+    st.caption(f"**Filters:** {', '.join(filters['design_ids'])} | {', '.join(steps_to_show)} | WW{filters['start_ww']}-{filters['end_ww']} ({len(workweeks)} weeks)")
+
+    # Fetch controls
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        fetch_fc = st.button(
+            "🔄 Fetch Live Data",
+            type="primary",
+            use_container_width=True,
+            key="fetch_failcrawler_btn"
+        )
+    with col2:
+        show_labels = st.checkbox("Data Labels", value=False, key="fc_show_labels")
+
+    if fetch_fc:
+        try:
+            with st.spinner(f"Fetching FAILCRAWLER data for {len(filters['design_ids'])} DIDs × {len(steps_to_show)} steps × {len(workweeks)} weeks..."):
+                # Use live mtsums fetch with main dashboard filters
+                fc_df = fetch_failcrawler_data(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks,
+                    cache_dir="cache" if use_cache else None
+                )
+
+                if fc_df.empty:
+                    st.warning("No FAILCRAWLER data returned. Check filters or try again.")
+                    return
+
+                st.session_state.failcrawler_data = fc_df
+                st.session_state.failcrawler_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                st.session_state.failcrawler_filters = filters.copy()  # Store filters used
+                st.success(f"Loaded {len(fc_df):,} FAILCRAWLER records!")
+                st.rerun()
+
+        except Exception as e:
+            st.error(f"Failed to fetch FAILCRAWLER data: {e}")
+            logger.exception("FAILCRAWLER fetch error")
+            return
+
+    # Display FAILCRAWLER data if available
+    if not st.session_state.failcrawler_data.empty:
+        fc_df = st.session_state.failcrawler_data.copy()
+
+        if st.session_state.failcrawler_last_fetch_time:
+            st.caption(f"📅 Last fetched: {st.session_state.failcrawler_last_fetch_time}")
+
+        st.divider()
+
+        # DID filter for viewing per-DID or cumulative
+        # Filter out NaN values before sorting
+        available_dids = [d for d in fc_df['DESIGN_ID'].unique().tolist()
+                          if d is not None and isinstance(d, str)] if 'DESIGN_ID' in fc_df.columns else []
+        did_options = ["All (Cumulative)"] + sorted(available_dids)
+
+        selected_did_view = st.selectbox(
+            "View by Design ID",
+            options=did_options,
+            index=0,
+            key="fc_did_filter",
+            help="View cumulative data or filter to a specific Design ID"
+        )
+
+        # Determine the design_id to pass to processing
+        if selected_did_view == "All (Cumulative)":
+            filter_design_id = None
+            design_id_label = "All DIDs"
+        else:
+            filter_design_id = selected_did_view
+            design_id_label = selected_did_view
+
+        # Display charts for each selected step
+        import streamlit.components.v1 as components
+
+        for step in steps_to_show:
+            data = process_failcrawler_data(fc_df, step, design_id=filter_design_id)
+            if data is None:
+                continue
+
+            st.subheader(f"📊 {step} FAILCRAWLER cDPM")
+
+            # Create chart (uses light mode colors for compatibility with dashboard theme)
+            fig = create_failcrawler_chart(
+                data,
+                design_id=design_id_label,
+                dark_mode=False,
+                show_data_labels=show_labels
+            )
+
+            if fig:
+                # Plotly config
+                plotly_config = {
+                    'displayModeBar': True,
+                    'responsive': True,
+                    'displaylogo': False,
+                    'modeBarButtonsToAdd': ['toggleSpikelines'],
+                    'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': f'failcrawler_{step}_{design_id_label}',
+                        'height': 800,
+                        'width': 1400,
+                        'scale': 2
+                    }
+                }
+
+                # Render chart
+                st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
+            # Pareto Summary table (80/20 analysis)
+            with st.expander(f"📋 {step} Pareto Summary (80/20 Analysis)", expanded=False):
+                pareto_html = create_pareto_summary_html(data, dark_mode=False)
+                if pareto_html:
+                    components.html(pareto_html, height=400, scrolling=True)
+
+            # Weekly cDPM table with WoW and anomalies
+            with st.expander(f"📈 {step} Weekly cDPM Data", expanded=False):
+                weekly_html = create_weekly_cdpm_table_html(data, dark_mode=False)
+                if weekly_html:
+                    components.html(weekly_html, height=600, scrolling=True)
+
+            st.divider()
+
+    else:
+        st.info("👆 Click 'Fetch Live Data' to load FAILCRAWLER cDPM data using current dashboard filters.")
+
+
+def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
+    """Render the Register Fallout sub-tab content (original Pareto content)."""
     st.markdown("""
     **Top 5 Failed Registers** by test step (HMFN, HMB1, QMON).
     Shows register fallout breakdown by design_id, form_factor, speed, density, and workweek.
@@ -1795,6 +2496,20 @@ def render_pareto_tab(filters: dict[str, Any]) -> None:
 
     else:
         st.info("Click 'Fetch Pareto Data' to load failed register data for HMFN, HMB1, and QMON.")
+
+
+def render_pareto_tab(filters: dict[str, Any]) -> None:
+    """Render the Pareto Analysis tab with sub-tabs for FAILCRAWLER and Register Fallout."""
+    st.header("Pareto Analysis")
+
+    # Create sub-tabs
+    fc_tab, reg_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout"])
+
+    with fc_tab:
+        render_failcrawler_subtab(filters)
+
+    with reg_tab:
+        render_register_fallout_subtab(filters)
 
 
 def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
@@ -2392,7 +3107,7 @@ def main() -> None:
                 densities=filters["densities"],
                 speeds=filters["speeds"],
             )
-            render_dashboard(processor)
+            render_dashboard(processor, filters)
         else:
             st.info("Click 'Fetch Data' to load yield data. Note: Each workweek may take 2-5 minutes to fetch.")
 

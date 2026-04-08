@@ -100,6 +100,9 @@ class FrptParser:
         header_line = lines[header_idx]
         columns = self._parse_header(header_line)
 
+        # Parse bin headers (actual bin names from frpt output)
+        bin_columns = self._parse_bin_headers(lines, header_idx)
+
         # Parse data rows
         data_rows = []
         lines_with_pipe = 0
@@ -114,12 +117,12 @@ class FrptParser:
                 lines_with_pipe += 1
             else:
                 lines_without_pipe += 1
-            row = self._parse_data_row(line, columns)
+            row = self._parse_data_row(line, columns, bin_columns)
             if row:
                 row["step"] = step
                 data_rows.append(row)
 
-        logger.info(f"Parser [{step}]: lines_with_pipe={lines_with_pipe}, lines_without_pipe={lines_without_pipe}")
+        logger.info(f"Parser [{step}]: lines_with_pipe={lines_with_pipe}, lines_without_pipe={lines_without_pipe}, bin_cols={bin_columns}")
 
         if not data_rows:
             return pd.DataFrame()
@@ -141,6 +144,55 @@ class FrptParser:
                 return i
         return None
 
+    def _parse_bin_headers(self, lines: list[str], header_idx: int) -> list[str]:
+        """Parse the bin column headers from frpt output.
+
+        The frpt output structure is:
+        Line header_idx-1: Column headers with bin numbers (UIN UPASS ... | Bin_1 Bin_20 ...)
+        Line header_idx (MYQUICK line): Labels after pipe (raw raw adj adj % | GOOD CONT ...)
+
+        Returns:
+            List of bin column names in format "Bin_XX_LABEL"
+        """
+        bin_columns = []
+
+        # The bin numbers are on the line BEFORE the MYQUICK line
+        if header_idx < 1:
+            return []
+
+        bin_num_line = lines[header_idx - 1]
+        # The labels are on the MYQUICK line itself (header_idx)
+        bin_label_line = lines[header_idx]
+
+        # Check if bin numbers line has Bin_ patterns
+        if "Bin_" not in bin_num_line and "BIN_" not in bin_num_line.upper():
+            return []
+
+        # Parse bin numbers after the pipe
+        if "|" in bin_num_line:
+            bin_part = bin_num_line.split("|")[1]
+            bin_nums = re.findall(r'Bin_(\d+)', bin_part, re.IGNORECASE)
+
+            # Parse corresponding labels from MYQUICK line
+            labels = []
+            if "|" in bin_label_line:
+                label_part = bin_label_line.split("|")[1]
+                labels = label_part.split()
+
+            # Create column names with labels
+            for i, bin_num in enumerate(bin_nums):
+                label = labels[i] if i < len(labels) else ""
+                # Clean up label (remove special chars, keep alphanumeric and hyphen)
+                label = re.sub(r'[^A-Za-z0-9\-]', '', label)
+                if label:
+                    bin_columns.append(f"Bin_{bin_num}_{label}")
+                else:
+                    bin_columns.append(f"Bin_{bin_num}")
+
+            logger.info(f"Parsed bin headers: {bin_columns}")
+
+        return bin_columns
+
     def _parse_header(self, header_line: str) -> list[str]:
         """Parse header line into column names.
 
@@ -150,8 +202,14 @@ class FrptParser:
         # Use standardized column names for frpt output
         return ["MYQUICK", "UIN_RAW", "UPASS_RAW", "UIN", "UPASS", "YIELD%", "|", "BIN1"]
 
-    def _parse_data_row(self, line: str, columns: list[str]) -> Optional[dict]:
-        """Parse a single data row."""
+    def _parse_data_row(self, line: str, columns: list[str], bin_columns: list[str] = None) -> Optional[dict]:
+        """Parse a single data row.
+
+        Args:
+            line: Data line to parse
+            columns: Column names (not used currently)
+            bin_columns: List of actual bin column names from header
+        """
         # Skip summary rows (Avg, ALL, TOT)
         line_upper = line.strip().upper()
         if line_upper.startswith("AVG") or line_upper.startswith("ALL") or line_upper.startswith("TOT"):
@@ -201,11 +259,32 @@ class FrptParser:
         if bin_part:
             bin_values = bin_part.split()
             logger.debug(f"Parser: Found bin_part='{bin_part}', values={bin_values}")
-            for i, bv in enumerate(bin_values):
-                try:
-                    row[f"BIN{i+1}"] = float(bv.replace(",", ""))
-                except ValueError:
-                    continue
+
+            # Use actual bin column names if available
+            if bin_columns:
+                for i, bv in enumerate(bin_values):
+                    if i < len(bin_columns):
+                        col_name = bin_columns[i]
+                    else:
+                        col_name = f"BIN{i+1}"
+                    try:
+                        # Handle "-" as 0
+                        if bv.strip() == "-":
+                            row[col_name] = 0.0
+                        else:
+                            row[col_name] = float(bv.replace(",", ""))
+                    except ValueError:
+                        row[col_name] = 0.0
+            else:
+                # Fallback to generic BIN1, BIN2, etc.
+                for i, bv in enumerate(bin_values):
+                    try:
+                        if bv.strip() == "-":
+                            row[f"BIN{i+1}"] = 0.0
+                        else:
+                            row[f"BIN{i+1}"] = float(bv.replace(",", ""))
+                    except ValueError:
+                        continue
         else:
             logger.debug(f"Parser: No bin_part found in line for MYQUICK={myquick}")
 

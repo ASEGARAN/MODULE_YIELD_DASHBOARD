@@ -113,7 +113,7 @@ class FrptRunner:
     """Execute frpt commands."""
 
     DEFAULT_TIMEOUT_SECONDS = 600  # 10 minutes - frpt can take 60+ seconds per query
-    DEFAULT_MAX_WORKERS = 4  # Number of parallel workers
+    DEFAULT_MAX_WORKERS = 8  # Number of parallel workers
 
     def __init__(
         self,
@@ -126,7 +126,7 @@ class FrptRunner:
 
         Args:
             timeout: Command timeout in seconds (default 10 minutes)
-            max_workers: Maximum parallel workers (default 4)
+            max_workers: Maximum parallel workers (default 8)
             cache: FrptCache instance (creates default if None and use_cache=True)
             use_cache: Whether to use caching (default True)
         """

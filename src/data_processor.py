@@ -119,8 +119,8 @@ class DataProcessor:
         if self._df.empty:
             return pd.DataFrame()
 
-        # Find BIN columns
-        bin_cols = [col for col in self._df.columns if col.startswith("BIN")]
+        # Find BIN columns (support both "BIN" and "Bin_" formats)
+        bin_cols = [col for col in self._df.columns if col.startswith("BIN") or col.startswith("Bin_")]
         if not bin_cols:
             return pd.DataFrame()
 
@@ -140,7 +140,8 @@ class DataProcessor:
         if self._df.empty:
             return pd.DataFrame()
 
-        bin_cols = [col for col in self._df.columns if col.startswith("BIN")]
+        # Find BIN columns (support both "BIN" and "Bin_" formats)
+        bin_cols = [col for col in self._df.columns if col.startswith("BIN") or col.startswith("Bin_")]
         if not bin_cols:
             return pd.DataFrame()
 
