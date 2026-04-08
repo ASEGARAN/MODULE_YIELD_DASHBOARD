@@ -32,6 +32,7 @@ from src import failcrawler
 importlib.reload(failcrawler)
 from src.failcrawler import (
     fetch_failcrawler_data,
+    fetch_msn_status_correlation_data,
     process_failcrawler_data,
     create_failcrawler_chart,
     create_failcrawler_summary_table,
@@ -137,6 +138,8 @@ def init_session_state() -> None:
     # FAILCRAWLER DPM session state
     if "failcrawler_data" not in st.session_state:
         st.session_state.failcrawler_data = pd.DataFrame()
+    if "failcrawler_msn_corr_data" not in st.session_state:
+        st.session_state.failcrawler_msn_corr_data = pd.DataFrame()
     if "failcrawler_last_fetch_time" not in st.session_state:
         st.session_state.failcrawler_last_fetch_time = None
     if "failcrawler_filters" not in st.session_state:
@@ -2205,7 +2208,7 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
     if fetch_fc:
         try:
             with st.spinner(f"Fetching FAILCRAWLER data for {len(filters['design_ids'])} DIDs × {len(steps_to_show)} steps × {len(workweeks)} weeks..."):
-                # Use live mtsums fetch with main dashboard filters
+                # Fetch main FAILCRAWLER cDPM data (without MSN_STATUS grouping)
                 fc_df = fetch_failcrawler_data(
                     design_ids=filters['design_ids'],
                     steps=steps_to_show,
@@ -2217,10 +2220,18 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     st.warning("No FAILCRAWLER data returned. Check filters or try again.")
                     return
 
+                # Fetch MSN_STATUS correlation data separately (with MSN_STATUS grouping)
+                msn_corr_df = fetch_msn_status_correlation_data(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks
+                )
+
                 st.session_state.failcrawler_data = fc_df
+                st.session_state.failcrawler_msn_corr_data = msn_corr_df
                 st.session_state.failcrawler_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                st.session_state.failcrawler_filters = filters.copy()  # Store filters used
-                st.success(f"Loaded {len(fc_df):,} FAILCRAWLER records!")
+                st.session_state.failcrawler_filters = filters.copy()
+                st.success(f"Loaded {len(fc_df):,} FAILCRAWLER records + {len(msn_corr_df):,} MSN_STATUS correlation records!")
                 st.rerun()
 
         except Exception as e:
@@ -2312,12 +2323,12 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
             st.subheader(f"🔗 {step} MSN_STATUS Correlation")
             st.caption("CDPM contribution by MSN_STATUS - ranked by contribution %, not count")
 
-            # Check if MSN_STATUS column exists in data
-            has_msn_status = 'MSN_STATUS' in fc_df.columns
-            if not has_msn_status:
-                st.warning("⚠️ MSN_STATUS column not found. Uncheck 'Use Cache' and click 'Fetch Live Data' to get fresh data with MSN_STATUS.")
+            # Use separate MSN_STATUS correlation data from session state
+            msn_corr_df = st.session_state.get('failcrawler_msn_corr_data', pd.DataFrame())
+            if msn_corr_df.empty:
+                st.info("MSN_STATUS correlation data not loaded. Click 'Fetch Live Data' to load.")
             else:
-                correlation_data = process_msn_status_correlation(fc_df, step, design_id=filter_design_id)
+                correlation_data = process_msn_status_correlation(msn_corr_df, step, design_id=filter_design_id)
                 if correlation_data:
                     # Display heatmap and ranked table side by side
                     corr_col1, corr_col2 = st.columns([1, 1])

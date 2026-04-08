@@ -105,9 +105,8 @@ def fetch_failcrawler_data(
     step_str = ','.join([s.lower() for s in steps])
     workweek_str = ','.join([str(ww) for ww in workweeks])
 
-    # Command to fetch FAILCRAWLER breakdown by workweek with MSN_STATUS
-    # Includes MSN_STATUS for correlation analysis
-    # Excludes Mod-Sys, ModOnly, NoFA, Multi-Mod per mtsums best practices
+    # Command to fetch FAILCRAWLER breakdown by workweek
+    # Original format WITHOUT MSN_STATUS grouping for correct cDPM values
     cmd = [
         '/u/dramsoft/bin/mtsums',
         '-FORCEAPI', '+quiet', '+csv', '+stdf',
@@ -117,11 +116,10 @@ def fetch_failcrawler_data(
         '+fidag', '+fc',
         f'-mfg_workweek={workweek_str}',
         '-round=1',
-        '-format=STEPTYPE,DESIGN_ID,STEP,MFG_WORKWEEK,MSN_STATUS',
+        '-format=STEPTYPE,DESIGN_ID,STEP,MFG_WORKWEEK',
         f'-step={step_str}',
         '-MOD_CUSTOM_TEST_FLOW<>HMB1_NPI_FLOW',
         '-format+=MOD_CUSTOM_TEST_FLOW',
-        '-msn_status!=Mod-Sys,ModOnly,NoFA,Multi-Mod',
         '+fm'
     ]
 
@@ -178,6 +176,75 @@ def fetch_failcrawler_data(
         return pd.DataFrame()
     except Exception as e:
         logger.exception(f"Error fetching FAILCRAWLER data: {e}")
+        return pd.DataFrame()
+
+
+def fetch_msn_status_correlation_data(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch FAILCRAWLER data WITH MSN_STATUS grouping for correlation analysis.
+
+    This is a separate query from the main FAILCRAWLER fetch because adding
+    MSN_STATUS to the format changes the DPM calculation (breaks down by MSN_STATUS).
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with FAILCRAWLER data grouped by MSN_STATUS
+    """
+    design_id_str = ','.join(design_ids)
+    step_str = ','.join([s.lower() for s in steps])
+    workweek_str = ','.join([str(ww) for ww in workweeks])
+
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        '-FORCEAPI', '+quiet', '+csv', '+stdf',
+        '-exclude_baseline=NULL',
+        f'-DESIGN_ID={design_id_str}',
+        '-MOD_CUSTOM_TEST_FLOW-+HMB1_NPI_FLOW',
+        '+fidag', '+fc',
+        f'-mfg_workweek={workweek_str}',
+        '-round=1',
+        '-format=STEPTYPE,DESIGN_ID,STEP,MFG_WORKWEEK,MSN_STATUS',
+        f'-step={step_str}',
+        '-MOD_CUSTOM_TEST_FLOW<>HMB1_NPI_FLOW',
+        '-format+=MOD_CUSTOM_TEST_FLOW',
+        '-msn_status!=Mod-Sys,ModOnly,NoFA,Multi-Mod',
+        '+fm'
+    ]
+
+    logger.info(f"Fetching MSN_STATUS correlation data...")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=600
+        )
+
+        if result.returncode != 0:
+            logger.error(f"mtsums error: {result.stderr.decode() if result.stderr else 'Unknown'}")
+            return pd.DataFrame()
+
+        output = result.stdout.decode()
+        if not output.strip():
+            return pd.DataFrame()
+
+        df = pd.read_csv(StringIO(output))
+        df.columns = [col.upper() for col in df.columns]
+
+        logger.info(f"Fetched {len(df)} MSN_STATUS correlation records")
+        return df
+
+    except Exception as e:
+        logger.exception(f"Error fetching MSN_STATUS correlation data: {e}")
         return pd.DataFrame()
 
 
