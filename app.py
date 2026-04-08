@@ -2311,24 +2311,30 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
             # MSN_STATUS Correlation (FAILCRAWLER × MSN_STATUS contribution analysis)
             st.subheader(f"🔗 {step} MSN_STATUS Correlation")
             st.caption("CDPM contribution by MSN_STATUS - ranked by contribution %, not count")
-            correlation_data = process_msn_status_correlation(fc_df, step, design_id=filter_design_id)
-            if correlation_data:
-                # Display heatmap and ranked table side by side
-                corr_col1, corr_col2 = st.columns([1, 1])
 
-                with corr_col1:
-                    # Heatmap: FAILCRAWLER × MSN_STATUS
-                    corr_fig = create_msn_status_correlation_chart(correlation_data, dark_mode=False)
-                    if corr_fig:
-                        st.plotly_chart(corr_fig, use_container_width=True)
-
-                with corr_col2:
-                    # Ranked table: MSN_STATUS by CDPM contribution
-                    ranked_html = create_msn_status_ranked_table_html(correlation_data, dark_mode=False)
-                    if ranked_html:
-                        components.html(ranked_html, height=450, scrolling=True)
+            # Check if MSN_STATUS column exists in data
+            has_msn_status = 'MSN_STATUS' in fc_df.columns
+            if not has_msn_status:
+                st.warning("⚠️ MSN_STATUS column not found. Uncheck 'Use Cache' and click 'Fetch Live Data' to get fresh data with MSN_STATUS.")
             else:
-                st.info("MSN_STATUS correlation data not available. Ensure mtsums returns MSN_STATUS field.")
+                correlation_data = process_msn_status_correlation(fc_df, step, design_id=filter_design_id)
+                if correlation_data:
+                    # Display heatmap and ranked table side by side
+                    corr_col1, corr_col2 = st.columns([1, 1])
+
+                    with corr_col1:
+                        # Heatmap: FAILCRAWLER × MSN_STATUS
+                        corr_fig = create_msn_status_correlation_chart(correlation_data, dark_mode=False)
+                        if corr_fig:
+                            st.plotly_chart(corr_fig, use_container_width=True)
+
+                    with corr_col2:
+                        # Ranked table: MSN_STATUS by CDPM contribution
+                        ranked_html = create_msn_status_ranked_table_html(correlation_data, dark_mode=False)
+                        if ranked_html:
+                            components.html(ranked_html, height=450, scrolling=True)
+                else:
+                    st.info(f"No MSN_STATUS correlation data for {step}. All failures may be 'Pass' status.")
 
             st.divider()
 
