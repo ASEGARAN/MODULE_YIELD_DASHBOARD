@@ -411,11 +411,7 @@ def create_failcrawler_chart(data: dict, design_id: str = None, dark_mode: bool 
     title_parts.append(f'- {step_name}</b>')
     title = ' '.join(title_parts)
 
-    # Calculate y-axis max based on data
-    max_dpm = max(total_dpm.max(), TARGET_CDPM * 1.5) if not total_dpm.empty else 500
-    y_max = min(max(max_dpm * 1.2, 100), 1000)  # Cap at 1000
-
-    # Update layout
+    # Update layout - use autorange for y-axis (no fixed cap)
     fig.update_layout(
         title=dict(text=title, font=dict(color=font_color, size=16)),
         barmode='stack',
@@ -444,7 +440,8 @@ def create_failcrawler_chart(data: dict, design_id: str = None, dark_mode: bool 
         ),
         yaxis=dict(
             title=dict(text='cDPM (Defects Per Million)', font=dict(color=font_color, size=12)),
-            range=[0, y_max],
+            autorange=True,
+            rangemode='tozero',
             side='left',
             tickfont=dict(color=font_color, size=10),
             gridcolor=grid_color
