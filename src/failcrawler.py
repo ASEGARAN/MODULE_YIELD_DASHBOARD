@@ -105,7 +105,9 @@ def fetch_failcrawler_data(
     step_str = ','.join([s.lower() for s in steps])
     workweek_str = ','.join([str(ww) for ww in workweeks])
 
-    # Command to fetch FAILCRAWLER breakdown by workweek
+    # Command to fetch FAILCRAWLER breakdown by workweek with MSN_STATUS
+    # Includes MSN_STATUS for correlation analysis
+    # Excludes Mod-Sys, ModOnly, NoFA, Multi-Mod per mtsums best practices
     cmd = [
         '/u/dramsoft/bin/mtsums',
         '-FORCEAPI', '+quiet', '+csv', '+stdf',
@@ -115,10 +117,11 @@ def fetch_failcrawler_data(
         '+fidag', '+fc',
         f'-mfg_workweek={workweek_str}',
         '-round=1',
-        '-format=STEPTYPE,DESIGN_ID,STEP,MFG_WORKWEEK,FAILCRAWLER',
+        '-format=STEPTYPE,DESIGN_ID,STEP,MFG_WORKWEEK,MSN_STATUS',
         f'-step={step_str}',
         '-MOD_CUSTOM_TEST_FLOW<>HMB1_NPI_FLOW',
         '-format+=MOD_CUSTOM_TEST_FLOW',
+        '-msn_status!=Mod-Sys,ModOnly,NoFA,Multi-Mod',
         '+fm'
     ]
 
@@ -233,7 +236,7 @@ def process_failcrawler_data(df: pd.DataFrame, step: str, design_id: str = None)
 
     # Identify FAILCRAWLER columns (exclude metadata columns)
     metadata_cols = ['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'MOD_CUSTOM_TEST_FLOW',
-                     'ALL(DPM)', 'ALL', 'UIN', 'UFAIL', 'UPASS', 'UNKNOWN']
+                     'MSN_STATUS', 'ALL(DPM)', 'ALL', 'UIN', 'UFAIL', 'UPASS', 'UNKNOWN']
     fc_columns = [col for col in step_df.columns if col not in metadata_cols and col != 'UNKNOWN']
 
     if not fc_columns:
@@ -698,6 +701,283 @@ def create_weekly_cdpm_table_html(data: dict, dark_mode: bool = True) -> str:
         </table>
         </div>
         <p style="font-size: 11px; color: {'#aaaaaa' if dark_mode else '#666666'}; margin-top: 5px;">Yellow rows = Anomalies (>500 cDPM or >500% WoW increase)</p>
+    </div>
+    '''
+
+    return html
+
+
+def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str = None) -> dict:
+    """
+    Process FAILCRAWLER data to compute MSN_STATUS correlation.
+
+    Calculates CDPM contribution by MSN_STATUS for each FAILCRAWLER category.
+    Following mtsums best practices:
+    - Rank by CDPM contribution %, not raw count
+    - Flag low-volume populations
+    - Exclude Mod-Sys, ModOnly, NoFA, Multi-Mod
+
+    Args:
+        df: Raw DataFrame from mtsums (wide format with FAILCRAWLER columns, grouped by MSN_STATUS)
+        step: Test step (HMFN, HMB1, QMON)
+        design_id: Optional Design ID to filter
+
+    Returns:
+        Dictionary with correlation data for visualization
+    """
+    if df.empty:
+        return None
+
+    df = df.copy()
+    df.columns = [col.upper() for col in df.columns]
+
+    # Check if MSN_STATUS column exists
+    if 'MSN_STATUS' not in df.columns:
+        logger.warning("MSN_STATUS column not found in data - correlation not available")
+        return None
+
+    # Filter to specific step (exclude Total row)
+    step_df = df[
+        (df['STEP'].str.upper() == step.upper()) &
+        (df['STEPTYPE'].str.upper() != 'TOTAL')
+    ].copy()
+
+    # Filter by design_id if specified
+    if design_id is not None and 'DESIGN_ID' in step_df.columns:
+        step_df = step_df[step_df['DESIGN_ID'] == design_id].copy()
+
+    if step_df.empty:
+        return None
+
+    # Identify FAILCRAWLER columns (exclude metadata columns)
+    metadata_cols = ['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'MOD_CUSTOM_TEST_FLOW',
+                     'MSN_STATUS', 'ALL(DPM)', 'ALL', 'UIN', 'UFAIL', 'UPASS', 'UNKNOWN']
+    fc_columns = [col for col in step_df.columns if col not in metadata_cols and col != 'UNKNOWN']
+
+    if not fc_columns:
+        return None
+
+    # Filter out excluded MSN_STATUS values (should already be filtered by mtsums, but double-check)
+    excluded_statuses = ['MOD-SYS', 'MODONLY', 'NOFA', 'MULTI-MOD', 'PASS']
+    step_df = step_df[~step_df['MSN_STATUS'].str.upper().isin(excluded_statuses)]
+
+    if step_df.empty:
+        return None
+
+    # Aggregate CDPM by MSN_STATUS
+    # Sum across workweeks and design IDs to get total CDPM per MSN_STATUS per FAILCRAWLER
+    agg_dict = {col: 'sum' for col in fc_columns}
+    agg_dict['UIN'] = 'sum'
+    msn_status_agg = step_df.groupby('MSN_STATUS').agg(agg_dict).reset_index()
+
+    # Calculate total CDPM for each MSN_STATUS (sum of all FAILCRAWLER columns)
+    msn_status_agg['TOTAL_CDPM'] = msn_status_agg[fc_columns].sum(axis=1)
+
+    # Calculate grand total CDPM
+    grand_total_cdpm = msn_status_agg['TOTAL_CDPM'].sum()
+
+    if grand_total_cdpm == 0:
+        return None
+
+    # Calculate contribution percentage for each MSN_STATUS
+    msn_status_agg['CONTRIBUTION_PCT'] = (msn_status_agg['TOTAL_CDPM'] / grand_total_cdpm * 100).round(2)
+
+    # Sort by CDPM contribution (descending)
+    msn_status_agg = msn_status_agg.sort_values('TOTAL_CDPM', ascending=False)
+
+    # Calculate cumulative percentage
+    msn_status_agg['CUMULATIVE_PCT'] = msn_status_agg['CONTRIBUTION_PCT'].cumsum().round(2)
+
+    # Flag low-volume populations (UIN < 100)
+    msn_status_agg['LOW_VOLUME'] = msn_status_agg['UIN'] < 100
+
+    # Build correlation matrix (FAILCRAWLER × MSN_STATUS)
+    # Rows = FAILCRAWLER, Columns = MSN_STATUS, Values = CDPM contribution %
+    correlation_matrix = {}
+    for fc in fc_columns:
+        fc_total = msn_status_agg[fc].sum()
+        if fc_total > 0:
+            correlation_matrix[fc] = {}
+            for _, row in msn_status_agg.iterrows():
+                msn_status = row['MSN_STATUS']
+                fc_cdpm = row[fc]
+                correlation_matrix[fc][msn_status] = round(fc_cdpm / fc_total * 100, 1) if fc_total > 0 else 0
+
+    # Get top FAILCRAWLERs (by total CDPM)
+    fc_totals = {fc: msn_status_agg[fc].sum() for fc in fc_columns}
+    top_fcs = sorted(fc_totals.keys(), key=lambda x: fc_totals[x], reverse=True)[:10]
+
+    # Get MSN_STATUS list (sorted by contribution)
+    msn_statuses = msn_status_agg['MSN_STATUS'].tolist()
+
+    return {
+        'step': step,
+        'msn_status_summary': msn_status_agg,
+        'correlation_matrix': correlation_matrix,
+        'fc_columns': fc_columns,
+        'top_fcs': top_fcs,
+        'msn_statuses': msn_statuses,
+        'grand_total_cdpm': grand_total_cdpm
+    }
+
+
+def create_msn_status_correlation_chart(data: dict, dark_mode: bool = False) -> go.Figure:
+    """
+    Create a heatmap showing FAILCRAWLER × MSN_STATUS CDPM contribution.
+
+    Args:
+        data: Processed correlation data from process_msn_status_correlation
+        dark_mode: Theme setting
+
+    Returns:
+        Plotly Figure (heatmap)
+    """
+    if data is None:
+        return None
+
+    correlation_matrix = data['correlation_matrix']
+    top_fcs = data['top_fcs']
+    msn_statuses = data['msn_statuses']
+    step = data['step']
+
+    # Build z-values matrix
+    z_values = []
+    for fc in top_fcs:
+        row = []
+        for msn in msn_statuses:
+            val = correlation_matrix.get(fc, {}).get(msn, 0)
+            row.append(val)
+        z_values.append(row)
+
+    # Theme colors
+    if dark_mode:
+        font_color = '#E0E0E0'
+        paper_bg = 'rgba(0,0,0,0)'
+        colorscale = 'Viridis'
+    else:
+        font_color = '#1a1a1a'
+        paper_bg = '#FFFFFF'
+        colorscale = 'Blues'
+
+    fig = go.Figure(data=go.Heatmap(
+        z=z_values,
+        x=msn_statuses,
+        y=top_fcs,
+        colorscale=colorscale,
+        text=[[f'{v:.1f}%' for v in row] for row in z_values],
+        texttemplate='%{text}',
+        textfont=dict(size=10, color=font_color),
+        hovertemplate='FAILCRAWLER: %{y}<br>MSN_STATUS: %{x}<br>Contribution: %{z:.1f}%<extra></extra>',
+        colorbar=dict(
+            title=dict(text='Contribution %', font=dict(color=font_color)),
+            tickfont=dict(color=font_color)
+        )
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text=f'<b>{step} FAILCRAWLER × MSN_STATUS Contribution</b>',
+            font=dict(color=font_color, size=14)
+        ),
+        xaxis=dict(
+            title='MSN_STATUS',
+            tickfont=dict(color=font_color, size=10),
+            tickangle=-45
+        ),
+        yaxis=dict(
+            title='FAILCRAWLER',
+            tickfont=dict(color=font_color, size=10)
+        ),
+        paper_bgcolor=paper_bg,
+        plot_bgcolor=paper_bg,
+        font=dict(color=font_color),
+        height=400,
+        margin=dict(l=150, r=50, t=50, b=100)
+    )
+
+    return fig
+
+
+def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> str:
+    """
+    Create HTML table showing MSN_STATUS ranked by CDPM contribution.
+
+    Following mtsums best practices:
+    - Rank by CDPM contribution %, not count
+    - Flag low-volume populations
+    - Show cumulative % for Pareto analysis
+
+    Args:
+        data: Processed correlation data
+        dark_mode: Theme setting
+
+    Returns:
+        HTML string for the ranked table
+    """
+    if data is None:
+        return ""
+
+    summary = data['msn_status_summary']
+    step = data['step']
+    grand_total = data['grand_total_cdpm']
+
+    # Style colors
+    bg_color = '#2d2d2d' if dark_mode else '#ffffff'
+    text_color = '#ffffff' if dark_mode else '#1a1a1a'
+    header_bg = '#3d3d3d' if dark_mode else '#e8e8e8'
+    border_color = '#555555' if dark_mode else '#cccccc'
+    highlight_80 = '#4a1a1a' if dark_mode else '#ffe0e0'
+    low_vol_color = '#5c4a00' if dark_mode else '#FFF3CD'
+
+    html = f'''
+    <div style="margin-bottom: 20px;">
+        <h4 style="color: {text_color}; margin-bottom: 10px;">{step} MSN_STATUS Ranked by CDPM Contribution</h4>
+        <p style="font-size: 11px; color: {'#aaaaaa' if dark_mode else '#666666'}; margin-bottom: 10px;">
+            Total CDPM: {grand_total:,.1f} | Ranked by contribution %, not count
+        </p>
+        <table style="border-collapse: collapse; width: 100%; font-size: 12px; font-family: Arial, sans-serif; background-color: {bg_color};">
+            <thead>
+                <tr style="background-color: {header_bg};">
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: left; color: {text_color};">Rank</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: left; color: {text_color};">MSN_STATUS</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Total CDPM</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Contribution %</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Cumulative %</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Volume (UIN)</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: center; color: {text_color};">Flag</th>
+                </tr>
+            </thead>
+            <tbody>
+    '''
+
+    for i, (_, row) in enumerate(summary.iterrows(), 1):
+        # Highlight top 80% contributors
+        row_style = ''
+        if row['CUMULATIVE_PCT'] <= 80 or i == 1:
+            row_style = f'background-color: {highlight_80};'
+        elif row['LOW_VOLUME']:
+            row_style = f'background-color: {low_vol_color};'
+
+        flag = '⚠️ Low Vol' if row['LOW_VOLUME'] else ''
+
+        html += f'''
+            <tr style="{row_style}">
+                <td style="border: 1px solid {border_color}; padding: 8px; color: {text_color};">{i}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; font-weight: bold; color: {text_color};">{row['MSN_STATUS']}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{row['TOTAL_CDPM']:,.1f}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{row['CONTRIBUTION_PCT']:.1f}%</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{row['CUMULATIVE_PCT']:.1f}%</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{int(row['UIN']):,}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: center; color: {text_color};">{flag}</td>
+            </tr>
+        '''
+
+    html += f'''
+            </tbody>
+        </table>
+        <p style="font-size: 11px; color: {'#aaaaaa' if dark_mode else '#666666'}; margin-top: 5px;">
+            🔴 Red rows = Top 80% contributors (focus areas) | 🟡 Yellow = Low volume (&lt;100 UIN, interpret with caution)
+        </p>
     </div>
     '''
 

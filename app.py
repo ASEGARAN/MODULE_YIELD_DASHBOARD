@@ -37,6 +37,9 @@ from src.failcrawler import (
     create_failcrawler_summary_table,
     create_pareto_summary_html,
     create_weekly_cdpm_table_html,
+    process_msn_status_correlation,
+    create_msn_status_correlation_chart,
+    create_msn_status_ranked_table_html,
 )
 
 # SMT6 yield module
@@ -2304,6 +2307,23 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 weekly_html = create_weekly_cdpm_table_html(data, dark_mode=False)
                 if weekly_html:
                     components.html(weekly_html, height=600, scrolling=True)
+
+            # MSN_STATUS Correlation (FAILCRAWLER × MSN_STATUS contribution analysis)
+            with st.expander(f"🔗 {step} MSN_STATUS Correlation", expanded=False):
+                st.caption("CDPM contribution by MSN_STATUS - ranked by contribution %, not count")
+                correlation_data = process_msn_status_correlation(fc_df, step, design_id=filter_design_id)
+                if correlation_data:
+                    # Heatmap: FAILCRAWLER × MSN_STATUS
+                    corr_fig = create_msn_status_correlation_chart(correlation_data, dark_mode=False)
+                    if corr_fig:
+                        st.plotly_chart(corr_fig, use_container_width=True)
+
+                    # Ranked table: MSN_STATUS by CDPM contribution
+                    ranked_html = create_msn_status_ranked_table_html(correlation_data, dark_mode=False)
+                    if ranked_html:
+                        components.html(ranked_html, height=400, scrolling=True)
+                else:
+                    st.info("MSN_STATUS correlation data not available. Ensure mtsums returns MSN_STATUS field.")
 
             st.divider()
 
