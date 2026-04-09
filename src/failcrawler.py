@@ -828,26 +828,34 @@ def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str =
     if step_df.empty:
         return None
 
-    # Aggregate CDPM by MSN_STATUS
-    # Sum across workweeks and design IDs to get total CDPM per MSN_STATUS per FAILCRAWLER
-    agg_dict = {col: 'sum' for col in fc_columns}
-    agg_dict['UIN'] = 'sum'
+    # Aggregate by MSN_STATUS using fail counts (ALL column), not DPM
+    # DPM values cannot be summed - they are rates, not counts
+    # Use ALL (fail count) and UIN for proper calculation
+    agg_dict = {'UIN': 'sum'}
+    if 'ALL' in step_df.columns:
+        agg_dict['ALL'] = 'sum'
     msn_status_agg = step_df.groupby('MSN_STATUS').agg(agg_dict).reset_index()
 
-    # Calculate total CDPM for each MSN_STATUS (sum of all FAILCRAWLER columns)
-    msn_status_agg['TOTAL_CDPM'] = msn_status_agg[fc_columns].sum(axis=1)
+    # Calculate proper DPM from aggregated counts: (fails / UIN) * 1,000,000
+    if 'ALL' in msn_status_agg.columns:
+        msn_status_agg['TOTAL_FAILS'] = msn_status_agg['ALL']
+        msn_status_agg['CALCULATED_DPM'] = (msn_status_agg['ALL'] / msn_status_agg['UIN'] * 1_000_000).round(1)
+    else:
+        # Fallback: use UIN as proxy for contribution
+        msn_status_agg['TOTAL_FAILS'] = msn_status_agg['UIN']
+        msn_status_agg['CALCULATED_DPM'] = 0
 
-    # Calculate grand total CDPM
-    grand_total_cdpm = msn_status_agg['TOTAL_CDPM'].sum()
+    # Calculate grand total fails
+    grand_total_fails = msn_status_agg['TOTAL_FAILS'].sum()
 
-    if grand_total_cdpm == 0:
+    if grand_total_fails == 0:
         return None
 
-    # Calculate contribution percentage for each MSN_STATUS
-    msn_status_agg['CONTRIBUTION_PCT'] = (msn_status_agg['TOTAL_CDPM'] / grand_total_cdpm * 100).round(2)
+    # Calculate contribution percentage based on fail count (not DPM)
+    msn_status_agg['CONTRIBUTION_PCT'] = (msn_status_agg['TOTAL_FAILS'] / grand_total_fails * 100).round(2)
 
-    # Sort by CDPM contribution (descending)
-    msn_status_agg = msn_status_agg.sort_values('TOTAL_CDPM', ascending=False)
+    # Sort by fail count contribution (descending)
+    msn_status_agg = msn_status_agg.sort_values('TOTAL_FAILS', ascending=False)
 
     # Calculate cumulative percentage
     msn_status_agg['CUMULATIVE_PCT'] = msn_status_agg['CONTRIBUTION_PCT'].cumsum().round(2)
@@ -855,20 +863,24 @@ def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str =
     # Flag low-volume populations (UIN < 100)
     msn_status_agg['LOW_VOLUME'] = msn_status_agg['UIN'] < 100
 
-    # Build correlation matrix (FAILCRAWLER × MSN_STATUS)
-    # Rows = FAILCRAWLER, Columns = MSN_STATUS, Values = CDPM contribution %
+    # Build correlation matrix (FAILCRAWLER × MSN_STATUS) from original step_df
+    # Use DPM values for relative distribution within each FAILCRAWLER category
+    # Note: This shows "for each FAILCRAWLER, what % came from each MSN_STATUS"
     correlation_matrix = {}
     for fc in fc_columns:
-        fc_total = msn_status_agg[fc].sum()
-        if fc_total > 0:
-            correlation_matrix[fc] = {}
-            for _, row in msn_status_agg.iterrows():
-                msn_status = row['MSN_STATUS']
-                fc_cdpm = row[fc]
-                correlation_matrix[fc][msn_status] = round(fc_cdpm / fc_total * 100, 1) if fc_total > 0 else 0
+        if fc in step_df.columns:
+            fc_by_msn = step_df.groupby('MSN_STATUS')[fc].sum()
+            fc_total = fc_by_msn.sum()
+            if fc_total > 0:
+                correlation_matrix[fc] = {}
+                for msn_status in fc_by_msn.index:
+                    correlation_matrix[fc][msn_status] = round(fc_by_msn[msn_status] / fc_total * 100, 1)
 
-    # Get top FAILCRAWLERs (by total CDPM)
-    fc_totals = {fc: msn_status_agg[fc].sum() for fc in fc_columns}
+    # Get top FAILCRAWLERs (by total DPM across all MSN_STATUS)
+    fc_totals = {}
+    for fc in fc_columns:
+        if fc in step_df.columns:
+            fc_totals[fc] = step_df[fc].sum()
     top_fcs = sorted(fc_totals.keys(), key=lambda x: fc_totals[x], reverse=True)[:10]
 
     # Get MSN_STATUS list (sorted by contribution)
@@ -881,7 +893,7 @@ def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str =
         'fc_columns': fc_columns,
         'top_fcs': top_fcs,
         'msn_statuses': msn_statuses,
-        'grand_total_cdpm': grand_total_cdpm
+        'grand_total_fails': grand_total_fails
     }
 
 
@@ -964,10 +976,11 @@ def create_msn_status_correlation_chart(data: dict, dark_mode: bool = False) -> 
 
 def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> str:
     """
-    Create HTML table showing MSN_STATUS ranked by CDPM contribution.
+    Create HTML table showing MSN_STATUS ranked by fail count contribution.
 
     Following mtsums best practices:
-    - Rank by CDPM contribution %, not count
+    - Rank by fail count contribution %, not summed DPM (DPM is a rate, not additive)
+    - Show calculated DPM = (fails / UIN) * 1,000,000
     - Flag low-volume populations
     - Show cumulative % for Pareto analysis
 
@@ -983,7 +996,7 @@ def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> 
 
     summary = data['msn_status_summary']
     step = data['step']
-    grand_total = data['grand_total_cdpm']
+    grand_total = data['grand_total_fails']
 
     # Style colors
     bg_color = '#2d2d2d' if dark_mode else '#ffffff'
@@ -995,16 +1008,17 @@ def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> 
 
     html = f'''
     <div style="margin-bottom: 20px;">
-        <h4 style="color: {text_color}; margin-bottom: 10px;">{step} MSN_STATUS Ranked by CDPM Contribution</h4>
+        <h4 style="color: {text_color}; margin-bottom: 10px;">{step} MSN_STATUS Ranked by Fail Count</h4>
         <p style="font-size: 11px; color: {'#aaaaaa' if dark_mode else '#666666'}; margin-bottom: 10px;">
-            Total CDPM: {grand_total:,.1f} | Ranked by contribution %, not count
+            Total Fails: {grand_total:,.0f} | DPM = (Fails / UIN) × 1M
         </p>
         <table style="border-collapse: collapse; width: 100%; font-size: 12px; font-family: Arial, sans-serif; background-color: {bg_color};">
             <thead>
                 <tr style="background-color: {header_bg};">
                     <th style="border: 1px solid {border_color}; padding: 8px; text-align: left; color: {text_color};">Rank</th>
                     <th style="border: 1px solid {border_color}; padding: 8px; text-align: left; color: {text_color};">MSN_STATUS</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Total CDPM</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Fails</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">DPM</th>
                     <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Contribution %</th>
                     <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Cumulative %</th>
                     <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Volume (UIN)</th>
@@ -1023,12 +1037,15 @@ def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> 
             row_style = f'background-color: {low_vol_color};'
 
         flag = '⚠️ Low Vol' if row['LOW_VOLUME'] else ''
+        fails = int(row['TOTAL_FAILS']) if 'TOTAL_FAILS' in row else 0
+        dpm = row['CALCULATED_DPM'] if 'CALCULATED_DPM' in row else 0
 
         html += f'''
             <tr style="{row_style}">
                 <td style="border: 1px solid {border_color}; padding: 8px; color: {text_color};">{i}</td>
                 <td style="border: 1px solid {border_color}; padding: 8px; font-weight: bold; color: {text_color};">{row['MSN_STATUS']}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{row['TOTAL_CDPM']:,.1f}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{fails:,}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{dpm:,.1f}</td>
                 <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{row['CONTRIBUTION_PCT']:.1f}%</td>
                 <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{row['CUMULATIVE_PCT']:.1f}%</td>
                 <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{int(row['UIN']):,}</td>
