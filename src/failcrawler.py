@@ -215,7 +215,7 @@ def fetch_msn_status_correlation_data(
         f'-step={step_str}',
         '-MOD_CUSTOM_TEST_FLOW<>HMB1_NPI_FLOW',
         '-format+=MOD_CUSTOM_TEST_FLOW',
-        '-msn_status!=Mod-Sys,ModOnly,NoFA,Multi-Mod',
+        '-msn_status!=Pass',
         '+fm'
     ]
 
@@ -822,8 +822,8 @@ def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str =
         return None
 
     # Filter out excluded MSN_STATUS values (should already be filtered by mtsums, but double-check)
-    excluded_statuses = ['MOD-SYS', 'MODONLY', 'NOFA', 'MULTI-MOD', 'PASS']
-    step_df = step_df[~step_df['MSN_STATUS'].str.upper().isin(excluded_statuses)]
+    # Exclude only Pass (not a failure)
+    step_df = step_df[step_df['MSN_STATUS'].str.upper() != 'PASS']
 
     if step_df.empty:
         return None
