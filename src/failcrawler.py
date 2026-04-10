@@ -479,46 +479,47 @@ def create_failcrawler_chart(data: dict, design_id: str = None, dark_mode: bool 
     title = ' '.join(title_parts)
 
     # Update layout - use autorange for y-axis (no fixed cap)
+    # Optimized font sizes for better readability
     fig.update_layout(
-        title=dict(text=title, font=dict(color=font_color, size=16)),
+        title=dict(text=title, font=dict(color=font_color, size=18)),
         barmode='stack',
         height=550,
         paper_bgcolor=paper_bg,
         plot_bgcolor=plot_bg,
-        font=dict(color=font_color, family='-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'),
+        font=dict(color=font_color, family='-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', size=13),
         legend=dict(
             orientation='v',
             yanchor='top',
             y=0.98,
             xanchor='left',
             x=1.02,
-            font=dict(color=font_color, size=11),
+            font=dict(color=font_color, size=13),
             bgcolor=legend_bg,
             bordercolor='rgba(0,0,0,0.2)' if not dark_mode else 'rgba(128,128,128,0.3)',
             borderwidth=1
         ),
-        margin=dict(l=60, r=180, t=60, b=80),
+        margin=dict(l=70, r=200, t=70, b=90),
         xaxis=dict(
             type='category',
             tickangle=-45,
-            tickfont=dict(color=font_color, size=10),
+            tickfont=dict(color=font_color, size=12),
             gridcolor=grid_color,
-            title=dict(text='Work Week', font=dict(color=font_color, size=12))
+            title=dict(text='Work Week', font=dict(color=font_color, size=14))
         ),
         yaxis=dict(
-            title=dict(text='cDPM (Defects Per Million)', font=dict(color=font_color, size=12)),
+            title=dict(text='cDPM (Defects Per Million)', font=dict(color=font_color, size=14)),
             autorange=True,
             rangemode='tozero',
             side='left',
-            tickfont=dict(color=font_color, size=10),
+            tickfont=dict(color=font_color, size=12),
             gridcolor=grid_color
         ),
         yaxis2=dict(
-            title=dict(text='Volume (UIN)', font=dict(color=font_color, size=12)),
+            title=dict(text='Volume (UIN)', font=dict(color=font_color, size=14)),
             overlaying='y',
             side='right',
             showgrid=False,
-            tickfont=dict(color=font_color, size=10)
+            tickfont=dict(color=font_color, size=12)
         ),
         hovermode='x unified'
     )

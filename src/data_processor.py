@@ -190,6 +190,79 @@ class DataProcessor:
             max_yield=round(row_yields.max(), 2) if not row_yields.empty else 0.0,
         )
 
+    def get_did_breakdown(self, latest_week_only: bool = True, by_step: bool = False) -> pd.DataFrame:
+        """Get yield breakdown by Design ID for the latest workweek.
+
+        Args:
+            latest_week_only: If True, only return data for the latest workweek
+            by_step: If True, also break down by test step (HMFN, SLT, ELC)
+
+        Returns:
+            DataFrame with DID-level yield statistics
+        """
+        if self._df.empty:
+            return pd.DataFrame()
+
+        df = self._df.copy()
+
+        # Filter to latest workweek if requested
+        if latest_week_only and 'MFG_WORKWEEK' in df.columns:
+            latest_ww = df['MFG_WORKWEEK'].max()
+            df = df[df['MFG_WORKWEEK'] == latest_ww]
+
+        # Determine DID column name
+        did_col = None
+        for col in ['DBASE', 'design_id', 'DESIGN_ID']:
+            if col in df.columns:
+                did_col = col
+                break
+
+        if did_col is None or df.empty:
+            return pd.DataFrame()
+
+        # Determine step column name
+        step_col = None
+        for col in ['STEP', 'step']:
+            if col in df.columns:
+                step_col = col
+                break
+
+        # Build group columns
+        group_cols = [did_col]
+        if by_step and step_col:
+            group_cols.append(step_col)
+
+        # Aggregate by DID (and optionally step)
+        did_summary = df.groupby(group_cols).agg({
+            'UIN': 'sum',
+            'UPASS': 'sum'
+        }).reset_index()
+
+        # Rename columns
+        if by_step and step_col:
+            did_summary.columns = ['design_id', 'step', 'uin', 'upass']
+        else:
+            did_summary.columns = ['design_id', 'uin', 'upass']
+
+        did_summary['yield_pct'] = (did_summary['upass'] / did_summary['uin'] * 100).round(2)
+        did_summary['ufail'] = did_summary['uin'] - did_summary['upass']
+
+        # Sort by DID then step (if applicable)
+        if by_step and 'step' in did_summary.columns:
+            # Define step order
+            step_order = {'hmfn': 0, 'slt': 1, 'elc': 2}
+            did_summary['step_order'] = did_summary['step'].str.lower().map(step_order).fillna(99)
+            did_summary = did_summary.sort_values(['design_id', 'step_order'])
+            did_summary = did_summary.drop(columns=['step_order'])
+        else:
+            did_summary = did_summary.sort_values('uin', ascending=False)
+
+        # Add latest workweek info
+        if 'MFG_WORKWEEK' in self._df.columns:
+            did_summary['workweek'] = self._df['MFG_WORKWEEK'].max()
+
+        return did_summary
+
     def get_summary_table(self) -> pd.DataFrame:
         """Get summary table for display.
 

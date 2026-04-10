@@ -669,10 +669,11 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
 
 
 def render_summary_metrics(processor: DataProcessor) -> None:
-    """Render summary metric cards."""
+    """Render summary metric cards with DID breakdown."""
     try:
         summary = processor.get_yield_summary()
 
+        # Overall metrics row
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
@@ -686,6 +687,128 @@ def render_summary_metrics(processor: DataProcessor) -> None:
                 "Yield Range",
                 f"{summary.min_yield:.1f}% - {summary.max_yield:.1f}%",
             )
+
+        # DID breakdown by step for latest week
+        did_breakdown = processor.get_did_breakdown(latest_week_only=True, by_step=True)
+        if not did_breakdown.empty:
+            st.markdown("---")
+            latest_ww = did_breakdown['workweek'].iloc[0] if 'workweek' in did_breakdown.columns else "N/A"
+            st.markdown(f"##### 📊 Design ID Yield by Step (WW{latest_ww})")
+            st.caption("ELC = HMFN × SLT (module-level end-of-line yield)")
+
+            # Step-specific targets for color coding
+            step_targets = {
+                'hmfn': 99.0,
+                'slt': 97.0,
+                'elc': 96.0
+            }
+
+            def get_yield_color(yield_pct: float, step: str) -> str:
+                """Get color based on yield relative to step target."""
+                target = step_targets.get(step.lower(), 97.0)
+                gap = yield_pct - target
+                if gap >= 0:
+                    return "#00C853"  # Green - at or above target
+                elif gap >= -1:
+                    return "#8BC34A"  # Light green - within 1% of target
+                elif gap >= -2:
+                    return "#FFEB3B"  # Yellow - within 2% of target
+                else:
+                    return "#FF5722"  # Red - more than 2% below target
+
+            # Group by DID
+            dids = did_breakdown['design_id'].unique()
+            num_dids = len(dids)
+            cols = st.columns(min(num_dids, 4))
+
+            for idx, did in enumerate(dids):
+                col_idx = idx % 4
+                did_data = did_breakdown[did_breakdown['design_id'] == did]
+
+                with cols[col_idx]:
+                    # Extract yields per step
+                    hmfn_yield = None
+                    slt_yield = None
+                    elc_yield = None
+                    hmfn_uin = 0
+                    slt_uin = 0
+                    elc_uin = 0
+
+                    for _, row in did_data.iterrows():
+                        step = row.get('step', '').lower()
+                        if step == 'hmfn':
+                            hmfn_yield = row['yield_pct']
+                            hmfn_uin = int(row['uin'])
+                        elif step == 'slt':
+                            slt_yield = row['yield_pct']
+                            slt_uin = int(row['uin'])
+                        elif step == 'elc':
+                            elc_yield = row['yield_pct']
+                            elc_uin = int(row['uin'])
+
+                    # Calculate expected ELC from HMFN × SLT
+                    calc_elc = None
+                    if hmfn_yield is not None and slt_yield is not None:
+                        calc_elc = (hmfn_yield / 100) * (slt_yield / 100) * 100
+
+                    # Build visual flow: HMFN → SLT → ELC
+                    hmfn_color = get_yield_color(hmfn_yield, 'hmfn') if hmfn_yield else "#666"
+                    slt_color = get_yield_color(slt_yield, 'slt') if slt_yield else "#666"
+                    elc_color = get_yield_color(elc_yield, 'elc') if elc_yield else "#666"
+
+                    # Show delta between calculated and actual ELC
+                    elc_delta_html = ""
+                    if calc_elc is not None and elc_yield is not None:
+                        delta = elc_yield - calc_elc
+                        delta_color = "#00C853" if delta >= 0 else "#FF5722"
+                        delta_sign = "+" if delta >= 0 else ""
+                        elc_delta_html = f'<span style="font-size: 9px; color: {delta_color};">({delta_sign}{delta:.2f}%)</span>'
+
+                    st.markdown(f"""
+                    <div style="
+                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                        border-radius: 8px;
+                        padding: 12px;
+                        margin-bottom: 8px;
+                    ">
+                        <div style="text-align: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+                            <span style="font-size: 16px; font-weight: 700; color: #fff;">{did}</span>
+                        </div>
+
+                        <!-- HMFN -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(0,191,255,0.1); border-radius: 6px; margin-bottom: 4px;">
+                            <span style="font-size: 11px; color: #00BFFF; font-weight: 600;">HMFN</span>
+                            <span style="font-size: 15px; font-weight: 700; color: {hmfn_color};">{f'{hmfn_yield:.2f}%' if hmfn_yield else 'N/A'}</span>
+                        </div>
+
+                        <!-- Multiplication symbol -->
+                        <div style="text-align: center; color: #666; font-size: 12px; margin: 2px 0;">×</div>
+
+                        <!-- SLT -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255,23,68,0.1); border-radius: 6px; margin-bottom: 4px;">
+                            <span style="font-size: 11px; color: #FF1744; font-weight: 600;">SLT</span>
+                            <span style="font-size: 15px; font-weight: 700; color: {slt_color};">{f'{slt_yield:.2f}%' if slt_yield else 'N/A'}</span>
+                        </div>
+
+                        <!-- Equals symbol -->
+                        <div style="text-align: center; color: #666; font-size: 12px; margin: 2px 0;">＝</div>
+
+                        <!-- ELC -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: rgba(57,255,20,0.1); border-radius: 6px; border: 1px solid {elc_color};">
+                            <span style="font-size: 11px; color: #39FF14; font-weight: 600;">ELC</span>
+                            <div style="text-align: right;">
+                                <span style="font-size: 17px; font-weight: 700; color: {elc_color};">{f'{elc_yield:.2f}%' if elc_yield else 'N/A'}</span>
+                                {elc_delta_html}
+                            </div>
+                        </div>
+
+                        <!-- Calculated vs Actual -->
+                        <div style="text-align: center; margin-top: 6px; font-size: 9px; color: #666;">
+                            Calc: {f'{calc_elc:.2f}%' if calc_elc else 'N/A'} | UIN: {elc_uin:,}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
     except Exception as e:
         logger.error("Failed to render metrics: %s", e)
         st.error("Failed to render summary metrics")
@@ -1335,8 +1458,13 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                         num_channels = display_df['site'].apply(
                             lambda x: re.match(r'S\d+C(\d+)', x).group(1) if re.match(r'S\d+C(\d+)', x) else '0'
                         ).nunique()
-                        # Height: header + slice boxes (each ~200px + channels*30px)
-                        grid_height = 150 + (num_slices * (150 + num_channels * 35))
+                        # Height: header + slice boxes + legend + footer
+                        # For 2x2 grid (4 slices), rows = 2
+                        if num_slices <= 2:
+                            slice_rows = 1
+                        else:
+                            slice_rows = 2  # 2x2 grid for 3-4 slices
+                        grid_height = 200 + (slice_rows * (180 + num_channels * 40)) + 60
 
                     else:  # Socket Health
                         num_sockets = display_df['site'].apply(
