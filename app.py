@@ -917,6 +917,59 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         st.error("Failed to render trend chart")
 
 
+def create_gauge_chart(value: float, target: float, title: str, height: int = 150) -> go.Figure:
+    """Create an animated gauge chart showing yield vs target."""
+    if value is None:
+        return None
+
+    # Determine color based on gap to target
+    gap = value - target
+    if gap >= 0:
+        bar_color = "#00ff88"  # Green
+        gauge_color = "rgba(0, 255, 136, 0.3)"
+    elif gap >= -1:
+        bar_color = "#ffaa00"  # Orange
+        gauge_color = "rgba(255, 170, 0, 0.3)"
+    else:
+        bar_color = "#ff4466"  # Red
+        gauge_color = "rgba(255, 68, 102, 0.3)"
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number+delta",
+        value=value,
+        number={'suffix': '%', 'font': {'size': 24, 'color': bar_color}},
+        delta={'reference': target, 'suffix': '%', 'font': {'size': 12},
+               'increasing': {'color': '#00ff88'}, 'decreasing': {'color': '#ff4466'}},
+        title={'text': title, 'font': {'size': 14, 'color': '#888'}},
+        gauge={
+            'axis': {'range': [90, 100], 'tickwidth': 1, 'tickcolor': '#444',
+                     'tickfont': {'size': 10, 'color': '#666'}},
+            'bar': {'color': bar_color, 'thickness': 0.7},
+            'bgcolor': 'rgba(30,30,60,0.5)',
+            'borderwidth': 0,
+            'steps': [
+                {'range': [90, target - 2], 'color': 'rgba(255, 68, 102, 0.2)'},
+                {'range': [target - 2, target], 'color': 'rgba(255, 170, 0, 0.2)'},
+                {'range': [target, 100], 'color': 'rgba(0, 255, 136, 0.2)'}
+            ],
+            'threshold': {
+                'line': {'color': '#00d4ff', 'width': 3},
+                'thickness': 0.8,
+                'value': target
+            }
+        }
+    ))
+
+    fig.update_layout(
+        margin=dict(l=20, r=20, t=40, b=10),
+        height=height,
+        paper_bgcolor='rgba(0,0,0,0)',
+        font={'color': '#fff'}
+    )
+
+    return fig
+
+
 def create_sparkline(values: list, color: str = "#00d4ff", height: int = 30) -> go.Figure:
     """Create a mini sparkline chart."""
     if not values or len(values) < 2:
@@ -1023,7 +1076,13 @@ def render_did_breakdown(processor: DataProcessor) -> None:
             return
 
         latest_ww = did_breakdown['workweek'].iloc[0] if 'workweek' in did_breakdown.columns else "N/A"
-        st.markdown(f"#### 📊 WW{latest_ww} Summary")
+
+        # Header with view toggle
+        hdr1, hdr2 = st.columns([3, 1])
+        with hdr1:
+            st.markdown(f"#### 📊 WW{latest_ww} Summary")
+        with hdr2:
+            show_gauges = st.toggle("Gauges", value=False, key="did_gauge_toggle", help="Show gauge charts")
 
         # Step-specific targets for color coding
         step_targets = {
@@ -1152,38 +1211,59 @@ def render_did_breakdown(processor: DataProcessor) -> None:
                 # Three metrics side by side
                 c1, c2, c3 = st.columns(3)
 
-                with c1:
-                    hmfn_emoji = status_emoji(hmfn_yield, targets['hmfn'])
-                    hmfn_delta = f"{hmfn_yield - targets['hmfn']:+.2f}%" if hmfn_yield else None
-                    st.metric(
-                        f"{hmfn_emoji} HMFN",
-                        f"{hmfn_yield:.2f}%" if hmfn_yield else "N/A",
-                        delta=hmfn_delta
-                    )
-                    fourwk_hmfn = f"{hmfn_4wk.get('yield', 0):.1f}%" if hmfn_4wk.get('yield') else "-"
-                    st.caption(f"n={fmt_vol(hmfn_uin)} | 4wk:{fourwk_hmfn}")
+                if show_gauges:
+                    # Gauge view
+                    with c1:
+                        gauge_fig = create_gauge_chart(hmfn_yield, targets['hmfn'], "HMFN", height=140)
+                        if gauge_fig:
+                            st.plotly_chart(gauge_fig, use_container_width=True, config={'displayModeBar': False}, key=f"gauge_hmfn_{did}")
+                        st.caption(f"n={fmt_vol(hmfn_uin)}")
 
-                with c2:
-                    slt_emoji = status_emoji(slt_yield, targets['slt'])
-                    slt_delta = f"{slt_yield - targets['slt']:+.2f}%" if slt_yield else None
-                    st.metric(
-                        f"{slt_emoji} SLT",
-                        f"{slt_yield:.2f}%" if slt_yield else "N/A",
-                        delta=slt_delta
-                    )
-                    fourwk_slt = f"{slt_4wk_yield:.1f}%" if slt_4wk_yield else "-"
-                    st.caption(f"n={fmt_vol(slt_uin)} | 4wk:{fourwk_slt}")
+                    with c2:
+                        gauge_fig = create_gauge_chart(slt_yield, targets['slt'], "SLT", height=140)
+                        if gauge_fig:
+                            st.plotly_chart(gauge_fig, use_container_width=True, config={'displayModeBar': False}, key=f"gauge_slt_{did}")
+                        st.caption(f"n={fmt_vol(slt_uin)}")
 
-                with c3:
-                    elc_emoji = status_emoji(elc_yield, targets['elc'])
-                    elc_delta = f"{elc_yield - targets['elc']:+.2f}%" if elc_yield else None
-                    st.metric(
-                        f"{elc_emoji} ELC",
-                        f"{elc_yield:.2f}%" if elc_yield else "N/A",
-                        delta=elc_delta
-                    )
-                    fourwk_elc = f"{elc_4wk_yield:.1f}%" if elc_4wk_yield else "-"
-                    st.caption(f"n={fmt_vol(elc_uin)} | 4wk:{fourwk_elc}")
+                    with c3:
+                        gauge_fig = create_gauge_chart(elc_yield, targets['elc'], "ELC", height=140)
+                        if gauge_fig:
+                            st.plotly_chart(gauge_fig, use_container_width=True, config={'displayModeBar': False}, key=f"gauge_elc_{did}")
+                        st.caption(f"n={fmt_vol(elc_uin)}")
+                else:
+                    # Metrics view (default)
+                    with c1:
+                        hmfn_emoji = status_emoji(hmfn_yield, targets['hmfn'])
+                        hmfn_delta = f"{hmfn_yield - targets['hmfn']:+.2f}%" if hmfn_yield else None
+                        st.metric(
+                            f"{hmfn_emoji} HMFN",
+                            f"{hmfn_yield:.2f}%" if hmfn_yield else "N/A",
+                            delta=hmfn_delta
+                        )
+                        fourwk_hmfn = f"{hmfn_4wk.get('yield', 0):.1f}%" if hmfn_4wk.get('yield') else "-"
+                        st.caption(f"n={fmt_vol(hmfn_uin)} | 4wk:{fourwk_hmfn}")
+
+                    with c2:
+                        slt_emoji = status_emoji(slt_yield, targets['slt'])
+                        slt_delta = f"{slt_yield - targets['slt']:+.2f}%" if slt_yield else None
+                        st.metric(
+                            f"{slt_emoji} SLT",
+                            f"{slt_yield:.2f}%" if slt_yield else "N/A",
+                            delta=slt_delta
+                        )
+                        fourwk_slt = f"{slt_4wk_yield:.1f}%" if slt_4wk_yield else "-"
+                        st.caption(f"n={fmt_vol(slt_uin)} | 4wk:{fourwk_slt}")
+
+                    with c3:
+                        elc_emoji = status_emoji(elc_yield, targets['elc'])
+                        elc_delta = f"{elc_yield - targets['elc']:+.2f}%" if elc_yield else None
+                        st.metric(
+                            f"{elc_emoji} ELC",
+                            f"{elc_yield:.2f}%" if elc_yield else "N/A",
+                            delta=elc_delta
+                        )
+                        fourwk_elc = f"{elc_4wk_yield:.1f}%" if elc_4wk_yield else "-"
+                        st.caption(f"n={fmt_vol(elc_uin)} | 4wk:{fourwk_elc}")
 
     except Exception as e:
         import traceback
@@ -1990,6 +2070,78 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
         st.info("Click 'Fetch Machine Data' to load machine-level yield data, or 'Fetch Site Data' for site-level breakdown.")
 
 
+def render_week_comparison(processor: DataProcessor) -> None:
+    """Render week-over-week comparison view."""
+    df = processor.dataframe
+    if df.empty:
+        st.info("No data for comparison")
+        return
+
+    ww_col = 'workweek' if 'workweek' in df.columns else None
+    if not ww_col:
+        st.info("Workweek data not available")
+        return
+
+    weeks = sorted(df[ww_col].unique(), reverse=True)
+    if len(weeks) < 2:
+        st.info("Need at least 2 weeks of data for comparison")
+        return
+
+    col1, col2 = st.columns(2)
+    with col1:
+        week1 = st.selectbox("Compare Week", weeks, index=0, key="compare_wk1")
+    with col2:
+        week2 = st.selectbox("Against Week", weeks, index=1 if len(weeks) > 1 else 0, key="compare_wk2")
+
+    if week1 == week2:
+        st.warning("Please select different weeks to compare")
+        return
+
+    # Get data for each week
+    df1 = df[df[ww_col] == week1].copy()
+    df2 = df[df[ww_col] == week2].copy()
+
+    # Calculate metrics for each week
+    def calc_metrics(data):
+        uin = data['UIN'].sum()
+        upass = data['UPASS'].sum()
+        yield_pct = (upass / uin * 100) if uin > 0 else 0
+        return {'uin': uin, 'upass': upass, 'yield': round(yield_pct, 2)}
+
+    m1 = calc_metrics(df1)
+    m2 = calc_metrics(df2)
+
+    # Display comparison
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.markdown(f"**WW{week1}**")
+        st.metric("Yield", f"{m1['yield']:.2f}%")
+        st.caption(f"UIN: {m1['uin']:,}")
+
+    with c2:
+        diff = m1['yield'] - m2['yield']
+        st.markdown("**Δ Change**")
+        st.metric(
+            "Difference",
+            f"{diff:+.2f}%",
+            delta=f"{diff:+.2f}%" if diff != 0 else "No change",
+            delta_color="normal" if diff >= 0 else "inverse"
+        )
+        # Visual indicator
+        if diff > 0.5:
+            st.success("📈 Significant Improvement")
+        elif diff < -0.5:
+            st.error("📉 Significant Decline")
+        else:
+            st.info("➡️ Stable")
+
+    with c3:
+        st.markdown(f"**WW{week2}**")
+        st.metric("Yield", f"{m2['yield']:.2f}%")
+        st.caption(f"UIN: {m2['uin']:,}")
+
+
 def render_dashboard(processor: DataProcessor, filters: dict[str, Any] = None) -> None:
     """Render all dashboard components."""
     # Summary metrics at top (Total Units In, Pass, Yield, Range)
@@ -2004,20 +2156,26 @@ def render_dashboard(processor: DataProcessor, filters: dict[str, Any] = None) -
         render_summary_table(processor)
     st.divider()
 
-    # Charts in two columns
-    col1, col2 = st.columns(2)
-    with col1:
-        render_yield_trend_chart(processor)
-    with col2:
-        render_bin_distribution_chart(processor)
+    # Week comparison mode (collapsible)
+    with st.expander("📊 Week-over-Week Comparison", expanded=False):
+        render_week_comparison(processor)
 
-    st.divider()
-    render_density_speed_heatmap(processor)
+    # Charts section (collapsible)
+    with st.expander("📈 Yield Trends & Distribution", expanded=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            render_yield_trend_chart(processor)
+        with col2:
+            render_bin_distribution_chart(processor)
+
+    # Heatmaps section (collapsible)
+    with st.expander("🗺️ Yield by Density & Speed", expanded=True):
+        render_density_speed_heatmap(processor)
 
     # SMT6 Machine Yield Trend section
     if filters:
-        st.divider()
-        render_smt6_yield_section(filters)
+        with st.expander("🔧 SMT6 Machine Yield", expanded=False):
+            render_smt6_yield_section(filters)
 
 
 def fetch_elc_data(filters: dict[str, Any], use_cache: bool = True) -> pd.DataFrame:
