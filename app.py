@@ -19,6 +19,9 @@ from src import frpt_parser
 importlib.reload(frpt_parser)
 from src.frpt_parser import FrptParser
 
+# Force reload data_processor to pick up latest changes
+from src import data_processor
+importlib.reload(data_processor)
 from src.data_processor import DataProcessor
 from src.cache import FrptCache
 
@@ -111,6 +114,75 @@ def get_current_workweek() -> str:
     now = datetime.now()
     week = now.isocalendar()[1]
     return f"{now.year}{week:02d}"
+
+
+def get_did_breakdown_local(df: pd.DataFrame, by_step: bool = True) -> pd.DataFrame:
+    """Local function to get DID breakdown - workaround for import issues."""
+    if df.empty:
+        return pd.DataFrame()
+
+    # Determine DID column name
+    did_col = None
+    for col in ['DBASE', 'design_id', 'DESIGN_ID']:
+        if col in df.columns:
+            did_col = col
+            break
+
+    if did_col is None:
+        return pd.DataFrame()
+
+    # Determine step column name
+    step_col = None
+    for col in ['STEP', 'step']:
+        if col in df.columns:
+            step_col = col
+            break
+
+    # Get latest workweek
+    ww_col = None
+    for col in ['workweek', 'MFG_WORKWEEK']:
+        if col in df.columns:
+            ww_col = col
+            break
+
+    if ww_col:
+        latest_ww = df[ww_col].max()
+        df = df[df[ww_col] == latest_ww].copy()
+
+    # Build group columns
+    group_cols = [did_col]
+    if by_step and step_col:
+        group_cols.append(step_col)
+
+    # Aggregate
+    did_summary = df.groupby(group_cols).agg({
+        'UIN': 'sum',
+        'UPASS': 'sum'
+    }).reset_index()
+
+    # Rename columns
+    if by_step and step_col:
+        did_summary.columns = ['design_id', 'step', 'uin', 'upass']
+    else:
+        did_summary.columns = ['design_id', 'uin', 'upass']
+
+    did_summary['yield_pct'] = (did_summary['upass'] / did_summary['uin'] * 100).round(2)
+    did_summary['ufail'] = did_summary['uin'] - did_summary['upass']
+
+    # Sort
+    if by_step and 'step' in did_summary.columns:
+        step_order = {'hmfn': 0, 'slt': 1, 'elc': 2}
+        did_summary['step_order'] = did_summary['step'].str.lower().map(step_order).fillna(99)
+        did_summary = did_summary.sort_values(['design_id', 'step_order'])
+        did_summary = did_summary.drop(columns=['step_order'])
+    else:
+        did_summary = did_summary.sort_values('uin', ascending=False)
+
+    # Add workweek info
+    if ww_col:
+        did_summary['workweek'] = latest_ww
+
+    return did_summary
 
 
 def init_session_state() -> None:
@@ -688,8 +760,8 @@ def render_summary_metrics(processor: DataProcessor) -> None:
                 f"{summary.min_yield:.1f}% - {summary.max_yield:.1f}%",
             )
 
-        # DID breakdown by step for latest week
-        did_breakdown = processor.get_did_breakdown(latest_week_only=True, by_step=True)
+        # DID breakdown by step for latest week - using local function to avoid import issues
+        did_breakdown = get_did_breakdown_local(processor.dataframe, by_step=True)
         if not did_breakdown.empty:
             st.markdown("---")
             latest_ww = did_breakdown['workweek'].iloc[0] if 'workweek' in did_breakdown.columns else "N/A"
@@ -810,7 +882,9 @@ def render_summary_metrics(processor: DataProcessor) -> None:
                     """, unsafe_allow_html=True)
 
     except Exception as e:
+        import traceback
         logger.error("Failed to render metrics: %s", e)
+        logger.error("Full traceback: %s", traceback.format_exc())
         st.error("Failed to render summary metrics")
 
 
