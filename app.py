@@ -287,6 +287,100 @@ def init_session_state() -> None:
         st.session_state.smt6_last_fetch_time = None
 
 
+def inject_custom_css() -> None:
+    """Inject custom CSS for enhanced styling."""
+    st.markdown("""
+    <style>
+    /* Card hover effects */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 212, 255, 0.15);
+    }
+
+    /* Metric styling */
+    div[data-testid="stMetric"] {
+        background: linear-gradient(135deg, rgba(30,30,60,0.4) 0%, rgba(20,20,40,0.4) 100%);
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    div[data-testid="stMetric"]:hover {
+        border-color: rgba(0, 212, 255, 0.3);
+    }
+
+    /* Quick filter badges */
+    .quick-filter-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        margin: 2px 4px;
+        border-radius: 20px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    .quick-filter-badge:hover {
+        transform: scale(1.05);
+        border-color: #00d4ff;
+    }
+    .badge-active {
+        background: linear-gradient(90deg, #00d4ff, #00ff88);
+        color: #000;
+        font-weight: 600;
+    }
+    .badge-inactive {
+        background: rgba(50,50,70,0.5);
+        color: #aaa;
+    }
+
+    /* Stats bar styling */
+    .stats-bar {
+        background: linear-gradient(90deg, rgba(0,212,255,0.1) 0%, rgba(0,255,136,0.1) 100%);
+        padding: 8px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        border: 1px solid rgba(0,212,255,0.2);
+    }
+    .stats-item {
+        display: inline-block;
+        margin-right: 24px;
+        font-size: 13px;
+    }
+    .stats-label {
+        color: #888;
+        margin-right: 6px;
+    }
+    .stats-value {
+        color: #00d4ff;
+        font-weight: 600;
+    }
+
+    /* Subheader styling */
+    h3 {
+        border-bottom: 2px solid rgba(0,212,255,0.3);
+        padding-bottom: 8px;
+    }
+
+    /* Tab styling */
+    button[data-baseweb="tab"] {
+        font-weight: 500;
+    }
+    button[data-baseweb="tab"]:hover {
+        color: #00d4ff !important;
+    }
+
+    /* Plotly chart container */
+    .js-plotly-plot {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
 def setup_page() -> None:
     """Configure Streamlit page settings."""
     st.set_page_config(
@@ -295,7 +389,22 @@ def setup_page() -> None:
         layout="wide",
         initial_sidebar_state="expanded",
     )
-    st.title("Module Yield Dashboard")
+
+    # Inject custom CSS
+    inject_custom_css()
+
+    # Header with timestamp
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.title("📊 Module Yield Dashboard")
+    with col2:
+        st.markdown(f"""
+        <div style="text-align: right; padding-top: 20px;">
+            <span style="color: #888; font-size: 12px;">Last refreshed</span><br>
+            <span style="color: #00d4ff; font-size: 14px; font-weight: 500;">{datetime.now().strftime('%H:%M:%S')}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown("Weekly yield tracking for SOCAMM/SOCAMM2 modules")
 
 
@@ -765,7 +874,7 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
                 secondary_y=True,
             )
 
-        # Update layout with explicit category order for workweeks
+        # Update layout with explicit category order for workweeks and range slider
         fig.update_layout(
             title="Yield % and Volume by Work Week",
             xaxis_title="Work Week (YYYYWW)",
@@ -774,6 +883,11 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
                 type="category",
                 categoryorder="array",
                 categoryarray=sorted_workweeks,
+                rangeslider=dict(
+                    visible=True,
+                    thickness=0.05,
+                    bgcolor="rgba(0,212,255,0.1)",
+                ),
             ),
             legend=dict(
                 orientation="h",
@@ -783,6 +897,7 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
                 x=1
             ),
             barmode="group",
+            height=500,  # Taller to accommodate range slider
         )
 
         # Update y-axes
@@ -802,10 +917,78 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         st.error("Failed to render trend chart")
 
 
+def create_sparkline(values: list, color: str = "#00d4ff", height: int = 30) -> go.Figure:
+    """Create a mini sparkline chart."""
+    if not values or len(values) < 2:
+        return None
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        y=values,
+        mode='lines',
+        line=dict(color=color, width=2),
+        fill='tozeroy',
+        fillcolor=f'rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.2)',
+        hoverinfo='skip'
+    ))
+
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=height,
+        showlegend=False,
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+    )
+
+    return fig
+
+
+def get_weekly_yields_for_sparkline(df: pd.DataFrame, did: str, step: str) -> list:
+    """Get weekly yield values for sparkline chart."""
+    if df.empty:
+        return []
+
+    # Find column names
+    did_col = next((c for c in ['DBASE', 'design_id', 'DESIGN_ID'] if c in df.columns), None)
+    step_col = next((c for c in ['STEP', 'step'] if c in df.columns), None)
+    ww_col = next((c for c in ['workweek', 'MFG_WORKWEEK'] if c in df.columns), None)
+
+    if not all([did_col, step_col, ww_col]):
+        return []
+
+    # Filter and aggregate
+    filtered = df[(df[did_col] == did) & (df[step_col].str.lower() == step.lower())]
+    if filtered.empty:
+        return []
+
+    weekly = filtered.groupby(ww_col).agg({'UIN': 'sum', 'UPASS': 'sum'}).reset_index()
+    weekly['yield'] = (weekly['UPASS'] / weekly['UIN'] * 100).round(2)
+    weekly = weekly.sort_values(ww_col)
+
+    return weekly['yield'].tolist()
+
+
 def render_summary_metrics(processor: DataProcessor) -> None:
-    """Render summary metric cards (top row only)."""
+    """Render summary metric cards with quick stats bar."""
     try:
         summary = processor.get_yield_summary()
+        df = processor.dataframe
+
+        # Quick stats bar
+        num_dids = df['design_id'].nunique() if 'design_id' in df.columns else 0
+        num_weeks = df['workweek'].nunique() if 'workweek' in df.columns else 0
+        num_steps = df['step'].nunique() if 'step' in df.columns else 0
+
+        st.markdown(f"""
+        <div class="stats-bar">
+            <span class="stats-item"><span class="stats-label">📦 Records:</span><span class="stats-value">{len(df):,}</span></span>
+            <span class="stats-item"><span class="stats-label">🔷 DIDs:</span><span class="stats-value">{num_dids}</span></span>
+            <span class="stats-item"><span class="stats-label">📅 Weeks:</span><span class="stats-value">{num_weeks}</span></span>
+            <span class="stats-item"><span class="stats-label">🧪 Steps:</span><span class="stats-value">{num_steps}</span></span>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Overall metrics row
         col1, col2, col3, col4 = st.columns(4)
@@ -948,11 +1131,23 @@ def render_did_breakdown(processor: DataProcessor) -> None:
                 elif trend_diff < -0.1:
                     trend_emoji = "📉"
 
+            # Get sparkline data for this DID
+            hmfn_spark = get_weekly_yields_for_sparkline(processor.dataframe, did, 'hmfn')
+
             # Compact card with border
             with st.container(border=True):
-                # Single line header: DID | Trend | WW
-                trend_str = f"{trend_diff:+.2f}%" if trend_diff else ""
-                st.markdown(f"### {did} &nbsp; {trend_emoji} {trend_str}")
+                # Header row with DID and trend
+                hdr_col1, hdr_col2 = st.columns([3, 1])
+                with hdr_col1:
+                    trend_str = f"{trend_diff:+.2f}%" if trend_diff else ""
+                    st.markdown(f"### {did} &nbsp; {trend_emoji} {trend_str}")
+                with hdr_col2:
+                    # Mini sparkline for HMFN trend
+                    if len(hmfn_spark) >= 2:
+                        spark_color = "#00ff88" if trend_diff and trend_diff > 0 else "#ff6b8a" if trend_diff and trend_diff < 0 else "#00d4ff"
+                        spark_fig = create_sparkline(hmfn_spark, color=spark_color, height=35)
+                        if spark_fig:
+                            st.plotly_chart(spark_fig, use_container_width=True, config={'displayModeBar': False}, key=f"spark_{did}")
 
                 # Three metrics side by side
                 c1, c2, c3 = st.columns(3)
