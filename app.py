@@ -293,526 +293,404 @@ def inject_custom_css() -> None:
     <style>
     /* ============================================
        GLASSMORPHISM THEME - Module Yield Dashboard
-       Supports Light & Dark Modes
+       Works in both Light & Dark Modes
        ============================================ */
 
     /* ============================================
-       DARK MODE VARIABLES (Default)
+       LIGHT MODE STYLES (Default for Streamlit)
        ============================================ */
-    :root {
-        --glass-bg: rgba(17, 25, 40, 0.75);
-        --glass-bg-solid: rgba(22, 27, 34, 0.95);
-        --glass-border: rgba(255, 255, 255, 0.125);
-        --glass-border-hover: rgba(0, 212, 255, 0.5);
-        --blur-amount: 16px;
-        --accent-cyan: #00d4ff;
-        --accent-green: #00ff88;
-        --accent-purple: #a855f7;
-        --accent-orange: #f97316;
-        --text-primary: #f0f6fc;
-        --text-secondary: #8b949e;
-        --bg-primary: #0d1117;
-        --bg-secondary: #161b22;
-        --bg-tertiary: #21262d;
-        --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.37);
-        --shadow-glow: 0 0 30px rgba(0, 212, 255, 0.2);
-        --input-bg: rgba(17, 25, 40, 0.6);
-        --metric-bg: linear-gradient(135deg, rgba(17, 25, 40, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%);
-        --expander-details-bg: rgba(0, 0, 0, 0.2);
-        --tab-hover-bg: rgba(0, 212, 255, 0.15);
-        --tab-active-bg: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 255, 136, 0.1) 100%);
-        --scrollbar-track: rgba(17, 25, 40, 0.5);
-        --yield-good: #00ff88;
-        --yield-warning: #fbbf24;
-        --yield-critical: #f87171;
+
+    /* Main title - gradient text */
+    .stApp h1, .main h1, [data-testid="stHeader"] h1 {
+        background: linear-gradient(90deg, #0891b2 0%, #059669 50%, #7c3aed 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.5px !important;
     }
 
-    /* ============================================
-       LIGHT MODE VARIABLES
-       ============================================ */
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(255"],
-    [data-testid="stAppViewContainer"][style*="background-color: white"],
-    .stApp[style*="background-color: rgb(255"],
-    .stApp[style*="background-color: white"] {
-        --glass-bg: rgba(255, 255, 255, 0.7) !important;
-        --glass-bg-solid: rgba(255, 255, 255, 0.95) !important;
-        --glass-border: rgba(0, 0, 0, 0.08) !important;
-        --glass-border-hover: rgba(0, 120, 180, 0.5) !important;
-        --accent-cyan: #0891b2 !important;
-        --accent-green: #059669 !important;
-        --accent-purple: #7c3aed !important;
-        --accent-orange: #ea580c !important;
-        --text-primary: #1e293b !important;
-        --text-secondary: #475569 !important;
-        --bg-primary: #f8fafc !important;
-        --bg-secondary: #f1f5f9 !important;
-        --bg-tertiary: #e2e8f0 !important;
-        --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
-        --shadow-glow: 0 0 30px rgba(0, 120, 180, 0.15) !important;
-        --input-bg: rgba(241, 245, 249, 0.8) !important;
-        --metric-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(241, 245, 249, 0.8) 100%) !important;
-        --expander-details-bg: rgba(241, 245, 249, 0.5) !important;
-        --tab-hover-bg: rgba(8, 145, 178, 0.1) !important;
-        --tab-active-bg: linear-gradient(135deg, rgba(8, 145, 178, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%) !important;
-        --scrollbar-track: rgba(226, 232, 240, 0.8) !important;
-        --yield-good: #059669 !important;
-        --yield-warning: #d97706 !important;
-        --yield-critical: #dc2626 !important;
-    }
-
-    /* Light mode background override */
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(255"] .stApp,
-    [data-testid="stAppViewContainer"][style*="background-color: white"] .stApp {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%) !important;
-    }
-
-    /* Light mode orbs - softer colors */
-    [data-testid="stAppViewContainer"][style*="background-color: rgb(255"] .stApp::before,
-    [data-testid="stAppViewContainer"][style*="background-color: white"] .stApp::before {
-        background:
-            radial-gradient(circle at 20% 80%, rgba(8, 145, 178, 0.12) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 40% 40%, rgba(5, 150, 105, 0.08) 0%, transparent 40%) !important;
-    }
-
-    /* ============================================
-       MAIN APP BACKGROUND
-       ============================================ */
-    .stApp {
-        background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%) !important;
-    }
-
-    /* Animated gradient orbs */
-    .stApp::before {
-        content: '';
-        position: fixed;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background:
-            radial-gradient(circle at 20% 80%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
-            radial-gradient(circle at 40% 40%, rgba(0, 255, 136, 0.05) 0%, transparent 40%);
-        animation: orbFloat 20s ease-in-out infinite;
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    @keyframes orbFloat {
-        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-        33% { transform: translate(2%, 2%) rotate(120deg); }
-        66% { transform: translate(-2%, 1%) rotate(240deg); }
-    }
-
-    /* ============================================
-       SIDEBAR
-       ============================================ */
+    /* Sidebar - frosted glass light */
     section[data-testid="stSidebar"] {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(var(--blur-amount)) !important;
-        -webkit-backdrop-filter: blur(var(--blur-amount)) !important;
-        border-right: 1px solid var(--glass-border) !important;
+        background: rgba(248, 250, 252, 0.85) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
     }
 
-    section[data-testid="stSidebar"] > div {
+    section[data-testid="stSidebar"] > div:first-child {
         background: transparent !important;
     }
 
     section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2 {
-        background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] .stMarkdown h2 {
+        background: linear-gradient(90deg, #0891b2, #059669) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        font-weight: 700 !important;
     }
 
-    /* ============================================
-       MAIN CONTENT
-       ============================================ */
+    /* Main container */
     .main .block-container {
         background: transparent !important;
-        position: relative;
-        z-index: 1;
     }
 
-    /* Card hover effects */
-    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(var(--blur-amount)) !important;
-        -webkit-backdrop-filter: blur(var(--blur-amount)) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 16px !important;
-        box-shadow: var(--shadow-glass) !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-
-    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        transform: translateY(-4px) !important;
-        border-color: var(--glass-border-hover) !important;
-        box-shadow: var(--shadow-glass), var(--shadow-glow) !important;
-    }
-
-    /* ============================================
-       METRICS
-       ============================================ */
-    div[data-testid="stMetric"] {
-        background: var(--metric-bg) !important;
+    /* Metrics cards - glass effect */
+    [data-testid="stMetric"] {
+        background: rgba(255, 255, 255, 0.7) !important;
         backdrop-filter: blur(12px) !important;
         -webkit-backdrop-filter: blur(12px) !important;
-        padding: 16px !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
         border-radius: 12px !important;
-        border: 1px solid var(--glass-border) !important;
-        box-shadow: var(--shadow-glass) !important;
+        padding: 16px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
         transition: all 0.3s ease !important;
     }
 
-    div[data-testid="stMetric"]:hover {
-        border-color: var(--accent-cyan) !important;
-        box-shadow: var(--shadow-glass), var(--shadow-glow) !important;
-        transform: scale(1.02) !important;
+    [data-testid="stMetric"]:hover {
+        border-color: #0891b2 !important;
+        box-shadow: 0 8px 30px rgba(8, 145, 178, 0.15) !important;
+        transform: translateY(-2px) !important;
     }
 
-    div[data-testid="stMetric"] label {
-        color: var(--text-secondary) !important;
-        font-weight: 500 !important;
+    [data-testid="stMetric"] label {
+        color: #64748b !important;
+        font-weight: 600 !important;
         text-transform: uppercase !important;
-        font-size: 0.75rem !important;
+        font-size: 0.7rem !important;
         letter-spacing: 0.5px !important;
     }
 
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: var(--text-primary) !important;
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #1e293b !important;
         font-weight: 700 !important;
-        font-size: 1.75rem !important;
     }
 
-    div[data-testid="stMetric"] div[data-testid="stMetricDelta"] svg {
-        filter: drop-shadow(0 0 6px currentColor);
-    }
-
-    /* ============================================
-       EXPANDERS
-       ============================================ */
-    div[data-testid="stExpander"] {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(var(--blur-amount)) !important;
-        -webkit-backdrop-filter: blur(var(--blur-amount)) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        margin-bottom: 12px !important;
-    }
-
-    div[data-testid="stExpander"] summary {
-        background: linear-gradient(90deg, rgba(0, 212, 255, 0.08) 0%, transparent 100%) !important;
-        padding: 12px 16px !important;
-        font-weight: 600 !important;
-        color: var(--text-primary) !important;
-        border-bottom: 1px solid var(--glass-border) !important;
-    }
-
-    div[data-testid="stExpander"] summary:hover {
-        background: linear-gradient(90deg, rgba(0, 212, 255, 0.15) 0%, rgba(0, 255, 136, 0.08) 100%) !important;
-    }
-
-    div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] {
-        background: var(--expander-details-bg) !important;
-        padding: 16px !important;
-    }
-
-    /* ============================================
-       TABS
-       ============================================ */
-    div[data-testid="stTabs"] {
+    /* Tabs - glass styling */
+    [data-baseweb="tab-list"] {
+        gap: 4px !important;
         background: transparent !important;
     }
 
     button[data-baseweb="tab"] {
-        background: var(--glass-bg) !important;
+        background: rgba(255, 255, 255, 0.6) !important;
         backdrop-filter: blur(8px) !important;
         -webkit-backdrop-filter: blur(8px) !important;
-        border: 1px solid var(--glass-border) !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
         border-radius: 8px 8px 0 0 !important;
-        color: var(--text-secondary) !important;
+        color: #64748b !important;
         font-weight: 600 !important;
-        padding: 12px 20px !important;
-        margin-right: 4px !important;
-        transition: all 0.3s ease !important;
+        padding: 10px 20px !important;
+        transition: all 0.2s ease !important;
     }
 
     button[data-baseweb="tab"]:hover {
-        background: var(--tab-hover-bg) !important;
-        color: var(--accent-cyan) !important;
-        border-color: var(--accent-cyan) !important;
+        background: rgba(8, 145, 178, 0.1) !important;
+        color: #0891b2 !important;
+        border-color: #0891b2 !important;
     }
 
     button[data-baseweb="tab"][aria-selected="true"] {
-        background: var(--tab-active-bg) !important;
-        color: var(--accent-cyan) !important;
-        border-color: var(--accent-cyan) !important;
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2) !important;
+        background: linear-gradient(135deg, rgba(8, 145, 178, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%) !important;
+        color: #0891b2 !important;
+        border-color: #0891b2 !important;
+        border-bottom-color: transparent !important;
     }
 
-    div[data-testid="stTabContent"] {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(var(--blur-amount)) !important;
-        -webkit-backdrop-filter: blur(var(--blur-amount)) !important;
-        border: 1px solid var(--glass-border) !important;
+    /* Tab content */
+    [data-testid="stTabContent"] {
+        background: rgba(255, 255, 255, 0.5) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
         border-top: none !important;
         border-radius: 0 0 12px 12px !important;
         padding: 20px !important;
     }
 
-    /* ============================================
-       INPUTS
-       ============================================ */
-    div[data-testid="stSelectbox"],
-    div[data-testid="stMultiSelect"],
-    div[data-testid="stSlider"] {
-        background: var(--input-bg) !important;
-        backdrop-filter: blur(8px) !important;
-        -webkit-backdrop-filter: blur(8px) !important;
-        border-radius: 8px !important;
-        padding: 8px !important;
-        border: 1px solid var(--glass-border) !important;
+    /* Expanders - glass accordion */
+    [data-testid="stExpander"] {
+        background: rgba(255, 255, 255, 0.6) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        margin-bottom: 12px !important;
     }
 
-    div[data-baseweb="select"] > div {
-        background: var(--glass-bg) !important;
-        border-color: var(--glass-border) !important;
-        border-radius: 8px !important;
+    [data-testid="stExpander"] summary {
+        background: linear-gradient(90deg, rgba(8, 145, 178, 0.08) 0%, transparent 100%) !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
     }
 
-    div[data-baseweb="select"] > div:hover {
-        border-color: var(--accent-cyan) !important;
+    [data-testid="stExpander"] summary:hover {
+        background: linear-gradient(90deg, rgba(8, 145, 178, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%) !important;
     }
 
-    div[data-testid="stSelectbox"] label,
-    div[data-testid="stMultiSelect"] label,
-    div[data-testid="stSlider"] label {
-        color: var(--text-secondary) !important;
-        font-weight: 500 !important;
-    }
-
-    /* ============================================
-       BUTTONS
-       ============================================ */
-    button[kind="primary"],
+    /* Buttons - gradient */
     .stButton > button {
-        background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-green) 100%) !important;
-        color: #000 !important;
-        font-weight: 700 !important;
+        background: linear-gradient(135deg, #0891b2 0%, #059669 100%) !important;
+        color: white !important;
+        font-weight: 600 !important;
         border: none !important;
         border-radius: 8px !important;
         padding: 10px 24px !important;
+        box-shadow: 0 4px 15px rgba(8, 145, 178, 0.3) !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3) !important;
     }
 
-    button[kind="primary"]:hover,
     .stButton > button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 25px rgba(0, 212, 255, 0.5) !important;
+        box-shadow: 0 6px 25px rgba(8, 145, 178, 0.4) !important;
     }
 
-    button[kind="secondary"],
-    .stButton > button[kind="secondary"] {
-        background: var(--glass-bg) !important;
+    /* Multiselect tags */
+    [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+        background: linear-gradient(135deg, #0891b2 0%, #059669 100%) !important;
+        color: white !important;
+        border-radius: 6px !important;
+        font-weight: 500 !important;
+    }
+
+    /* Select boxes */
+    [data-testid="stSelectbox"] > div > div,
+    [data-testid="stMultiSelect"] > div > div {
+        background: rgba(255, 255, 255, 0.8) !important;
+        border-color: rgba(0, 0, 0, 0.1) !important;
+        border-radius: 8px !important;
+    }
+
+    [data-testid="stSelectbox"] > div > div:hover,
+    [data-testid="stMultiSelect"] > div > div:hover {
+        border-color: #0891b2 !important;
+    }
+
+    /* Alert boxes */
+    [data-testid="stAlert"] {
         backdrop-filter: blur(8px) !important;
         -webkit-backdrop-filter: blur(8px) !important;
-        color: var(--accent-cyan) !important;
-        border: 1px solid var(--accent-cyan) !important;
+        border-radius: 8px !important;
     }
 
-    /* ============================================
-       HEADERS
-       ============================================ */
-    h1, .main h1 {
-        background: linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-green) 50%, var(--accent-purple) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: 800 !important;
-        letter-spacing: -0.5px !important;
+    /* Success alert (green) */
+    .stAlert[data-baseweb="notification"][kind="positive"],
+    div[data-testid="stAlert"]:has(svg[data-testid="stIconSuccess"]) {
+        background: rgba(5, 150, 105, 0.1) !important;
+        border-left: 4px solid #059669 !important;
     }
 
-    h2, h3 {
-        color: var(--text-primary) !important;
-        border-bottom: 2px solid var(--glass-border) !important;
+    /* Warning alert (yellow) */
+    .stAlert[data-baseweb="notification"][kind="warning"],
+    div[data-testid="stAlert"]:has(svg[data-testid="stIconWarning"]) {
+        background: rgba(245, 158, 11, 0.1) !important;
+        border-left: 4px solid #f59e0b !important;
+    }
+
+    /* Info alert */
+    .stAlert[data-baseweb="notification"][kind="info"],
+    div[data-testid="stAlert"]:has(svg[data-testid="stIconInfo"]) {
+        background: rgba(8, 145, 178, 0.1) !important;
+        border-left: 4px solid #0891b2 !important;
+    }
+
+    /* DataFrames */
+    [data-testid="stDataFrame"] {
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+    }
+
+    /* Headers h2, h3 */
+    .stApp h2, .stApp h3, .main h2, .main h3 {
+        color: #1e293b !important;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.06) !important;
         padding-bottom: 8px !important;
-        position: relative !important;
     }
 
-    h3::after {
-        content: '';
-        position: absolute;
-        bottom: -2px;
-        left: 0;
-        width: 60px;
-        height: 2px;
-        background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
-        border-radius: 2px;
-    }
-
-    /* ============================================
-       DIVIDERS
-       ============================================ */
-    hr {
+    /* Dividers */
+    .stApp hr {
         border: none !important;
         height: 1px !important;
-        background: linear-gradient(90deg, transparent, var(--glass-border), transparent) !important;
-        margin: 24px 0 !important;
+        background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1), transparent) !important;
     }
 
-    /* ============================================
-       CHARTS
-       ============================================ */
+    /* Charts container */
     .js-plotly-plot {
         border-radius: 12px !important;
         overflow: hidden !important;
-        box-shadow: var(--shadow-glass) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
     }
 
-    .js-plotly-plot .plotly {
-        background: transparent !important;
-    }
-
-    /* ============================================
-       CUSTOM COMPONENTS
-       ============================================ */
-    .stats-bar {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(var(--blur-amount)) !important;
-        -webkit-backdrop-filter: blur(var(--blur-amount)) !important;
-        padding: 12px 20px !important;
-        border-radius: 12px !important;
-        margin-bottom: 20px !important;
-        border: 1px solid var(--glass-border) !important;
-        box-shadow: var(--shadow-glass) !important;
-    }
-
-    .stats-item {
-        display: inline-block;
-        margin-right: 32px;
-        font-size: 14px;
-    }
-
-    .stats-label {
-        color: var(--text-secondary);
-        margin-right: 8px;
-        font-weight: 500;
-    }
-
-    .stats-value {
-        color: var(--accent-cyan);
-        font-weight: 700;
-    }
-
-    .quick-filter-badge {
-        display: inline-block;
-        padding: 6px 16px;
-        margin: 4px 6px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-    }
-
-    .quick-filter-badge:hover {
-        transform: scale(1.08) translateY(-2px);
-        box-shadow: var(--shadow-glow);
-    }
-
-    .badge-active {
-        background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-green) 100%);
-        color: #000;
-        border: none;
-        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
-    }
-
-    .badge-inactive {
-        background: var(--glass-bg);
-        color: var(--text-secondary);
-        border: 1px solid var(--glass-border);
-    }
-
-    .badge-inactive:hover {
-        border-color: var(--accent-cyan);
-        color: var(--accent-cyan);
-    }
-
-    .glass-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(var(--blur-amount));
-        -webkit-backdrop-filter: blur(var(--blur-amount));
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: var(--shadow-glass);
-        transition: all 0.3s ease;
-    }
-
-    .glass-card:hover {
-        border-color: var(--glass-border-hover);
-        box-shadow: var(--shadow-glass), var(--shadow-glow);
-        transform: translateY(-4px);
-    }
-
-    .glass-card-header {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 12px;
-    }
-
-    .glass-card-value {
-        font-size: 2rem;
-        font-weight: 800;
-        background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    /* Yield indicators */
-    .yield-good {
-        color: var(--yield-good) !important;
-    }
-
-    .yield-warning {
-        color: var(--yield-warning) !important;
-    }
-
-    .yield-critical {
-        color: var(--yield-critical) !important;
-    }
-
-    /* ============================================
-       SCROLLBAR
-       ============================================ */
+    /* Scrollbar - light mode */
     ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
     }
 
     ::-webkit-scrollbar-track {
-        background: var(--scrollbar-track);
+        background: rgba(0, 0, 0, 0.05);
         border-radius: 4px;
     }
 
     ::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, var(--accent-cyan) 0%, var(--accent-purple) 100%);
+        background: linear-gradient(180deg, #0891b2 0%, #7c3aed 100%);
         border-radius: 4px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, var(--accent-green) 0%, var(--accent-cyan) 100%);
+        background: linear-gradient(180deg, #059669 0%, #0891b2 100%);
+    }
+
+    /* ============================================
+       DARK MODE STYLES
+       ============================================ */
+    @media (prefers-color-scheme: dark) {
+        /* Title gradient - brighter for dark mode */
+        .stApp h1, .main h1 {
+            background: linear-gradient(90deg, #00d4ff 0%, #00ff88 50%, #a855f7 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+
+        /* Sidebar */
+        section[data-testid="stSidebar"] {
+            background: rgba(17, 25, 40, 0.85) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2 {
+            background: linear-gradient(90deg, #00d4ff, #00ff88) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+        }
+
+        /* Metrics */
+        [data-testid="stMetric"] {
+            background: rgba(17, 25, 40, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        [data-testid="stMetric"]:hover {
+            border-color: #00d4ff !important;
+            box-shadow: 0 8px 30px rgba(0, 212, 255, 0.2) !important;
+        }
+
+        [data-testid="stMetric"] label {
+            color: #8b949e !important;
+        }
+
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {
+            color: #f0f6fc !important;
+        }
+
+        /* Tabs */
+        button[data-baseweb="tab"] {
+            background: rgba(17, 25, 40, 0.7) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #8b949e !important;
+        }
+
+        button[data-baseweb="tab"]:hover {
+            background: rgba(0, 212, 255, 0.15) !important;
+            color: #00d4ff !important;
+            border-color: #00d4ff !important;
+        }
+
+        button[data-baseweb="tab"][aria-selected="true"] {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 255, 136, 0.1) 100%) !important;
+            color: #00d4ff !important;
+            border-color: #00d4ff !important;
+        }
+
+        /* Tab content */
+        [data-testid="stTabContent"] {
+            background: rgba(17, 25, 40, 0.6) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Expanders */
+        [data-testid="stExpander"] {
+            background: rgba(17, 25, 40, 0.7) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        [data-testid="stExpander"] summary {
+            background: linear-gradient(90deg, rgba(0, 212, 255, 0.1) 0%, transparent 100%) !important;
+            color: #f0f6fc !important;
+        }
+
+        /* Buttons */
+        .stButton > button {
+            background: linear-gradient(135deg, #00d4ff 0%, #00ff88 100%) !important;
+            color: #000 !important;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3) !important;
+        }
+
+        /* Multiselect tags */
+        [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+            background: linear-gradient(135deg, #00d4ff 0%, #00ff88 100%) !important;
+            color: #000 !important;
+        }
+
+        /* Select boxes */
+        [data-testid="stSelectbox"] > div > div,
+        [data-testid="stMultiSelect"] > div > div {
+            background: rgba(17, 25, 40, 0.8) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        [data-testid="stSelectbox"] > div > div:hover,
+        [data-testid="stMultiSelect"] > div > div:hover {
+            border-color: #00d4ff !important;
+        }
+
+        /* Alerts - dark mode */
+        div[data-testid="stAlert"]:has(svg[data-testid="stIconSuccess"]) {
+            background: rgba(0, 255, 136, 0.1) !important;
+            border-left-color: #00ff88 !important;
+        }
+
+        div[data-testid="stAlert"]:has(svg[data-testid="stIconWarning"]) {
+            background: rgba(251, 191, 36, 0.1) !important;
+            border-left-color: #fbbf24 !important;
+        }
+
+        div[data-testid="stAlert"]:has(svg[data-testid="stIconInfo"]) {
+            background: rgba(0, 212, 255, 0.1) !important;
+            border-left-color: #00d4ff !important;
+        }
+
+        /* DataFrames */
+        [data-testid="stDataFrame"] {
+            background: rgba(17, 25, 40, 0.8) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Headers */
+        .stApp h2, .stApp h3 {
+            color: #f0f6fc !important;
+            border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Dividers */
+        .stApp hr {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent) !important;
+        }
+
+        /* Scrollbar - dark mode */
+        ::-webkit-scrollbar-track {
+            background: rgba(17, 25, 40, 0.5);
+        }
     }
 
     /* ============================================
@@ -829,55 +707,23 @@ def inject_custom_css() -> None:
         animation: shimmer 2s infinite;
     }
 
-    @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
-        50% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.6); }
-    }
-
-    .pulse-glow {
-        animation: pulse-glow 2s ease-in-out infinite;
-    }
-
     /* ============================================
-       DATAFRAMES & TABLES
+       UTILITY CLASSES
        ============================================ */
-    div[data-testid="stDataFrame"] {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(var(--blur-amount)) !important;
-        -webkit-backdrop-filter: blur(var(--blur-amount)) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 12px !important;
-        overflow: hidden !important;
-    }
+    .yield-good { color: #059669 !important; }
+    .yield-warning { color: #d97706 !important; }
+    .yield-critical { color: #dc2626 !important; }
 
-    div[data-testid="stDataFrame"] table {
-        background: transparent !important;
-    }
-
-    div[data-testid="stDataFrame"] th {
-        background: rgba(0, 212, 255, 0.1) !important;
-        color: var(--accent-cyan) !important;
-        font-weight: 600 !important;
-    }
-
-    div[data-testid="stDataFrame"] td {
-        border-color: var(--glass-border) !important;
-    }
-
-    /* ============================================
-       TOOLTIPS
-       ============================================ */
-    div[data-baseweb="tooltip"] {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(16px) !important;
-        -webkit-backdrop-filter: blur(16px) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 8px !important;
-        box-shadow: var(--shadow-glass) !important;
+    @media (prefers-color-scheme: dark) {
+        .yield-good { color: #00ff88 !important; }
+        .yield-warning { color: #fbbf24 !important; }
+        .yield-critical { color: #f87171 !important; }
     }
 
     </style>
     """, unsafe_allow_html=True)
+
+
 
 
 def setup_page() -> None:
@@ -1282,7 +1128,8 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
             return
 
         trend_data = trend_data.copy()
-        # Series: design_id, form_factor, speed, density, step
+
+        # Full series name: design_id + form_factor + speed + density + step
         trend_data["series"] = (
             trend_data["design_id"].fillna("") + "_" +
             trend_data["form_factor"].fillna("") + "_" +
@@ -1291,126 +1138,128 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
             trend_data["step"].fillna("")
         )
 
-        # Ensure workweek is string for proper categorical display (YYYYWW format)
+        # Ensure workweek is string for proper categorical display
         trend_data["workweek"] = trend_data["workweek"].astype(str)
 
-        # Sort by workweek to ensure correct chronological order
-        # Convert to int for proper numeric sorting, then back to string
-        trend_data = trend_data.copy()
+        # Sort by workweek chronologically
         trend_data["_ww_sort"] = trend_data["workweek"].astype(int)
-        trend_data = trend_data.sort_values("_ww_sort")
-        trend_data = trend_data.drop(columns=["_ww_sort"])
+        trend_data = trend_data.sort_values("_ww_sort").drop(columns=["_ww_sort"])
 
-        # Get sorted unique workweeks for explicit category order
+        # Get sorted unique workweeks
         sorted_workweeks = sorted(trend_data["workweek"].unique().tolist(), key=int)
 
         # Get unique series for filter
         all_series = sorted(trend_data["series"].unique().tolist())
 
-        # Series filter
+        # Series filter - DEFAULT TO EMPTY so user picks what to display
         selected_series = st.multiselect(
             "Select Series to Display",
             options=all_series,
-            default=all_series,
+            default=[],  # Empty by default - user picks
             key="trend_series_filter",
-            help="Filter which product combinations to show in the chart"
+            help="Select which product combinations to show in the chart"
         )
 
         if not selected_series:
-            st.warning("Please select at least one series to display")
+            st.info("👆 Select one or more series above to display the trend chart")
             return
 
-        # Option to pin data labels on chart
-        show_labels = st.checkbox("Show data labels on chart", value=False, key="trend_show_labels")
+        # Chart options in columns
+        opt_col1, opt_col2, opt_col3 = st.columns([1, 1, 1])
+        with opt_col1:
+            show_labels = st.checkbox("Show data labels", value=False, key="trend_show_labels")
+        with opt_col2:
+            y_min = st.number_input("Y-axis Min %", min_value=0.0, max_value=99.0, value=94.0, step=0.5, key="trend_y_min")
+        with opt_col3:
+            y_max = st.number_input("Y-axis Max %", min_value=1.0, max_value=100.5, value=100.5, step=0.5, key="trend_y_max")
 
         # Filter data by selected series
         filtered_data = trend_data[trend_data["series"].isin(selected_series)]
 
-        # Create figure with secondary y-axis
+        # Aggregate by series and workweek (in case of duplicates)
+        agg_data = filtered_data.groupby(["series", "workweek"]).agg({
+            "yield_pct": "mean",
+            "UIN": "sum"
+        }).reset_index()
+
+        # Get fiscal month labels for x-axis
+        tick_labels = get_workweek_labels_with_months(sorted_workweeks)
+
+        # Color palette
+        colors = px.colors.qualitative.Set2
+
+        # Create figure with secondary y-axis for volume
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-        # Color palette for series
-        colors = px.colors.qualitative.Set1
-
-        # Add traces for each series
         for i, series_name in enumerate(selected_series):
-            series_data = filtered_data[filtered_data["series"] == series_name]
+            series_data = agg_data[agg_data["series"] == series_name].copy()
+            series_data = series_data.sort_values("workweek", key=lambda x: x.astype(int))
             color = colors[i % len(colors)]
 
-            # Determine mode based on show_labels option
+            # Yield line (primary y-axis) - paired with volume via legendgroup
             trace_mode = "lines+markers+text" if show_labels else "lines+markers"
             text_values = series_data["yield_pct"].apply(lambda x: f"{x:.1f}%") if show_labels else None
 
-            # Add yield line (primary y-axis)
             fig.add_trace(
                 go.Scatter(
                     x=series_data["workweek"],
                     y=series_data["yield_pct"],
                     mode=trace_mode,
-                    name=f"{series_name} (Yield)",
-                    line=dict(color=color, width=2),
+                    name=series_name,
+                    legendgroup=series_name,  # Group with volume
+                    line=dict(color=color, width=2.5),
                     marker=dict(size=8),
                     text=text_values,
                     textposition="top center",
-                    textfont=dict(size=9),
-                    hovertemplate="WW%{x}<br>Yield: %{y:.2f}%<extra></extra>",
+                    textfont=dict(size=10),
+                    hovertemplate=f"<b>{series_name}</b><br>WW%{{x}}<br>Yield: %{{y:.2f}}%<extra></extra>",
                 ),
                 secondary_y=False,
             )
 
-            # Add volume bars (secondary y-axis)
+            # Volume bars (secondary y-axis) - paired with yield via legendgroup
             fig.add_trace(
                 go.Bar(
                     x=series_data["workweek"],
                     y=series_data["UIN"],
-                    name=f"{series_name} (Volume)",
+                    name=f"{series_name} (Vol)",
+                    legendgroup=series_name,  # Group with yield - clicking legend toggles both
                     marker=dict(color=color, opacity=0.3),
-                    text=series_data["UIN"].apply(lambda x: f"{x:,.0f}") if show_labels else None,
-                    textposition="outside",
-                    textfont=dict(size=8),
-                    hovertemplate="WW%{x}<br>Volume: %{y:,}<extra></extra>",
+                    hovertemplate=f"<b>{series_name}</b><br>WW%{{x}}<br>Volume: %{{y:,}}<extra></extra>",
+                    showlegend=False,  # Only show one legend entry per series
                 ),
                 secondary_y=True,
             )
 
-        # Update layout with explicit category order for workweeks and range slider
         fig.update_layout(
             title="Yield % and Volume by Work Week",
-            xaxis_title="Work Week (YYYYWW)",
+            xaxis_title="Work Week",
             hovermode="x unified",
             xaxis=dict(
                 type="category",
                 categoryorder="array",
                 categoryarray=sorted_workweeks,
-                rangeslider=dict(
-                    visible=True,
-                    thickness=0.05,
-                    bgcolor="rgba(0,212,255,0.1)",
-                ),
+                ticktext=tick_labels,
+                tickvals=sorted_workweeks,
             ),
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
                 y=1.02,
-                xanchor="right",
-                x=1
+                xanchor="center",
+                x=0.5
             ),
             barmode="group",
-            height=500,  # Taller to accommodate range slider
+            height=450,
+            margin=dict(t=80, b=60),
         )
 
-        # Update y-axes
-        fig.update_yaxes(title_text="Yield %", range=[95, 100], secondary_y=False)
+        # Update y-axes with user-controlled range
+        fig.update_yaxes(title_text="Yield %", range=[y_min, y_max], secondary_y=False)
         fig.update_yaxes(title_text="Volume (UIN)", secondary_y=True)
 
-        # Add Micron fiscal month labels below workweek on x-axis
-        tick_labels = get_workweek_labels_with_months(sorted_workweeks)
-        fig.update_xaxes(
-            ticktext=tick_labels,
-            tickvals=sorted_workweeks,
-        )
-
         st.plotly_chart(fig, use_container_width=True)
+
     except Exception as e:
         logger.error("Failed to render trend chart: %s", e)
         st.error("Failed to render trend chart")
@@ -1861,17 +1710,17 @@ def render_bin_distribution_chart(processor: DataProcessor) -> None:
         # Get unique series for filter
         all_series = sorted(df["series"].unique().tolist())
 
-        # Series filter
+        # Series filter - DEFAULT TO EMPTY so user picks what to display
         selected_series = st.multiselect(
             "Select Series to Display",
             options=all_series,
-            default=all_series,
+            default=[],  # Empty by default - user picks
             key="bin_series_filter",
-            help="Filter which product combinations to show"
+            help="Select which product combinations to show in the chart"
         )
 
         if not selected_series:
-            st.warning("Please select at least one series to display")
+            st.info("👆 Select one or more series above to display the bin distribution chart")
             return
 
         # Filter data by selected series
@@ -2569,78 +2418,6 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
         st.info("Click 'Fetch Machine Data' to load machine-level yield data, or 'Fetch Site Data' for site-level breakdown.")
 
 
-def render_week_comparison(processor: DataProcessor) -> None:
-    """Render week-over-week comparison view."""
-    df = processor.dataframe
-    if df.empty:
-        st.info("No data for comparison")
-        return
-
-    ww_col = 'workweek' if 'workweek' in df.columns else None
-    if not ww_col:
-        st.info("Workweek data not available")
-        return
-
-    weeks = sorted(df[ww_col].unique(), reverse=True)
-    if len(weeks) < 2:
-        st.info("Need at least 2 weeks of data for comparison")
-        return
-
-    col1, col2 = st.columns(2)
-    with col1:
-        week1 = st.selectbox("Compare Week", weeks, index=0, key="compare_wk1")
-    with col2:
-        week2 = st.selectbox("Against Week", weeks, index=1 if len(weeks) > 1 else 0, key="compare_wk2")
-
-    if week1 == week2:
-        st.warning("Please select different weeks to compare")
-        return
-
-    # Get data for each week
-    df1 = df[df[ww_col] == week1].copy()
-    df2 = df[df[ww_col] == week2].copy()
-
-    # Calculate metrics for each week
-    def calc_metrics(data):
-        uin = data['UIN'].sum()
-        upass = data['UPASS'].sum()
-        yield_pct = (upass / uin * 100) if uin > 0 else 0
-        return {'uin': uin, 'upass': upass, 'yield': round(yield_pct, 2)}
-
-    m1 = calc_metrics(df1)
-    m2 = calc_metrics(df2)
-
-    # Display comparison
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown(f"**WW{week1}**")
-        st.metric("Yield", f"{m1['yield']:.2f}%")
-        st.caption(f"UIN: {m1['uin']:,}")
-
-    with c2:
-        diff = m1['yield'] - m2['yield']
-        st.markdown("**Δ Change**")
-        st.metric(
-            "Difference",
-            f"{diff:+.2f}%",
-            delta=f"{diff:+.2f}%" if diff != 0 else "No change",
-            delta_color="normal" if diff >= 0 else "inverse"
-        )
-        # Visual indicator
-        if diff > 0.5:
-            st.success("📈 Significant Improvement")
-        elif diff < -0.5:
-            st.error("📉 Significant Decline")
-        else:
-            st.info("➡️ Stable")
-
-    with c3:
-        st.markdown(f"**WW{week2}**")
-        st.metric("Yield", f"{m2['yield']:.2f}%")
-        st.caption(f"UIN: {m2['uin']:,}")
-
-
 def render_dashboard(processor: DataProcessor, filters: dict[str, Any] = None) -> None:
     """Render all dashboard components."""
     # Summary metrics at top (Total Units In, Pass, Yield, Range)
@@ -2654,10 +2431,6 @@ def render_dashboard(processor: DataProcessor, filters: dict[str, Any] = None) -
     with right_col:
         render_summary_table(processor)
     st.divider()
-
-    # Week comparison mode (collapsible)
-    with st.expander("📊 Week-over-Week Comparison", expanded=False):
-        render_week_comparison(processor)
 
     # Charts section (collapsible)
     with st.expander("📈 Yield Trends & Distribution", expanded=True):
