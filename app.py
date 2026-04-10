@@ -116,6 +116,68 @@ def get_current_workweek() -> str:
     return f"{now.year}{week:02d}"
 
 
+def get_4week_rolled_yields(df: pd.DataFrame) -> dict:
+    """Calculate 4-week rolled yields by DID and step."""
+    if df.empty:
+        return {}
+
+    # Find workweek column
+    ww_col = None
+    for col in ['workweek', 'MFG_WORKWEEK']:
+        if col in df.columns:
+            ww_col = col
+            break
+
+    if not ww_col:
+        return {}
+
+    # Find DID column
+    did_col = None
+    for col in ['DBASE', 'design_id', 'DESIGN_ID']:
+        if col in df.columns:
+            did_col = col
+            break
+
+    if not did_col:
+        return {}
+
+    # Find step column
+    step_col = None
+    for col in ['STEP', 'step']:
+        if col in df.columns:
+            step_col = col
+            break
+
+    # Get last 4 workweeks
+    workweeks = sorted(df[ww_col].unique())
+    last_4_weeks = workweeks[-4:] if len(workweeks) >= 4 else workweeks
+    df_4week = df[df[ww_col].isin(last_4_weeks)].copy()
+
+    # Aggregate by DID and step
+    group_cols = [did_col]
+    if step_col:
+        group_cols.append(step_col)
+
+    rolled = df_4week.groupby(group_cols).agg({
+        'UIN': 'sum',
+        'UPASS': 'sum'
+    }).reset_index()
+
+    rolled['yield_pct'] = (rolled['UPASS'] / rolled['UIN'] * 100).round(2)
+
+    # Build result dict: {(did, step): {'yield': x, 'uin': y}}
+    result = {}
+    for _, row in rolled.iterrows():
+        did = row[did_col]
+        step = row[step_col].lower() if step_col else 'all'
+        result[(did, step)] = {
+            'yield': row['yield_pct'],
+            'uin': int(row['UIN'])
+        }
+
+    return result
+
+
 def get_did_breakdown_local(df: pd.DataFrame, by_step: bool = True) -> pd.DataFrame:
     """Local function to get DID breakdown - workaround for import issues."""
     if df.empty:
@@ -741,7 +803,7 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
 
 
 def render_summary_metrics(processor: DataProcessor) -> None:
-    """Render summary metric cards with DID breakdown."""
+    """Render summary metric cards (top row only)."""
     try:
         summary = processor.get_yield_summary()
 
@@ -760,132 +822,179 @@ def render_summary_metrics(processor: DataProcessor) -> None:
                 f"{summary.min_yield:.1f}% - {summary.max_yield:.1f}%",
             )
 
+    except Exception as e:
+        import traceback
+        logger.error("Failed to render top metrics: %s", e)
+        st.error("Failed to render summary metrics")
+
+
+def render_did_breakdown(processor: DataProcessor) -> None:
+    """Render DID breakdown by step for latest workweek."""
+    try:
         # DID breakdown by step for latest week - using local function to avoid import issues
         did_breakdown = get_did_breakdown_local(processor.dataframe, by_step=True)
-        if not did_breakdown.empty:
-            st.markdown("---")
-            latest_ww = did_breakdown['workweek'].iloc[0] if 'workweek' in did_breakdown.columns else "N/A"
-            st.markdown(f"##### 📊 Design ID Yield by Step (WW{latest_ww})")
-            st.caption("ELC = HMFN × SLT (module-level end-of-line yield)")
+        rolled_4week = get_4week_rolled_yields(processor.dataframe)
 
-            # Step-specific targets for color coding
-            step_targets = {
-                'hmfn': 99.0,
-                'slt': 97.0,
-                'elc': 96.0
-            }
+        if did_breakdown.empty:
+            st.info("No DID breakdown data available")
+            return
 
-            def get_yield_color(yield_pct: float, step: str) -> str:
-                """Get color based on yield relative to step target."""
-                target = step_targets.get(step.lower(), 97.0)
-                gap = yield_pct - target
+        latest_ww = did_breakdown['workweek'].iloc[0] if 'workweek' in did_breakdown.columns else "N/A"
+        st.markdown(f"#### 📊 WW{latest_ww} Summary")
+
+        # Step-specific targets for color coding
+        step_targets = {
+            'hmfn': 99.0,
+            'slt': 97.0,
+            'elc': 96.0
+        }
+
+        def get_yield_color(yield_pct: float, step: str) -> str:
+            """Get color based on yield relative to step target."""
+            target = step_targets.get(step.lower(), 97.0)
+            gap = yield_pct - target
+            if gap >= 0:
+                return "#00C853"  # Green - at or above target
+            elif gap >= -1:
+                return "#8BC34A"  # Light green - within 1% of target
+            elif gap >= -2:
+                return "#FFEB3B"  # Yellow - within 2% of target
+            else:
+                return "#FF5722"  # Red - more than 2% below target
+
+        # Group by DID
+        dids = did_breakdown['design_id'].unique()
+        num_dids = len(dids)
+
+        for idx, did in enumerate(dids):
+            did_data = did_breakdown[did_breakdown['design_id'] == did]
+
+            # Extract yields per step
+            hmfn_yield = None
+            hmb1_yield = None
+            qmon_yield = None
+            hmfn_uin = 0
+            hmb1_uin = 0
+            qmon_uin = 0
+
+            for _, row in did_data.iterrows():
+                step = row.get('step', '').lower()
+                if step == 'hmfn':
+                    hmfn_yield = row['yield_pct']
+                    hmfn_uin = int(row['uin'])
+                elif step == 'hmb1':
+                    hmb1_yield = row['yield_pct']
+                    hmb1_uin = int(row['uin'])
+                elif step == 'qmon':
+                    qmon_yield = row['yield_pct']
+                    qmon_uin = int(row['uin'])
+
+            # Calculate SLT = HMB1 × QMON
+            slt_yield = None
+            slt_uin = min(hmb1_uin, qmon_uin) if hmb1_uin and qmon_uin else 0
+            if hmb1_yield is not None and qmon_yield is not None:
+                slt_yield = round((hmb1_yield / 100) * (qmon_yield / 100) * 100, 2)
+
+            # Calculate ELC = HMFN × SLT
+            elc_yield = None
+            elc_uin = min(hmfn_uin, slt_uin) if hmfn_uin and slt_uin else 0
+            if hmfn_yield is not None and slt_yield is not None:
+                elc_yield = round((hmfn_yield / 100) * (slt_yield / 100) * 100, 2)
+
+            # Get 4-week rolled data for this DID
+            hmfn_4wk = rolled_4week.get((did, 'hmfn'), {})
+            hmb1_4wk = rolled_4week.get((did, 'hmb1'), {})
+            qmon_4wk = rolled_4week.get((did, 'qmon'), {})
+
+            # Calculate 4-week SLT and ELC
+            slt_4wk_yield = None
+            elc_4wk_yield = None
+            if hmb1_4wk.get('yield') and qmon_4wk.get('yield'):
+                slt_4wk_yield = round((hmb1_4wk['yield'] / 100) * (qmon_4wk['yield'] / 100) * 100, 2)
+            if hmfn_4wk.get('yield') and slt_4wk_yield:
+                elc_4wk_yield = round((hmfn_4wk['yield'] / 100) * (slt_4wk_yield / 100) * 100, 2)
+
+            # Targets
+            targets = {'hmfn': 99.0, 'slt': 97.0, 'elc': 96.0}
+
+            # Calculate trend
+            trend_diff = None
+            if elc_yield is not None and elc_4wk_yield is not None:
+                trend_diff = elc_yield - elc_4wk_yield
+
+            # Format volume compactly
+            def fmt_vol(v):
+                if not v:
+                    return "-"
+                return f"{v/1000:.1f}K" if v >= 10000 else f"{v:,}"
+
+            # Status emoji based on target
+            def status_emoji(val, target):
+                if val is None:
+                    return "⚫"
+                gap = val - target
                 if gap >= 0:
-                    return "#00C853"  # Green - at or above target
+                    return "🟢"
                 elif gap >= -1:
-                    return "#8BC34A"  # Light green - within 1% of target
-                elif gap >= -2:
-                    return "#FFEB3B"  # Yellow - within 2% of target
+                    return "🟡"
                 else:
-                    return "#FF5722"  # Red - more than 2% below target
+                    return "🔴"
 
-            # Group by DID
-            dids = did_breakdown['design_id'].unique()
-            num_dids = len(dids)
-            cols = st.columns(min(num_dids, 4))
+            # Trend emoji
+            trend_emoji = "⚪"
+            if trend_diff is not None:
+                if trend_diff > 0.1:
+                    trend_emoji = "📈"
+                elif trend_diff < -0.1:
+                    trend_emoji = "📉"
 
-            for idx, did in enumerate(dids):
-                col_idx = idx % 4
-                did_data = did_breakdown[did_breakdown['design_id'] == did]
+            # Compact card with border
+            with st.container(border=True):
+                # Single line header: DID | Trend | WW
+                trend_str = f"{trend_diff:+.2f}%" if trend_diff else ""
+                st.markdown(f"### {did} &nbsp; {trend_emoji} {trend_str}")
 
-                with cols[col_idx]:
-                    # Extract yields per step
-                    hmfn_yield = None
-                    slt_yield = None
-                    elc_yield = None
-                    hmfn_uin = 0
-                    slt_uin = 0
-                    elc_uin = 0
+                # Three metrics side by side
+                c1, c2, c3 = st.columns(3)
 
-                    for _, row in did_data.iterrows():
-                        step = row.get('step', '').lower()
-                        if step == 'hmfn':
-                            hmfn_yield = row['yield_pct']
-                            hmfn_uin = int(row['uin'])
-                        elif step == 'slt':
-                            slt_yield = row['yield_pct']
-                            slt_uin = int(row['uin'])
-                        elif step == 'elc':
-                            elc_yield = row['yield_pct']
-                            elc_uin = int(row['uin'])
+                with c1:
+                    hmfn_emoji = status_emoji(hmfn_yield, targets['hmfn'])
+                    hmfn_delta = f"{hmfn_yield - targets['hmfn']:+.2f}%" if hmfn_yield else None
+                    st.metric(
+                        f"{hmfn_emoji} HMFN",
+                        f"{hmfn_yield:.2f}%" if hmfn_yield else "N/A",
+                        delta=hmfn_delta
+                    )
+                    fourwk_hmfn = f"{hmfn_4wk.get('yield', 0):.1f}%" if hmfn_4wk.get('yield') else "-"
+                    st.caption(f"n={fmt_vol(hmfn_uin)} | 4wk:{fourwk_hmfn}")
 
-                    # Calculate expected ELC from HMFN × SLT
-                    calc_elc = None
-                    if hmfn_yield is not None and slt_yield is not None:
-                        calc_elc = (hmfn_yield / 100) * (slt_yield / 100) * 100
+                with c2:
+                    slt_emoji = status_emoji(slt_yield, targets['slt'])
+                    slt_delta = f"{slt_yield - targets['slt']:+.2f}%" if slt_yield else None
+                    st.metric(
+                        f"{slt_emoji} SLT",
+                        f"{slt_yield:.2f}%" if slt_yield else "N/A",
+                        delta=slt_delta
+                    )
+                    fourwk_slt = f"{slt_4wk_yield:.1f}%" if slt_4wk_yield else "-"
+                    st.caption(f"n={fmt_vol(slt_uin)} | 4wk:{fourwk_slt}")
 
-                    # Build visual flow: HMFN → SLT → ELC
-                    hmfn_color = get_yield_color(hmfn_yield, 'hmfn') if hmfn_yield else "#666"
-                    slt_color = get_yield_color(slt_yield, 'slt') if slt_yield else "#666"
-                    elc_color = get_yield_color(elc_yield, 'elc') if elc_yield else "#666"
-
-                    # Show delta between calculated and actual ELC
-                    elc_delta_html = ""
-                    if calc_elc is not None and elc_yield is not None:
-                        delta = elc_yield - calc_elc
-                        delta_color = "#00C853" if delta >= 0 else "#FF5722"
-                        delta_sign = "+" if delta >= 0 else ""
-                        elc_delta_html = f'<span style="font-size: 9px; color: {delta_color};">({delta_sign}{delta:.2f}%)</span>'
-
-                    st.markdown(f"""
-                    <div style="
-                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                        border-radius: 8px;
-                        padding: 12px;
-                        margin-bottom: 8px;
-                    ">
-                        <div style="text-align: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
-                            <span style="font-size: 16px; font-weight: 700; color: #fff;">{did}</span>
-                        </div>
-
-                        <!-- HMFN -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(0,191,255,0.1); border-radius: 6px; margin-bottom: 4px;">
-                            <span style="font-size: 11px; color: #00BFFF; font-weight: 600;">HMFN</span>
-                            <span style="font-size: 15px; font-weight: 700; color: {hmfn_color};">{f'{hmfn_yield:.2f}%' if hmfn_yield else 'N/A'}</span>
-                        </div>
-
-                        <!-- Multiplication symbol -->
-                        <div style="text-align: center; color: #666; font-size: 12px; margin: 2px 0;">×</div>
-
-                        <!-- SLT -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255,23,68,0.1); border-radius: 6px; margin-bottom: 4px;">
-                            <span style="font-size: 11px; color: #FF1744; font-weight: 600;">SLT</span>
-                            <span style="font-size: 15px; font-weight: 700; color: {slt_color};">{f'{slt_yield:.2f}%' if slt_yield else 'N/A'}</span>
-                        </div>
-
-                        <!-- Equals symbol -->
-                        <div style="text-align: center; color: #666; font-size: 12px; margin: 2px 0;">＝</div>
-
-                        <!-- ELC -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: rgba(57,255,20,0.1); border-radius: 6px; border: 1px solid {elc_color};">
-                            <span style="font-size: 11px; color: #39FF14; font-weight: 600;">ELC</span>
-                            <div style="text-align: right;">
-                                <span style="font-size: 17px; font-weight: 700; color: {elc_color};">{f'{elc_yield:.2f}%' if elc_yield else 'N/A'}</span>
-                                {elc_delta_html}
-                            </div>
-                        </div>
-
-                        <!-- Calculated vs Actual -->
-                        <div style="text-align: center; margin-top: 6px; font-size: 9px; color: #666;">
-                            Calc: {f'{calc_elc:.2f}%' if calc_elc else 'N/A'} | UIN: {elc_uin:,}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                with c3:
+                    elc_emoji = status_emoji(elc_yield, targets['elc'])
+                    elc_delta = f"{elc_yield - targets['elc']:+.2f}%" if elc_yield else None
+                    st.metric(
+                        f"{elc_emoji} ELC",
+                        f"{elc_yield:.2f}%" if elc_yield else "N/A",
+                        delta=elc_delta
+                    )
+                    fourwk_elc = f"{elc_4wk_yield:.1f}%" if elc_4wk_yield else "-"
+                    st.caption(f"n={fmt_vol(elc_uin)} | 4wk:{fourwk_elc}")
 
     except Exception as e:
         import traceback
-        logger.error("Failed to render metrics: %s", e)
+        logger.error("Failed to render DID breakdown: %s", e)
         logger.error("Full traceback: %s", traceback.format_exc())
-        st.error("Failed to render summary metrics")
+        st.error("Failed to render DID breakdown")
 
 
 def render_summary_table(processor: DataProcessor) -> None:
@@ -1096,7 +1205,7 @@ def render_bin_distribution_chart(processor: DataProcessor) -> None:
 
 
 def render_density_speed_heatmap(processor: DataProcessor) -> None:
-    """Render yield heatmap by density and speed, with separate charts per step/design_id."""
+    """Render yield heatmap by density and speed - compact grid layout (rows=DIDs, cols=steps)."""
     st.subheader("Yield by Density & Speed")
 
     try:
@@ -1105,106 +1214,101 @@ def render_density_speed_heatmap(processor: DataProcessor) -> None:
             st.info("No density/speed data available")
             return
 
-        # Check if we have multiple steps or design_ids
         df = processor.dataframe
-        unique_steps = df["step"].unique().tolist() if "step" in df.columns else []
-        unique_design_ids = df["design_id"].unique().tolist() if "design_id" in df.columns else []
+        unique_steps = sorted(df["step"].unique().tolist()) if "step" in df.columns else []
+        unique_design_ids = sorted(df["design_id"].unique().tolist()) if "design_id" in df.columns else []
 
-        # If multiple steps or design_ids, create separate charts
-        if len(unique_steps) > 1 or len(unique_design_ids) > 1:
-            # Add step and design_id to the data if not present
-            raw_df = df.copy()
+        # Define step order for consistent column layout
+        step_order = ['hmfn', 'hmb1', 'qmon']
+        # Filter and sort steps based on order
+        ordered_steps = [s for s in step_order if s in [x.lower() for x in unique_steps]]
+        # Map back to original case
+        step_map = {s.lower(): s for s in unique_steps}
+        display_steps = [step_map.get(s, s) for s in ordered_steps]
+        # Add any steps not in the predefined order
+        for s in unique_steps:
+            if s.lower() not in step_order:
+                display_steps.append(s)
 
-            for design_id in unique_design_ids:
-                for step in unique_steps:
-                    # Filter data for this combination
+        if not display_steps:
+            display_steps = unique_steps
+
+        raw_df = df.copy()
+
+        # Grid layout: one row per DID, columns for each step
+        for design_id in unique_design_ids:
+            st.markdown(f"**{design_id}**")
+
+            # Create columns for steps
+            num_steps = len(display_steps)
+            cols = st.columns(num_steps)
+
+            for col_idx, step in enumerate(display_steps):
+                with cols[col_idx]:
+                    # Filter data for this DID + step combination
                     filtered = raw_df[(raw_df["design_id"] == design_id) & (raw_df["step"] == step)]
-                    if filtered.empty:
+
+                    if filtered.empty or "density" not in filtered.columns or "speed" not in filtered.columns:
+                        st.caption(f"{step.upper()}")
+                        st.info("No data")
                         continue
 
-                    # Calculate yield by density/speed for this subset
-                    if "density" in filtered.columns and "speed" in filtered.columns:
-                        grouped = (
-                            filtered.groupby(["density", "speed"])
-                            .agg({"UIN": "sum", "UPASS": "sum"})
-                            .reset_index()
-                        )
-                        grouped["yield_pct"] = (grouped["UPASS"] / grouped["UIN"] * 100).round(2)
+                    # Calculate yield by density/speed
+                    grouped = (
+                        filtered.groupby(["density", "speed"])
+                        .agg({"UIN": "sum", "UPASS": "sum"})
+                        .reset_index()
+                    )
+                    grouped["yield_pct"] = (grouped["UPASS"] / grouped["UIN"] * 100).round(2)
 
-                        if grouped.empty:
-                            continue
+                    if grouped.empty:
+                        st.caption(f"{step.upper()}")
+                        st.info("No data")
+                        continue
 
-                        pivot = grouped.pivot_table(
-                            index="density",
-                            columns="speed",
-                            values="yield_pct",
-                            aggfunc="mean",
-                        )
+                    pivot = grouped.pivot_table(
+                        index="density",
+                        columns="speed",
+                        values="yield_pct",
+                        aggfunc="mean",
+                    )
 
-                        if pivot.empty:
-                            continue
+                    if pivot.empty:
+                        st.caption(f"{step.upper()}")
+                        st.info("No data")
+                        continue
 
-                        fig = px.imshow(
-                            pivot,
-                            text_auto=".1f",
-                            color_continuous_scale="RdYlGn",
-                            aspect="auto",
-                            title=f"Yield % by Density & Speed - {design_id} / {step}",
-                            labels={"color": "Yield %"},
-                        )
+                    # Compact heatmap
+                    fig = px.imshow(
+                        pivot,
+                        text_auto=".1f",
+                        color_continuous_scale="RdYlGn",
+                        aspect="auto",
+                        labels={"color": "Yield %"},
+                    )
 
-                        # Enhanced hover for heatmap
-                        fig.update_traces(
-                            hovertemplate="<b>Density:</b> %{y}<br>" +
-                                          "<b>Speed:</b> %{x}<br>" +
-                                          "<b>Yield:</b> %{z:.2f}%<br>" +
-                                          f"<b>Design:</b> {design_id}<br>" +
-                                          f"<b>Step:</b> {step}<br>" +
-                                          "<extra></extra>"
-                        )
+                    fig.update_traces(
+                        hovertemplate="<b>Density:</b> %{y}<br>" +
+                                      "<b>Speed:</b> %{x}<br>" +
+                                      "<b>Yield:</b> %{z:.2f}%<br>" +
+                                      f"<b>Design:</b> {design_id}<br>" +
+                                      f"<b>Step:</b> {step}<br>" +
+                                      "<extra></extra>"
+                    )
 
-                        fig.update_layout(
-                            xaxis_title="Speed",
-                            yaxis_title="Density",
-                        )
+                    fig.update_layout(
+                        title=dict(text=step.upper(), font=dict(size=14)),
+                        xaxis_title="",
+                        yaxis_title="",
+                        margin=dict(l=10, r=10, t=30, b=10),
+                        height=250,
+                        coloraxis_showscale=False,  # Hide color bar to save space
+                    )
 
-                        st.plotly_chart(fig, use_container_width=True)
-        else:
-            # Single step/design_id - show combined chart
-            pivot = data.pivot_table(
-                index="density",
-                columns="speed",
-                values="yield_pct",
-                aggfunc="mean",
-            )
+                    st.plotly_chart(fig, use_container_width=True, key=f"heatmap_{design_id}_{step}")
 
-            if pivot.empty:
-                st.info("Insufficient data for heatmap")
-                return
+            st.divider()
 
-            fig = px.imshow(
-                pivot,
-                text_auto=".1f",
-                color_continuous_scale="RdYlGn",
-                aspect="auto",
-                title="Average Yield % by Density and Speed",
-                labels={"color": "Yield %"},
-            )
-
-            # Enhanced hover for heatmap
-            fig.update_traces(
-                hovertemplate="<b>Density:</b> %{y}<br>" +
-                              "<b>Speed:</b> %{x}<br>" +
-                              "<b>Yield:</b> %{z:.2f}%<br>" +
-                              "<extra></extra>"
-            )
-
-            fig.update_layout(
-                xaxis_title="Speed",
-                yaxis_title="Density",
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         logger.error("Failed to render heatmap: %s", e)
         st.error("Failed to render density/speed heatmap")
@@ -1693,12 +1797,16 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
 
 def render_dashboard(processor: DataProcessor, filters: dict[str, Any] = None) -> None:
     """Render all dashboard components."""
-    # Summary metrics at top
+    # Summary metrics at top (Total Units In, Pass, Yield, Range)
     render_summary_metrics(processor)
     st.divider()
 
-    # Summary table (moved to top per user request)
-    render_summary_table(processor)
+    # DID breakdown and Summary table side by side
+    left_col, right_col = st.columns([1, 1])
+    with left_col:
+        render_did_breakdown(processor)
+    with right_col:
+        render_summary_table(processor)
     st.divider()
 
     # Charts in two columns
