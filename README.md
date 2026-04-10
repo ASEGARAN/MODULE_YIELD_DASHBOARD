@@ -2,37 +2,79 @@
 
 Weekly yield tracking dashboard for SOCAMM and SOCAMM2 modules at HMFN, HMB1, and QMON test steps.
 
+## Live Dashboard
+
+**URL:** http://bolpedh02.micron.com:8501
+
+Access the production dashboard from any machine on the Micron network.
+
 ## Features
 
 - **Weekly Yield Trend Charts**: Track yield over time by test step and form factor
 - **Bin Distribution Analysis**: View bin percentages by test step
 - **Density/Speed Heatmap**: Visualize yield across density and speed combinations
 - **Summary Table**: Detailed breakdown with CSV export
+- **FAILCRAWLER DPM Analysis**: Live mtsums cDPM trending
+- **SMT6 Tester Yield**: Machine and socket-level yield monitoring
 
-## Requirements
-
-- Python 3.8 or higher
-
-## Installation
+## Quick Start
 
 ```bash
-# Navigate to project directory
+# Clone the repository
+git clone https://github.com/ASEGARAN/MODULE_YIELD_DASHBOARD.git
 cd MODULE_YIELD_DASHBOARD
 
-# Install dependencies (use pip with Python 3.8+)
-python3.11 -m pip install -r requirements.txt
-# or
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
-```
 
-## Usage
-
-```bash
 # Run the dashboard
 streamlit run app.py
 ```
 
 The dashboard will open in your browser at `http://localhost:8501`.
+
+## Requirements
+
+- Python 3.8 or higher
+- Access to Micron network (for frpt/mtsums commands)
+
+## Installation (Detailed)
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/ASEGARAN/MODULE_YIELD_DASHBOARD.git
+cd MODULE_YIELD_DASHBOARD
+```
+
+### 2. Set Up Virtual Environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run the Dashboard
+
+```bash
+streamlit run app.py --server.port 8501
+```
+
+To make it accessible to others on the network:
+
+```bash
+streamlit run app.py --server.address 0.0.0.0 --server.port 8501
+```
 
 ## Configuration
 
