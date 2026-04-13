@@ -127,10 +127,26 @@ MAX_YEAR = 2030
 
 
 def get_current_workweek() -> str:
-    """Get current work week in YYYYWW format."""
+    """Get current work week in YYYYWW format (Micron Fri-Thu weeks).
+
+    Micron fiscal weeks run Friday to Thursday:
+    - If today is Mon-Thu, we're in the previous ISO week's Micron week
+    - If today is Fri-Sun, we're in the current ISO week's Micron week
+    """
     now = datetime.now()
-    week = now.isocalendar()[1]
-    return f"{now.year}{week:02d}"
+    iso_year, iso_week, iso_day = now.isocalendar()
+
+    # Micron week adjustment: Mon-Thu (days 1-4) belong to previous week
+    if iso_day <= 4:  # Monday=1 through Thursday=4
+        micron_week = iso_week - 1
+        # Handle year boundary (week 0 means week 52 of previous year)
+        if micron_week <= 0:
+            micron_week = 52
+            iso_year -= 1
+    else:  # Friday=5 through Sunday=7
+        micron_week = iso_week
+
+    return f"{iso_year}{micron_week:02d}"
 
 
 def get_4week_rolled_yields(df: pd.DataFrame) -> dict:
