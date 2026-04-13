@@ -78,6 +78,12 @@ from src.grace_motherboard import (
     calculate_rolling_metrics,
     aggregate_by_machine,
     get_health_status,
+    # New FM-based analysis functions
+    fetch_grace_fm_data,
+    get_hang_machines,
+    compare_weeks,
+    analyze_hang_failures,
+    get_previous_workweek,
 )
 from config.settings import Settings
 
@@ -3451,15 +3457,14 @@ def render_pareto_tab(filters: dict[str, Any]) -> None:
 
 
 def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
-    """Render GRACE Motherboard Health Monitoring section."""
+    """Render GRACE Motherboard Health Monitoring section with FM-based analysis."""
     st.markdown("### GRACE Motherboard Health Monitoring")
     st.markdown("""
-    Monitor NVGRACE motherboard performance for HMB1/QMON test steps.
-    Track health metrics, failure composition, and identify chronic issues.
+    Monitor NVGRACE motherboard performance using Fail Mode (FM) cDPM analysis.
+    Identifies machines with Hang failures and drills down to find 100% fail cases (UIN=4, UPASS=0).
     """)
 
     # Use filters from main dashboard - Required
-    start_ww = str(filters.get("start_ww", "202610"))
     end_ww = str(filters.get("end_ww", "202614"))
     form_factors = [ff.lower() for ff in filters.get("form_factors", ["SOCAMM", "SOCAMM2"])]
 
@@ -3481,7 +3486,7 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
     filter_parts = [
         f"{', '.join([ff.upper() for ff in form_factors])}",
         "HMB1, QMON",
-        f"WW{start_ww}-{end_ww}"
+        f"Last 30 days"
     ]
     # Add optional filters if specified
     if design_ids:
@@ -3495,327 +3500,255 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
 
     st.caption(f"**Filters:** {' | '.join(filter_parts)}")
 
-    # Fetch button
-    fetch_btn = st.button("🔄 Fetch GRACE Data", key="fetch_grace_data", type="primary")
+    # Session state initialization
+    if 'grace_fm_df' not in st.session_state:
+        st.session_state.grace_fm_df = None
+    if 'grace_available_weeks' not in st.session_state:
+        st.session_state.grace_available_weeks = []
+    if 'grace_hang_analysis' not in st.session_state:
+        st.session_state.grace_hang_analysis = {}
 
-    # Session state for GRACE data
-    if 'grace_health_df' not in st.session_state:
-        st.session_state.grace_health_df = None
-    if 'grace_weekly_df' not in st.session_state:
-        st.session_state.grace_weekly_df = None
-    if 'grace_machine_df' not in st.session_state:
-        st.session_state.grace_machine_df = None
-    if 'grace_last_filters' not in st.session_state:
-        st.session_state.grace_last_filters = None
+    # Fetch FM data button
+    fetch_btn = st.button("🔄 Fetch GRACE FM Data", key="fetch_grace_fm_data", type="primary")
 
-    # Build current filter key for cache invalidation
-    optional_key = f"{','.join(design_ids)}_{','.join(densities)}_{','.join(speeds)}_{facility}"
-    current_filter_key = f"{start_ww}_{end_ww}_{','.join(sorted(form_factors))}_{optional_key}"
-
-    # Fetch data if button clicked or filters changed
     if fetch_btn:
-        with st.spinner("Fetching GRACE motherboard data from mtsums..."):
-            raw_df = fetch_grace_health_data(
-                start_ww=start_ww,
-                end_ww=end_ww,
+        with st.spinner("Fetching GRACE motherboard FM data from mtsums (+fm flag)..."):
+            fm_df = fetch_grace_fm_data(
                 form_factors=form_factors,
-                steps=['hmb1', 'qmon'],
+                days=30,
                 design_ids=design_ids if design_ids else None,
                 densities=densities if densities else None,
                 speeds=speeds if speeds else None,
                 facility=facility if facility else None
             )
 
-            if raw_df is not None and not raw_df.empty:
-                st.session_state.grace_health_df = raw_df
-                st.session_state.grace_weekly_df = calculate_rolling_metrics(
-                    aggregate_weekly_health(raw_df)
-                )
-                st.session_state.grace_machine_df = aggregate_by_machine(raw_df)
-                st.session_state.grace_last_filters = current_filter_key
-                st.success(f"Loaded {len(raw_df):,} records for {raw_df['MACHINE_ID'].nunique()} NVGRACE motherboards")
+            if fm_df is not None and not fm_df.empty:
+                st.session_state.grace_fm_df = fm_df
+                # Get available work weeks from the data
+                if 'MFG_WORKWEEK' in fm_df.columns:
+                    weeks = sorted(fm_df['MFG_WORKWEEK'].unique(), reverse=True)
+                    st.session_state.grace_available_weeks = [str(w) for w in weeks]
+                st.success(f"Loaded {len(fm_df):,} NVGRACE records across {fm_df['MFG_WORKWEEK'].nunique()} work weeks")
             else:
                 st.error("No GRACE motherboard data found for the specified filters.")
+                st.session_state.grace_fm_df = None
+                st.session_state.grace_available_weeks = []
 
-    # Display data if available
-    if st.session_state.grace_weekly_df is not None and not st.session_state.grace_weekly_df.empty:
-        weekly_df = st.session_state.grace_weekly_df
-        machine_df = st.session_state.grace_machine_df
+    # Display analysis if data available
+    if st.session_state.grace_fm_df is not None and not st.session_state.grace_fm_df.empty:
+        fm_df = st.session_state.grace_fm_df
+        available_weeks = st.session_state.grace_available_weeks
 
-        # ============================================
-        # PAGE 1: Health Overview
-        # ============================================
         st.markdown("---")
-        st.markdown("#### 📊 Health Overview")
 
-        # Latest week metrics
-        latest = weekly_df.iloc[-1]
-        prev = weekly_df.iloc[-2] if len(weekly_df) > 1 else latest
-
-        # RAG Status
-        status_text, status_color = get_health_status(latest['dpm'])
-
-        # Metrics row
-        metric_cols = st.columns(5)
-        with metric_cols[0]:
-            # Health Status Card
-            status_html = f"""
-            <div style="background: linear-gradient(135deg, {status_color}33 0%, {status_color}11 100%);
-                        border-left: 4px solid {status_color}; border-radius: 8px; padding: 15px;">
-                <div style="font-size: 12px; color: #888;">Health Status</div>
-                <div style="font-size: 24px; font-weight: bold; color: {status_color};">{status_text}</div>
-                <div style="font-size: 11px; color: #666;">WW{latest['week']}</div>
-            </div>
-            """
-            st.markdown(status_html, unsafe_allow_html=True)
-
-        with metric_cols[1]:
-            st.metric(
-                "Weekly DPM",
-                f"{latest['dpm']:,.0f}",
-                delta=f"{latest['wow_delta_dpm']:+,.0f}" if pd.notna(latest['wow_delta_dpm']) else None,
-                delta_color="inverse"
+        # Work week selector for comparison
+        col1, col2 = st.columns(2)
+        with col1:
+            selected_ww = st.selectbox(
+                "Select Work Week (Current)",
+                options=available_weeks,
+                index=0 if available_weeks else None,
+                key="grace_selected_ww"
             )
+        with col2:
+            # Automatically calculate previous week
+            if selected_ww:
+                prev_ww = get_previous_workweek(selected_ww)
+                st.text_input(
+                    "Previous Work Week (Auto)",
+                    value=prev_ww,
+                    disabled=True,
+                    key="grace_prev_ww_display"
+                )
+            else:
+                prev_ww = None
 
-        with metric_cols[2]:
-            st.metric(
-                "4-Week Rolling DPM",
-                f"{latest['rolling_dpm']:,.0f}",
-                help="Rolling 4-week DPM for trend smoothing"
-            )
+        if selected_ww:
+            # ============================================
+            # Machines with Hang cDPM > 0
+            # ============================================
+            st.markdown("#### 🔥 Machines with Hang Failures")
 
-        with metric_cols[3]:
-            st.metric(
-                "Modules Tested",
-                f"{latest['tested']:,}",
-                delta=f"{latest['tested'] - prev['tested']:+,}" if len(weekly_df) > 1 else None
-            )
+            hang_machines = get_hang_machines(fm_df, selected_ww)
 
-        with metric_cols[4]:
-            st.metric(
-                "Total Fails",
-                f"{latest['total_fails']:,}",
-                delta=f"{latest['total_fails'] - prev['total_fails']:+,}" if len(weekly_df) > 1 else None,
-                delta_color="inverse"
-            )
+            if not hang_machines.empty:
+                st.warning(f"Found **{len(hang_machines)}** machines with Hang cDPM > 0 in WW{selected_ww}")
 
-        # DPM Trend Chart
-        st.markdown("##### Weekly DPM vs 4-Week Rolling")
-
-        fig = go.Figure()
-
-        # Weekly DPM bars
-        fig.add_trace(go.Bar(
-            x=[f"WW{w}" for w in weekly_df['week']],
-            y=weekly_df['dpm'],
-            name='Weekly DPM',
-            marker_color='rgba(99, 110, 250, 0.7)',
-            text=weekly_df['dpm'].round(0).astype(int),
-            textposition='outside',
-            textfont=dict(size=10)
-        ))
-
-        # Rolling DPM line
-        fig.add_trace(go.Scatter(
-            x=[f"WW{w}" for w in weekly_df['week']],
-            y=weekly_df['rolling_dpm'],
-            name='4-Week Rolling DPM',
-            mode='lines+markers',
-            line=dict(color='#FF6B6B', width=3),
-            marker=dict(size=8)
-        ))
-
-        # Add threshold lines
-        fig.add_hline(y=2000, line_dash="dot", line_color="#00C853",
-                      annotation_text="Good (<2000)", annotation_position="right")
-        fig.add_hline(y=5000, line_dash="dot", line_color="#FFB300",
-                      annotation_text="Warning (<5000)", annotation_position="right")
-
-        fig.update_layout(
-            height=350,
-            margin=dict(l=50, r=50, t=30, b=50),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
-            xaxis_title="Work Week",
-            yaxis_title="DPM",
-            hovermode="x unified"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # ============================================
-        # PAGE 2: Failure Composition
-        # ============================================
-        st.markdown("---")
-        st.markdown("#### 📈 Failure Composition")
-
-        # Fail type breakdown
-        fail_cols = st.columns(4)
-        with fail_cols[0]:
-            st.metric(
-                "System Fails (Mod-Sys)",
-                f"{latest['system_fails']:,}",
-                delta=f"{latest['system_fails'] - prev['system_fails']:+,}" if len(weekly_df) > 1 else None,
-                delta_color="inverse"
-            )
-        with fail_cols[1]:
-            st.metric(
-                "Hang Fails",
-                f"{latest['hang_fails']:,}",
-                delta=f"{latest['hang_fails'] - prev['hang_fails']:+,}" if len(weekly_df) > 1 else None,
-                delta_color="inverse"
-            )
-        with fail_cols[2]:
-            st.metric(
-                "Boot Fails",
-                f"{latest['boot_fails']:,}",
-                delta=f"{latest['boot_fails'] - prev['boot_fails']:+,}" if len(weekly_df) > 1 else None,
-                delta_color="inverse"
-            )
-        with fail_cols[3]:
-            st.metric(
-                "Other Fails",
-                f"{latest['other_fails']:,}",
-                delta=f"{latest['other_fails'] - prev['other_fails']:+,}" if len(weekly_df) > 1 else None,
-                delta_color="inverse"
-            )
-
-        # Stacked bar chart for fail composition over time
-        fig_comp = go.Figure()
-
-        fig_comp.add_trace(go.Bar(
-            x=[f"WW{w}" for w in weekly_df['week']],
-            y=weekly_df['system_fails'],
-            name='System (Mod-Sys)',
-            marker_color='#FF6B6B'
-        ))
-        fig_comp.add_trace(go.Bar(
-            x=[f"WW{w}" for w in weekly_df['week']],
-            y=weekly_df['hang_fails'],
-            name='Hang',
-            marker_color='#4ECDC4'
-        ))
-        fig_comp.add_trace(go.Bar(
-            x=[f"WW{w}" for w in weekly_df['week']],
-            y=weekly_df['boot_fails'],
-            name='Boot',
-            marker_color='#45B7D1'
-        ))
-        fig_comp.add_trace(go.Bar(
-            x=[f"WW{w}" for w in weekly_df['week']],
-            y=weekly_df['other_fails'],
-            name='Other',
-            marker_color='#96CEB4'
-        ))
-
-        fig_comp.update_layout(
-            barmode='stack',
-            height=300,
-            margin=dict(l=50, r=50, t=30, b=50),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
-            xaxis_title="Work Week",
-            yaxis_title="Fail Count",
-            hovermode="x unified"
-        )
-
-        st.plotly_chart(fig_comp, use_container_width=True)
-
-        # ============================================
-        # PAGE 3: Chronic Exposure (Problem Boards)
-        # ============================================
-        st.markdown("---")
-        st.markdown("#### 🔧 Chronic Exposure - Problem Boards")
-
-        if machine_df is not None and not machine_df.empty:
-            # Filter to boards with fails
-            problem_boards = machine_df[machine_df['fails'] > 0].head(20)
-
-            if not problem_boards.empty:
-                # Summary metrics
-                total_boards = len(machine_df)
-                problem_count = len(machine_df[machine_df['fails'] > 0])
-                chronic_count = len(machine_df[machine_df['fails'] >= 3])
-
-                board_cols = st.columns(4)
-                with board_cols[0]:
-                    st.metric("Total Boards", f"{total_boards:,}")
-                with board_cols[1]:
-                    st.metric("Boards with Fails", f"{problem_count:,}")
-                with board_cols[2]:
-                    st.metric("Chronic Boards (≥3 fails)", f"{chronic_count:,}")
-                with board_cols[3]:
-                    pct_problem = (problem_count / total_boards * 100) if total_boards > 0 else 0
-                    st.metric("% Problem Boards", f"{pct_problem:.1f}%")
-
-                # Problem boards table
-                st.markdown("##### Top 20 Problem Boards by DPM")
-
-                # Prepare display dataframe
-                display_df = problem_boards[['machine_id', 'tested', 'fails', 'dpm', 'yield_pct', 'weeks_active']].copy()
-                display_df.columns = ['Machine ID', 'Tested', 'Fails', 'DPM', 'Yield %', 'Weeks Active']
-                display_df['DPM'] = display_df['DPM'].apply(lambda x: f"{x:,.0f}")
-                display_df['Yield %'] = display_df['Yield %'].apply(lambda x: f"{x:.2f}%")
+                # Display hang machines table
+                hang_display = hang_machines.copy()
+                hang_display['Hang_cDPM'] = hang_display['Hang_cDPM'].apply(lambda x: f"{x:,.0f}")
+                hang_display['UIN'] = hang_display['UIN'].apply(lambda x: f"{x:,}")
+                hang_display.columns = ['Machine ID', 'Work Week', 'Hang cDPM', 'UIN']
 
                 st.dataframe(
-                    display_df,
+                    hang_display,
                     use_container_width=True,
                     hide_index=True,
                     column_config={
                         "Machine ID": st.column_config.TextColumn("Machine ID", width="medium"),
-                        "Tested": st.column_config.NumberColumn("Tested", format="%d"),
-                        "Fails": st.column_config.NumberColumn("Fails", format="%d"),
-                        "DPM": st.column_config.TextColumn("DPM"),
-                        "Yield %": st.column_config.TextColumn("Yield %"),
-                        "Weeks Active": st.column_config.NumberColumn("Weeks", format="%d")
+                        "Work Week": st.column_config.NumberColumn("Work Week", format="%d"),
+                        "Hang cDPM": st.column_config.TextColumn("Hang cDPM"),
+                        "UIN": st.column_config.TextColumn("UIN")
                     }
                 )
 
-                # Top problem boards bar chart
-                top_10 = problem_boards.head(10)
-                fig_boards = go.Figure()
+                # Week-over-week comparison
+                if prev_ww and prev_ww in available_weeks:
+                    st.markdown("---")
+                    st.markdown(f"#### 📊 Week-over-Week Comparison (WW{selected_ww} vs WW{prev_ww})")
 
-                fig_boards.add_trace(go.Bar(
-                    x=top_10['machine_id'],
-                    y=top_10['dpm'],
-                    marker_color=['#FF1744' if d >= 5000 else '#FFB300' if d >= 2000 else '#00C853' for d in top_10['dpm']],
-                    text=top_10['dpm'].round(0).astype(int),
-                    textposition='outside'
-                ))
+                    comparison_df = compare_weeks(fm_df, selected_ww, prev_ww)
 
-                fig_boards.update_layout(
-                    height=300,
-                    margin=dict(l=50, r=50, t=30, b=80),
-                    xaxis_title="Machine ID",
-                    yaxis_title="DPM",
-                    xaxis_tickangle=-45
+                    if not comparison_df.empty:
+                        # Summary metrics
+                        new_issues = len(comparison_df[comparison_df['is_new']])
+                        resolved = len(comparison_df[comparison_df['is_resolved']])
+                        chronic = len(comparison_df[comparison_df['is_chronic']])
+
+                        comp_cols = st.columns(4)
+                        with comp_cols[0]:
+                            st.metric("New Issues", f"{new_issues}", help="Machines with Hang > 0 in current week but not previous")
+                        with comp_cols[1]:
+                            st.metric("Resolved", f"{resolved}", delta=f"+{resolved}" if resolved > 0 else None, delta_color="normal", help="Machines with Hang > 0 in previous week but not current")
+                        with comp_cols[2]:
+                            st.metric("Chronic", f"{chronic}", delta_color="inverse", help="Machines with Hang > 0 in both weeks")
+                        with comp_cols[3]:
+                            st.metric("Total Tracked", f"{len(comparison_df)}")
+
+                        # Comparison table
+                        with st.expander("📋 Detailed Comparison Table", expanded=True):
+                            comp_display = comparison_df.copy()
+
+                            # Add status column
+                            def get_status(row):
+                                if row['is_new']:
+                                    return "🆕 New"
+                                elif row['is_resolved']:
+                                    return "✅ Resolved"
+                                elif row['is_chronic']:
+                                    return "⚠️ Chronic"
+                                return "—"
+
+                            comp_display['Status'] = comp_display.apply(get_status, axis=1)
+
+                            # Select and rename columns for display
+                            display_cols = ['machine_id', 'Status', f'hang_cDPM_{selected_ww}', f'hang_cDPM_{prev_ww}', 'hang_delta', f'uin_{selected_ww}', f'uin_{prev_ww}']
+                            comp_display = comp_display[display_cols].copy()
+                            comp_display.columns = ['Machine ID', 'Status', f'Hang WW{selected_ww}', f'Hang WW{prev_ww}', 'Delta', f'UIN WW{selected_ww}', f'UIN WW{prev_ww}']
+
+                            st.dataframe(comp_display, use_container_width=True, hide_index=True)
+
+                # ============================================
+                # Drill-down: UIN=4, UPASS=0 Analysis
+                # ============================================
+                st.markdown("---")
+                st.markdown("#### 🔍 Drill-Down: 100% Fail Cases (UIN=4, UPASS=0)")
+
+                # Machine selector for drill-down
+                machine_options = hang_machines['MACHINE_ID'].tolist()
+                selected_machine = st.selectbox(
+                    "Select Machine for Drill-Down",
+                    options=machine_options,
+                    key="grace_drill_machine"
                 )
 
-                st.plotly_chart(fig_boards, use_container_width=True)
+                if selected_machine:
+                    drill_btn = st.button(f"🔎 Analyze {selected_machine}", key="grace_drill_btn")
+
+                    if drill_btn:
+                        with st.spinner(f"Running tsums drill-down for {selected_machine}..."):
+                            analysis = analyze_hang_failures(
+                                machine_id=selected_machine,
+                                current_ww=selected_ww,
+                                previous_ww=prev_ww if prev_ww else get_previous_workweek(selected_ww),
+                                days=30
+                            )
+                            st.session_state.grace_hang_analysis[selected_machine] = analysis
+
+                    # Display analysis results if available
+                    if selected_machine in st.session_state.grace_hang_analysis:
+                        analysis = st.session_state.grace_hang_analysis[selected_machine]
+
+                        if 'error' in analysis and analysis['error']:
+                            st.error(f"Analysis error: {analysis['error']}")
+                        else:
+                            # Analysis summary
+                            analysis_cols = st.columns(4)
+                            with analysis_cols[0]:
+                                st.metric(
+                                    f"100% Fails WW{analysis.get('current_ww', selected_ww)}",
+                                    f"{analysis.get('current_ww_count', 0)}"
+                                )
+                            with analysis_cols[1]:
+                                st.metric(
+                                    f"100% Fails WW{analysis.get('previous_ww', prev_ww)}",
+                                    f"{analysis.get('previous_ww_count', 0)}"
+                                )
+                            with analysis_cols[2]:
+                                is_chronic = analysis.get('is_chronic', False)
+                                st.metric(
+                                    "Chronic Issue?",
+                                    "YES" if is_chronic else "NO",
+                                    delta="⚠️" if is_chronic else None,
+                                    delta_color="inverse" if is_chronic else "normal"
+                                )
+                            with analysis_cols[3]:
+                                bios_versions = analysis.get('bios_versions', [])
+                                st.metric("BIOS Versions", f"{len(bios_versions)}")
+
+                            # Current week failures
+                            current_failures = analysis.get('current_ww_failures', [])
+                            if current_failures:
+                                st.markdown(f"##### 100% Fail Lots in WW{analysis.get('current_ww', selected_ww)}")
+                                current_df = pd.DataFrame(current_failures)
+                                st.dataframe(current_df, use_container_width=True, hide_index=True)
+                            else:
+                                st.info(f"No 100% fail cases found in WW{analysis.get('current_ww', selected_ww)}")
+
+                            # Previous week failures
+                            prev_failures = analysis.get('previous_ww_failures', [])
+                            if prev_failures:
+                                st.markdown(f"##### 100% Fail Lots in WW{analysis.get('previous_ww', prev_ww)}")
+                                prev_df = pd.DataFrame(prev_failures)
+                                st.dataframe(prev_df, use_container_width=True, hide_index=True)
+
+                            # BIOS versions seen
+                            if bios_versions:
+                                with st.expander("🔧 BIOS Versions Observed"):
+                                    for bv in bios_versions:
+                                        st.code(bv)
 
             else:
-                st.success("No problem boards detected! All NVGRACE motherboards are performing well.")
+                st.success(f"No machines with Hang cDPM > 0 in WW{selected_ww}")
 
-        # ============================================
-        # Weekly Summary Table
-        # ============================================
-        with st.expander("📋 Weekly Summary Table", expanded=False):
-            summary_display = weekly_df[['week', 'tested', 'total_fails', 'system_fails', 'hang_fails', 'other_fails', 'dpm', 'rolling_dpm', 'yield_pct']].copy()
-            summary_display.columns = ['Work Week', 'Tested', 'Total Fails', 'System', 'Hang', 'Other', 'DPM', '4W Rolling DPM', 'Yield %']
-            summary_display['Work Week'] = summary_display['Work Week'].apply(lambda x: f"WW{x}")
-            summary_display['DPM'] = summary_display['DPM'].apply(lambda x: f"{x:,.0f}")
-            summary_display['4W Rolling DPM'] = summary_display['4W Rolling DPM'].apply(lambda x: f"{x:,.0f}")
-            summary_display['Yield %'] = summary_display['Yield %'].apply(lambda x: f"{x:.2f}%")
+            # ============================================
+            # Full FM Data Summary (Collapsible)
+            # ============================================
+            with st.expander("📋 Full FM Data Summary", expanded=False):
+                # Show available columns and sample data
+                st.markdown(f"**Available columns:** {', '.join(fm_df.columns.tolist())}")
+                st.markdown(f"**Total records:** {len(fm_df):,}")
+                st.markdown(f"**Unique machines:** {fm_df['MACHINE_ID'].nunique()}")
+                st.markdown(f"**Work weeks:** {', '.join([f'WW{w}' for w in sorted(fm_df['MFG_WORKWEEK'].unique())])}")
 
-            st.dataframe(summary_display, use_container_width=True, hide_index=True)
+                # Sample data
+                st.markdown("**Sample data (first 20 rows):**")
+                st.dataframe(fm_df.head(20), use_container_width=True, hide_index=True)
 
     else:
         # No data - show placeholder
-        st.info("👆 Enter work week range and click **Fetch GRACE Data** to load motherboard health metrics.")
+        st.info("👆 Click **Fetch GRACE FM Data** to load motherboard health metrics using Fail Mode (FM) cDPM analysis.")
 
         placeholder_html = """
         <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 40px; margin: 20px 0; text-align: center; border: 2px dashed rgba(255,255,255,0.2);">
             <div style="font-size: 48px; margin-bottom: 15px;">🖥️</div>
             <div style="font-size: 18px; color: #888; margin-bottom: 10px;">GRACE Motherboard Health Monitoring</div>
-            <div style="font-size: 14px; color: #666;">Data source: MTSUMS (HMB1, QMON steps for NVGRACE machines)</div>
+            <div style="font-size: 14px; color: #666;">Data source: MTSUMS +fm (Fail Mode cDPM analysis)</div>
+            <div style="font-size: 12px; color: #555; margin-top: 10px;">
+                <br>• Fetch FM data to see machines with Hang failures
+                <br>• Compare week-over-week to identify new, resolved, and chronic issues
+                <br>• Drill down to find 100% fail cases (UIN=4, UPASS=0)
+            </div>
         </div>
         """
         st.markdown(placeholder_html, unsafe_allow_html=True)

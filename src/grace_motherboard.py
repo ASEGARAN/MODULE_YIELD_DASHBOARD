@@ -303,3 +303,339 @@ def get_health_status(dpm: float, thresholds: dict = None) -> tuple[str, str]:
         return 'Warning', '#FFB300'
     else:
         return 'Critical', '#FF1744'
+
+
+# =============================================================================
+# NEW: Fail Mode (FM) based analysis with week-over-week comparison
+# =============================================================================
+
+def fetch_grace_fm_data(
+    form_factors: list[str] = ['socamm', 'socamm2'],
+    days: int = 30,
+    design_ids: Optional[list[str]] = None,
+    densities: Optional[list[str]] = None,
+    speeds: Optional[list[str]] = None,
+    facility: Optional[str] = None
+) -> Optional[pd.DataFrame]:
+    """
+    Fetch GRACE motherboard data with fail mode (FM) cDPM breakdown.
+
+    Uses: mtsums -modff=socamm2,socamm -30 +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf
+
+    Args:
+        form_factors: Module form factors
+        days: Number of days to look back (default 30)
+        design_ids: Optional list of design IDs
+        densities: Optional list of module densities
+        speeds: Optional list of module speeds
+        facility: Optional test facility
+
+    Returns:
+        DataFrame with MACHINE_ID, MFG_WORKWEEK, and cDPM columns for each fail mode
+    """
+    modff = ','.join(form_factors)
+
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        f'-modff={modff}',
+        f'-{days}',
+        '+fm',
+        '-format+=machine_id,mfg_workweek',
+        '=islatest',
+        '=isvalid',
+        '+stdf',
+        '+quiet',
+        '+csv'
+    ]
+
+    # Add optional filters
+    if design_ids:
+        cmd.append(f'-dbase={",".join(design_ids)}')
+    if densities:
+        cmd.append(f'-module_density={",".join(densities)}')
+    if speeds:
+        cmd.append(f'-module_speed={",".join(speeds)}')
+    if facility:
+        cmd.append(f'-test_facility={facility}')
+
+    logger.info(f"Running mtsums +fm command: {' '.join(cmd)}")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+
+        if result.returncode != 0:
+            logger.error(f"mtsums +fm failed: {result.stderr}")
+            return None
+
+        output = result.stdout
+        if not output.strip():
+            logger.warning("mtsums +fm returned empty output")
+            return None
+
+        df = pd.read_csv(StringIO(output))
+
+        # Filter for NVGRACE machines only
+        if 'MACHINE_ID' in df.columns:
+            df = df[df['MACHINE_ID'].str.contains('NVGRACE', case=False, na=False)]
+
+        if df.empty:
+            logger.warning("No NVGRACE data found in +fm output")
+            return None
+
+        logger.info(f"Fetched {len(df)} NVGRACE FM records")
+        return df
+
+    except subprocess.TimeoutExpired:
+        logger.error("mtsums +fm command timed out")
+        return None
+    except Exception as e:
+        logger.error(f"Error fetching GRACE FM data: {e}")
+        return None
+
+
+def get_hang_machines(fm_df: pd.DataFrame, selected_ww: str) -> pd.DataFrame:
+    """
+    Find machines with Hang cDPM > 0 for the selected work week.
+
+    Args:
+        fm_df: DataFrame from fetch_grace_fm_data()
+        selected_ww: Work week to filter (e.g., '202614')
+
+    Returns:
+        DataFrame with machines that have Hang failures
+    """
+    if fm_df is None or fm_df.empty:
+        return pd.DataFrame()
+
+    # Filter to selected work week
+    ww_int = int(selected_ww)
+    ww_df = fm_df[fm_df['MFG_WORKWEEK'] == ww_int].copy()
+
+    if ww_df.empty:
+        return pd.DataFrame()
+
+    # Filter for Hang > 0
+    if 'Hang' in ww_df.columns:
+        hang_machines = ww_df[ww_df['Hang'] > 0][['MACHINE_ID', 'MFG_WORKWEEK', 'Hang', 'UIN']].copy()
+        hang_machines = hang_machines.rename(columns={'Hang': 'Hang_cDPM'})
+        return hang_machines.sort_values('Hang_cDPM', ascending=False)
+
+    return pd.DataFrame()
+
+
+def compare_weeks(fm_df: pd.DataFrame, current_ww: str, previous_ww: str) -> pd.DataFrame:
+    """
+    Compare fail mode data between two work weeks.
+
+    Args:
+        fm_df: DataFrame from fetch_grace_fm_data()
+        current_ww: Current work week (e.g., '202614')
+        previous_ww: Previous work week (e.g., '202613')
+
+    Returns:
+        DataFrame with comparison metrics
+    """
+    if fm_df is None or fm_df.empty:
+        return pd.DataFrame()
+
+    current_int = int(current_ww)
+    previous_int = int(previous_ww)
+
+    current_df = fm_df[fm_df['MFG_WORKWEEK'] == current_int].copy()
+    previous_df = fm_df[fm_df['MFG_WORKWEEK'] == previous_int].copy()
+
+    if current_df.empty and previous_df.empty:
+        return pd.DataFrame()
+
+    # Get all machines from both weeks
+    all_machines = set(current_df['MACHINE_ID'].unique()) | set(previous_df['MACHINE_ID'].unique())
+
+    comparison_data = []
+    for machine in all_machines:
+        curr = current_df[current_df['MACHINE_ID'] == machine]
+        prev = previous_df[previous_df['MACHINE_ID'] == machine]
+
+        curr_hang = curr['Hang'].values[0] if not curr.empty and 'Hang' in curr.columns else 0
+        prev_hang = prev['Hang'].values[0] if not prev.empty and 'Hang' in prev.columns else 0
+        curr_uin = curr['UIN'].values[0] if not curr.empty and 'UIN' in curr.columns else 0
+        prev_uin = prev['UIN'].values[0] if not prev.empty and 'UIN' in prev.columns else 0
+
+        # Only include if either week has Hang > 0
+        if curr_hang > 0 or prev_hang > 0:
+            comparison_data.append({
+                'machine_id': machine,
+                f'hang_cDPM_{current_ww}': curr_hang,
+                f'hang_cDPM_{previous_ww}': prev_hang,
+                f'uin_{current_ww}': curr_uin,
+                f'uin_{previous_ww}': prev_uin,
+                'hang_delta': curr_hang - prev_hang,
+                'is_new': prev_hang == 0 and curr_hang > 0,
+                'is_resolved': prev_hang > 0 and curr_hang == 0,
+                'is_chronic': prev_hang > 0 and curr_hang > 0
+            })
+
+    return pd.DataFrame(comparison_data).sort_values('hang_delta', ascending=False)
+
+
+def fetch_machine_tsums(
+    machine_id: str,
+    steps: list[str] = ['hmb1', 'qmon'],
+    days: int = 30
+) -> Optional[pd.DataFrame]:
+    """
+    Fetch detailed tsums data for a specific machine.
+
+    Uses: tsums -machine_id=NVGRACE-XXXXXX -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+
+    Args:
+        machine_id: Machine ID (e.g., 'NVGRACE-099562')
+        steps: Test steps to query
+        days: Number of days to look back
+
+    Returns:
+        DataFrame with lot-level details including UIN, UPASS, MFG_WORKWEEK, BIOS_VERSION
+    """
+    step_list = ','.join(steps)
+
+    cmd = f"tsums -machine_id={machine_id} -step={step_list} -standard_flow=yes -{days} -ta -format+=mfg_workweek,bios_version +echo"
+
+    logger.info(f"Running tsums command: {cmd}")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if result.returncode != 0:
+            logger.error(f"tsums failed: {result.stderr}")
+            return None
+
+        output = result.stdout
+        if not output.strip() or 'Command Echo' not in output:
+            logger.warning("tsums returned no data")
+            return None
+
+        # Parse the output (space-separated, skip the Command Echo line)
+        lines = output.strip().split('\n')
+        data_lines = [l for l in lines if not l.startswith('Command Echo') and l.strip()]
+
+        if not data_lines:
+            return None
+
+        # Parse each line into structured data
+        records = []
+        for line in data_lines:
+            parts = line.split()
+            if len(parts) >= 20:  # Ensure we have enough columns
+                try:
+                    records.append({
+                        'lot': parts[0],
+                        'uin': int(parts[3]),
+                        'upass': int(parts[4]),
+                        'step': parts[-3],
+                        'mfg_workweek': parts[-2],
+                        'bios_version': parts[-1]
+                    })
+                except (ValueError, IndexError) as e:
+                    logger.debug(f"Skipping line due to parse error: {e}")
+                    continue
+
+        if not records:
+            return None
+
+        return pd.DataFrame(records)
+
+    except subprocess.TimeoutExpired:
+        logger.error("tsums command timed out")
+        return None
+    except Exception as e:
+        logger.error(f"Error fetching machine tsums: {e}")
+        return None
+
+
+def analyze_hang_failures(
+    machine_id: str,
+    current_ww: str,
+    previous_ww: str,
+    days: int = 30
+) -> dict:
+    """
+    Analyze hang failures for a specific machine, comparing two work weeks.
+
+    Identifies cases where UIN=4 and UPASS=0 (100% fail) in both weeks.
+
+    Args:
+        machine_id: Machine ID to analyze
+        current_ww: Current work week
+        previous_ww: Previous work week
+        days: Days to look back for tsums data
+
+    Returns:
+        Dict with analysis results including:
+        - current_ww_failures: List of lots with UIN=4, UPASS=0 in current week
+        - previous_ww_failures: List of lots with UIN=4, UPASS=0 in previous week
+        - is_chronic: True if failures in both weeks
+        - bios_versions: Unique BIOS versions seen
+    """
+    tsums_df = fetch_machine_tsums(machine_id, days=days)
+
+    if tsums_df is None or tsums_df.empty:
+        return {
+            'machine_id': machine_id,
+            'current_ww_failures': [],
+            'previous_ww_failures': [],
+            'is_chronic': False,
+            'bios_versions': [],
+            'error': 'No tsums data available'
+        }
+
+    # Filter for 100% fail cases (UIN=4, UPASS=0)
+    fail_100pct = tsums_df[(tsums_df['uin'] == 4) & (tsums_df['upass'] == 0)]
+
+    current_failures = fail_100pct[fail_100pct['mfg_workweek'] == current_ww].to_dict('records')
+    previous_failures = fail_100pct[fail_100pct['mfg_workweek'] == previous_ww].to_dict('records')
+
+    # Get unique BIOS versions
+    bios_versions = tsums_df['bios_version'].unique().tolist()
+
+    return {
+        'machine_id': machine_id,
+        'current_ww': current_ww,
+        'previous_ww': previous_ww,
+        'current_ww_failures': current_failures,
+        'previous_ww_failures': previous_failures,
+        'current_ww_count': len(current_failures),
+        'previous_ww_count': len(previous_failures),
+        'is_chronic': len(current_failures) > 0 and len(previous_failures) > 0,
+        'bios_versions': bios_versions,
+        'total_100pct_fails': len(fail_100pct)
+    }
+
+
+def get_previous_workweek(ww: str) -> str:
+    """
+    Get the previous work week given a work week string.
+
+    Args:
+        ww: Work week in YYYYWW format (e.g., '202614')
+
+    Returns:
+        Previous work week (e.g., '202613')
+    """
+    year = int(ww[:4])
+    week = int(ww[4:])
+
+    if week > 1:
+        return f"{year}{week-1:02d}"
+    else:
+        # Handle year boundary - assume previous year has 52 weeks
+        return f"{year-1}52"
