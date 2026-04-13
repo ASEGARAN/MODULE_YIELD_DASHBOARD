@@ -1164,14 +1164,12 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
             st.info("👆 Select one or more series above to display the trend chart")
             return
 
-        # Chart options in columns
-        opt_col1, opt_col2, opt_col3 = st.columns([1, 1, 1])
+        # Chart options
+        opt_col1, opt_col2 = st.columns([1, 2])
         with opt_col1:
             show_labels = st.checkbox("Show data labels", value=False, key="trend_show_labels")
         with opt_col2:
-            y_min = st.number_input("Y-axis Min %", min_value=0.0, max_value=99.0, value=94.0, step=0.5, key="trend_y_min")
-        with opt_col3:
-            y_max = st.number_input("Y-axis Max %", min_value=1.0, max_value=100.5, value=100.5, step=0.5, key="trend_y_max")
+            y_min = st.slider("Y-axis Min %", min_value=0, max_value=99, value=94, step=1, key="trend_y_min")
 
         # Filter data by selected series
         filtered_data = trend_data[trend_data["series"].isin(selected_series)]
@@ -1255,7 +1253,7 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         )
 
         # Update y-axes with user-controlled range
-        fig.update_yaxes(title_text="Yield %", range=[y_min, y_max], secondary_y=False)
+        fig.update_yaxes(title_text="Yield %", range=[y_min, 100], secondary_y=False)
         fig.update_yaxes(title_text="Volume (UIN)", secondary_y=True)
 
         st.plotly_chart(fig, use_container_width=True)
