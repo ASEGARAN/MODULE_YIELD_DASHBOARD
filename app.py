@@ -3498,11 +3498,15 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
     if not isinstance(speeds, list):
         speeds = [speeds] if speeds else []
 
+    # Calculate previous week for comparison
+    selected_ww = end_ww
+    prev_ww = get_previous_workweek(selected_ww)
+
     # Build filter context display
     filter_parts = [
         f"{', '.join([ff.upper() for ff in form_factors])}",
         "HMB1, QMON",
-        f"Last 30 days"
+        f"WW{selected_ww} (vs WW{prev_ww})"
     ]
     # Add optional filters if specified
     if design_ids:
@@ -3559,53 +3563,48 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
 
         st.markdown("---")
 
-        # Work week selector for comparison
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_ww = st.selectbox(
-                "Select Work Week (Current)",
-                options=available_weeks,
-                index=0 if available_weeks else None,
-                key="grace_selected_ww"
-            )
-        with col2:
-            # Automatically calculate previous week
-            if selected_ww:
-                prev_ww = get_previous_workweek(selected_ww)
-                st.text_input(
-                    "Previous Work Week (Auto)",
-                    value=prev_ww,
-                    disabled=True,
-                    key="grace_prev_ww_display"
-                )
-            else:
-                prev_ww = None
-
-        if selected_ww:
+        # Check if selected week has data
+        if selected_ww in available_weeks:
             # ============================================
             # Machines with Hang cDPM > 0
             # ============================================
-            st.markdown("#### 🔥 Machines with Hang Failures")
+            st.markdown(f"#### 🔥 Machines with Hang Failures (WW{selected_ww} vs WW{prev_ww})")
 
             hang_machines = get_hang_machines(fm_df, selected_ww)
 
             if not hang_machines.empty:
                 st.warning(f"Found **{len(hang_machines)}** machines with Hang cDPM > 0 in WW{selected_ww}")
 
-                # Display hang machines table
+                # Get previous week's Hang cDPM for delta calculation
+                prev_hang = get_hang_machines(fm_df, prev_ww) if prev_ww in available_weeks else pd.DataFrame()
+                prev_hang_dict = {}
+                if not prev_hang.empty:
+                    prev_hang_dict = dict(zip(prev_hang['MACHINE_ID'], prev_hang['Hang_cDPM']))
+
+                # Build display table with delta
                 hang_display = hang_machines.copy()
-                hang_display['Hang_cDPM'] = hang_display['Hang_cDPM'].apply(lambda x: f"{x:,.0f}")
-                hang_display['UIN'] = hang_display['UIN'].apply(lambda x: f"{x:,}")
-                hang_display.columns = ['Machine ID', 'Work Week', 'Hang cDPM', 'UIN']
+                hang_display['Prev_Hang'] = hang_display['MACHINE_ID'].map(lambda x: prev_hang_dict.get(x, 0))
+                hang_display['Delta'] = hang_display['Hang_cDPM'] - hang_display['Prev_Hang']
+
+                # Format for display
+                hang_display['Hang_cDPM_fmt'] = hang_display['Hang_cDPM'].apply(lambda x: f"{x:,.0f}")
+                hang_display['Prev_Hang_fmt'] = hang_display['Prev_Hang'].apply(lambda x: f"{x:,.0f}")
+                hang_display['Delta_fmt'] = hang_display['Delta'].apply(lambda x: f"{x:+,.0f}" if x != 0 else "0")
+                hang_display['UIN_fmt'] = hang_display['UIN'].apply(lambda x: f"{x:,}")
+
+                # Select display columns
+                display_df = hang_display[['MACHINE_ID', 'Hang_cDPM_fmt', 'Prev_Hang_fmt', 'Delta_fmt', 'UIN_fmt']].copy()
+                display_df.columns = ['Machine ID', f'Hang WW{selected_ww}', f'Hang WW{prev_ww}', 'Delta', 'UIN']
 
                 st.dataframe(
-                    hang_display,
+                    display_df,
                     use_container_width=True,
                     hide_index=True,
                     column_config={
                         "Machine ID": st.column_config.TextColumn("Machine ID", width="medium"),
-                        "Work Week": st.column_config.NumberColumn("Work Week", format="%d"),
-                        "Hang cDPM": st.column_config.TextColumn("Hang cDPM"),
+                        f"Hang WW{selected_ww}": st.column_config.TextColumn(f"Hang WW{selected_ww}"),
+                        f"Hang WW{prev_ww}": st.column_config.TextColumn(f"Hang WW{prev_ww}"),
+                        "Delta": st.column_config.TextColumn("Delta (cDPM)"),
                         "UIN": st.column_config.TextColumn("UIN")
                     }
                 )
@@ -3752,6 +3751,11 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
                 # Sample data
                 st.markdown("**Sample data (first 20 rows):**")
                 st.dataframe(fm_df.head(20), use_container_width=True, hide_index=True)
+
+        else:
+            # Selected week not in available data
+            st.warning(f"WW{selected_ww} not found in fetched data. Available weeks: {', '.join([f'WW{w}' for w in available_weeks])}")
+            st.info("Adjust the main dashboard Work Week filter or fetch fresh data.")
 
     else:
         # No data - show placeholder
