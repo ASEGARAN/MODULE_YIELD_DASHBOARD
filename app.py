@@ -797,7 +797,7 @@ def render_primary_filters() -> dict[str, Any]:
         "Test Facility",
         options=Settings.FACILITIES,
         index=0,
-        help="Select test facility",
+        help="Select test facility. For GRACE Motherboard analysis, select PENANG or BOISE (not 'all').",
     )
 
     return {

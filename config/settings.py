@@ -24,7 +24,7 @@ class Settings:
     SPEEDS: ClassVar[list[str]] = ["6400MTPS", "7500MTPS", "8533MTPS", "9600MTPS"]
 
     # Test facilities
-    FACILITIES: ClassVar[list[str]] = ["all", "PENANG", "SUZHOU", "XIAN"]
+    FACILITIES: ClassVar[list[str]] = ["all", "PENANG", "BOISE", "SUZHOU", "XIAN"]
 
     # Default values
     DEFAULT_DESIGN_ID: ClassVar[str] = "Y6CP"
