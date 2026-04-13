@@ -3509,17 +3509,19 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
         st.session_state.grace_hang_analysis = {}
 
     # Fetch FM data button
-    fetch_btn = st.button("🔄 Fetch GRACE FM Data", key="fetch_grace_fm_data", type="primary")
+    fetch_btn = st.button("🔄 Fetch GRACE Data", key="fetch_grace_fm_data", type="primary")
 
     if fetch_btn:
-        with st.spinner("Fetching GRACE motherboard FM data from mtsums (+fm flag)..."):
+        with st.spinner("Fetching GRACE motherboard data from mtsums (+fm flag)..."):
+            # Don't pass facility if it's "all" or empty
+            facility_filter = facility if facility and facility.lower() != "all" else None
             fm_df = fetch_grace_fm_data(
                 form_factors=form_factors,
                 days=30,
                 design_ids=design_ids if design_ids else None,
                 densities=densities if densities else None,
                 speeds=speeds if speeds else None,
-                facility=facility if facility else None
+                facility=facility_filter
             )
 
             if fm_df is not None and not fm_df.empty:
@@ -3737,7 +3739,7 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
 
     else:
         # No data - show placeholder
-        st.info("👆 Click **Fetch GRACE FM Data** to load motherboard health metrics using Fail Mode (FM) cDPM analysis.")
+        st.info("👆 Click **Fetch GRACE Data** to load motherboard health metrics using Fail Mode (FM) cDPM analysis.")
 
         placeholder_html = """
         <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 40px; margin: 20px 0; text-align: center; border: 2px dashed rgba(255,255,255,0.2);">
