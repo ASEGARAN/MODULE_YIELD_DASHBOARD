@@ -3481,7 +3481,8 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
     """)
 
     # Use filters from main dashboard - Required
-    end_ww = str(filters.get("end_ww", "202614"))
+    start_ww = str(filters.get("start_ww", "202606"))
+    end_ww = str(filters.get("end_ww", "202615"))
     form_factors = [ff.lower() for ff in filters.get("form_factors", ["SOCAMM", "SOCAMM2"])]
 
     # Optional filters from main dashboard (ensure they are lists)
@@ -3506,7 +3507,7 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
     filter_parts = [
         f"{', '.join([ff.upper() for ff in form_factors])}",
         "HMB1, QMON",
-        f"WW{selected_ww} (vs WW{prev_ww})"
+        f"WW{start_ww}-{end_ww} (10 weeks)"
     ]
     # Add optional filters if specified
     if design_ids:
@@ -3532,12 +3533,13 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
     fetch_btn = st.button("🔄 Fetch GRACE Data", key="fetch_grace_fm_data", type="primary")
 
     if fetch_btn:
-        with st.spinner("Fetching GRACE motherboard data from mtsums (+fm flag)..."):
+        with st.spinner(f"Fetching GRACE motherboard data (WW{start_ww}-{end_ww})..."):
             # Don't pass facility if it's "all" or empty
             facility_filter = facility if facility and facility.lower() != "all" else None
             fm_df = fetch_grace_fm_data(
+                start_ww=start_ww,
+                end_ww=end_ww,
                 form_factors=form_factors,
-                days=30,
                 design_ids=design_ids if design_ids else None,
                 densities=densities if densities else None,
                 speeds=speeds if speeds else None,
@@ -3562,6 +3564,76 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
         available_weeks = st.session_state.grace_available_weeks
 
         st.markdown("---")
+
+        # ============================================
+        # Hang cDPM Trend Chart
+        # ============================================
+        st.markdown("#### 📈 Hang cDPM Trend")
+
+        # Calculate weighted Hang cDPM per week
+        # Hang column is already cDPM per machine, so use weighted average: sum(Hang * UIN) / sum(UIN)
+        fm_df['Hang_weighted'] = fm_df['Hang'] * fm_df['UIN']
+        weekly_hang = fm_df.groupby('MFG_WORKWEEK').agg({
+            'Hang_weighted': 'sum',
+            'UIN': 'sum'
+        }).reset_index()
+        weekly_hang['MFG_WORKWEEK'] = weekly_hang['MFG_WORKWEEK'].astype(int)
+        weekly_hang = weekly_hang.sort_values('MFG_WORKWEEK')
+
+        # Weighted average Hang cDPM
+        weekly_hang['Hang_cDPM'] = (weekly_hang['Hang_weighted'] / weekly_hang['UIN']).fillna(0)
+
+        # Create combined chart
+        fig_trend = go.Figure()
+
+        # Bar chart for UIN (Volume) - secondary y-axis
+        fig_trend.add_trace(go.Bar(
+            x=[f"WW{w}" for w in weekly_hang['MFG_WORKWEEK']],
+            y=weekly_hang['UIN'],
+            name='Volume (UIN)',
+            marker_color='rgba(99, 110, 250, 0.4)',
+            yaxis='y2',
+            text=weekly_hang['UIN'].apply(lambda x: f"{x:,.0f}"),
+            textposition='outside',
+            textfont=dict(size=9)
+        ))
+
+        # Line chart for Hang cDPM - primary y-axis
+        fig_trend.add_trace(go.Scatter(
+            x=[f"WW{w}" for w in weekly_hang['MFG_WORKWEEK']],
+            y=weekly_hang['Hang_cDPM'],
+            name='Hang cDPM',
+            mode='lines+markers+text',
+            line=dict(color='#FF6B6B', width=3),
+            marker=dict(size=10),
+            text=weekly_hang['Hang_cDPM'].apply(lambda x: f"{x:,.0f}"),
+            textposition='top center',
+            textfont=dict(size=10, color='#FF6B6B')
+        ))
+
+        fig_trend.update_layout(
+            height=350,
+            margin=dict(l=50, r=50, t=30, b=50),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+            xaxis_title="Work Week",
+            yaxis=dict(
+                title="Hang cDPM",
+                titlefont=dict(color='#FF6B6B'),
+                tickfont=dict(color='#FF6B6B'),
+                side='left'
+            ),
+            yaxis2=dict(
+                title="Volume (UIN)",
+                titlefont=dict(color='rgba(99, 110, 250, 0.8)'),
+                tickfont=dict(color='rgba(99, 110, 250, 0.8)'),
+                overlaying='y',
+                side='right'
+            ),
+            hovermode="x unified",
+            barmode='overlay'
+        )
+
+        st.plotly_chart(fig_trend, use_container_width=True)
 
         # Check if selected week has data
         if selected_ww in available_weeks:

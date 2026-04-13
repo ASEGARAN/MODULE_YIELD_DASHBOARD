@@ -310,8 +310,9 @@ def get_health_status(dpm: float, thresholds: dict = None) -> tuple[str, str]:
 # =============================================================================
 
 def fetch_grace_fm_data(
+    start_ww: str,
+    end_ww: str,
     form_factors: list[str] = ['socamm', 'socamm2'],
-    days: int = 30,
     design_ids: Optional[list[str]] = None,
     densities: Optional[list[str]] = None,
     speeds: Optional[list[str]] = None,
@@ -320,11 +321,12 @@ def fetch_grace_fm_data(
     """
     Fetch GRACE motherboard data with fail mode (FM) cDPM breakdown.
 
-    Uses: mtsums -modff=socamm2,socamm -30 +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf
+    Uses: mtsums -modff=socamm2,socamm -ww=YYYYWW,YYYYWW +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf
 
     Args:
+        start_ww: Start work week (e.g., '202606')
+        end_ww: End work week (e.g., '202615')
         form_factors: Module form factors
-        days: Number of days to look back (default 30)
         design_ids: Optional list of design IDs
         densities: Optional list of module densities
         speeds: Optional list of module speeds
@@ -333,12 +335,15 @@ def fetch_grace_fm_data(
     Returns:
         DataFrame with MACHINE_ID, MFG_WORKWEEK, and cDPM columns for each fail mode
     """
+    # Generate work week range
+    weeks = generate_workweek_range(start_ww, end_ww)
+    ww_list = ','.join(weeks)
     modff = ','.join(form_factors)
 
     cmd = [
         '/u/dramsoft/bin/mtsums',
         f'-modff={modff}',
-        f'-{days}',
+        f'-ww={ww_list}',
         '+fm',
         '-format+=machine_id,mfg_workweek',
         '=islatest',
