@@ -3529,7 +3529,7 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
                 # Get available work weeks from the data
                 if 'MFG_WORKWEEK' in fm_df.columns:
                     weeks = sorted(fm_df['MFG_WORKWEEK'].unique(), reverse=True)
-                    st.session_state.grace_available_weeks = [str(w) for w in weeks]
+                    st.session_state.grace_available_weeks = [str(int(w)) for w in weeks]
                 st.success(f"Loaded {len(fm_df):,} NVGRACE records across {fm_df['MFG_WORKWEEK'].nunique()} work weeks")
             else:
                 st.error("No GRACE motherboard data found for the specified filters.")
