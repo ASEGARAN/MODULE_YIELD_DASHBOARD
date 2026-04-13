@@ -3617,14 +3617,12 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
             xaxis_title="Work Week",
             yaxis=dict(
-                title="Hang cDPM",
-                titlefont=dict(color='#FF6B6B'),
+                title=dict(text="Hang cDPM", font=dict(color='#FF6B6B')),
                 tickfont=dict(color='#FF6B6B'),
                 side='left'
             ),
             yaxis2=dict(
-                title="Volume (UIN)",
-                titlefont=dict(color='rgba(99, 110, 250, 0.8)'),
+                title=dict(text="Volume (UIN)", font=dict(color='rgba(99, 110, 250, 0.8)')),
                 tickfont=dict(color='rgba(99, 110, 250, 0.8)'),
                 overlaying='y',
                 side='right'
