@@ -3603,13 +3603,20 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
             ))
 
             # Line chart for Hang cDPM - primary y-axis
+            # Color markers based on Hang value: Red for Hang > 0, Green for Hang = 0
+            marker_colors = ['#FF1744' if h > 0 else '#00C853' for h in week_data['Hang']]
+
             fig_trend.add_trace(go.Scatter(
                 x=week_data['MACHINE_ID'],
                 y=week_data['Hang'],
                 name='Hang cDPM',
                 mode='lines+markers',
-                line=dict(color='#FF6B6B', width=2),
-                marker=dict(size=6, color='#FF6B6B')
+                line=dict(color='#888888', width=1),  # Gray line connecting points
+                marker=dict(
+                    size=10,
+                    color=marker_colors,
+                    line=dict(width=1, color='white')  # White border for visibility
+                )
             ))
 
             fig_trend.update_layout(
@@ -3702,26 +3709,33 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
 
                         comp_cols = st.columns(4)
                         with comp_cols[0]:
-                            st.metric("New Issues", f"{new_issues}", help="Machines with Hang > 0 in current week but not previous")
+                            st.metric("🆕 New Issues", f"{new_issues}", help="Newly failing: Hang > 0 this week, but was 0 last week")
                         with comp_cols[1]:
-                            st.metric("Resolved", f"{resolved}", delta=f"+{resolved}" if resolved > 0 else None, delta_color="normal", help="Machines with Hang > 0 in previous week but not current")
+                            st.metric("✅ Fixed", f"{resolved}", delta=f"+{resolved}" if resolved > 0 else None, delta_color="normal", help="Problem resolved: Hang > 0 last week, but is 0 this week")
                         with comp_cols[2]:
-                            st.metric("Chronic", f"{chronic}", delta_color="inverse", help="Machines with Hang > 0 in both weeks")
+                            st.metric("🔄 Recurring", f"{chronic}", delta_color="inverse", help="Ongoing chronic issue: Hang > 0 in both weeks")
                         with comp_cols[3]:
-                            st.metric("Total Tracked", f"{len(comparison_df)}")
+                            st.metric("Total Tracked", f"{len(comparison_df)}", help="All machines that had Hang > 0 in either week")
 
-                        # Comparison table
-                        with st.expander("📋 Detailed Comparison Table", expanded=True):
+                        # Comparison table with status explanation tooltip
+                        status_help = (
+                            "**Status Categories:**\n\n"
+                            "- **🆕 New Issue**: Hang > 0 this week, but was 0 last week (newly failing)\n\n"
+                            "- **✅ Fixed**: Hang > 0 last week, but is 0 this week (problem resolved)\n\n"
+                            "- **🔄 Recurring**: Hang > 0 in both weeks (ongoing chronic issue)"
+                        )
+                        with st.expander(f"📋 Detailed Comparison Table", expanded=True):
+                            st.caption(f"ℹ️ {status_help}")
                             comp_display = comparison_df.copy()
 
-                            # Add status column
+                            # Add status column with clearer labels
                             def get_status(row):
                                 if row['is_new']:
-                                    return "🆕 New"
+                                    return "🆕 New Issue"
                                 elif row['is_resolved']:
-                                    return "✅ Resolved"
+                                    return "✅ Fixed"
                                 elif row['is_chronic']:
-                                    return "⚠️ Chronic"
+                                    return "🔄 Recurring"
                                 return "—"
 
                             comp_display['Status'] = comp_display.apply(get_status, axis=1)
