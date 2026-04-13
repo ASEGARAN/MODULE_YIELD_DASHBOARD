@@ -3598,18 +3598,18 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
                 x=week_data['MACHINE_ID'],
                 y=week_data['UIN'],
                 name='Volume (UIN)',
-                marker_color='rgba(99, 110, 250, 0.4)',
+                marker_color='rgba(99, 110, 250, 0.5)',
                 yaxis='y2'
             ))
 
-            # Bar chart for Hang cDPM - primary y-axis
-            # Color code: red for Hang > 0, light gray for Hang = 0
-            colors = ['#FF6B6B' if h > 0 else 'rgba(200, 200, 200, 0.3)' for h in week_data['Hang']]
-            fig_trend.add_trace(go.Bar(
+            # Line chart for Hang cDPM - primary y-axis
+            fig_trend.add_trace(go.Scatter(
                 x=week_data['MACHINE_ID'],
                 y=week_data['Hang'],
                 name='Hang cDPM',
-                marker_color=colors
+                mode='lines+markers',
+                line=dict(color='#FF6B6B', width=2),
+                marker=dict(size=6, color='#FF6B6B')
             ))
 
             fig_trend.update_layout(

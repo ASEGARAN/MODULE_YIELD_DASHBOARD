@@ -344,6 +344,7 @@ def fetch_grace_fm_data(
         '/u/dramsoft/bin/mtsums',
         f'-modff={modff}',
         f'-ww={ww_list}',
+        '-step=hmb1,qmon',
         '+fm',
         '-format+=machine_id,mfg_workweek',
         '=islatest',
