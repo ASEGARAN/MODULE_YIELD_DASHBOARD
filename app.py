@@ -68,6 +68,17 @@ from src.smt6_yield import (
     create_site_trend_heatmap,
     create_site_trend_summary_html,
 )
+
+# GRACE Motherboard monitoring module
+from src import grace_motherboard
+importlib.reload(grace_motherboard)
+from src.grace_motherboard import (
+    fetch_grace_health_data,
+    aggregate_weekly_health,
+    calculate_rolling_metrics,
+    aggregate_by_machine,
+    get_health_status,
+)
 from config.settings import Settings
 
 # Fail Viewer module
@@ -2107,7 +2118,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                         components.html(summary_html, height=350, scrolling=True)
 
         # =====================================================================
-        # SOCKET/SITE ANALYSIS (All site-level content in one section)
+        # SOCKET/SITE ANALYSIS - STREAMLINED VERSION
         # =====================================================================
         st.divider()
         st.markdown("#### 🔌 Socket & Site Analysis")
@@ -2117,7 +2128,6 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
         with header_col1:
             st.caption("Fetch site-level data to analyze socket health per machine")
         with header_col2:
-            # Site data range options
             site_fetch_mode = st.radio(
                 "Site Data Range",
                 options=["Latest Week", "Full Range"],
@@ -2126,7 +2136,6 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 label_visibility="collapsed"
             )
         with header_col3:
-            # Inline fetch site data button
             if st.button("📡 Fetch Site Data", key="fetch_site_inline", type="secondary", use_container_width=True):
                 st.session_state.smt6_fetch_site_inline = True
                 st.session_state.smt6_site_fetch_mode_selected = site_fetch_mode
@@ -2137,7 +2146,6 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
             st.session_state.smt6_fetch_site_inline = False
             fetch_mode = st.session_state.get('smt6_site_fetch_mode_selected', 'Latest Week')
 
-            # Determine workweeks based on fetch mode
             if fetch_mode == "Latest Week":
                 wws = [str(filters["end_ww"])]
                 spinner_text = "Fetching site data for latest week..."
@@ -2166,251 +2174,211 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
 
         # Show site analysis if data is available
         if not filtered_site_df.empty:
-            # Get list of machines
             machines = sorted(filtered_site_df['machine_id'].unique())
+            site_mode = st.session_state.get("smt6_site_fetch_mode_used", "Latest Week")
+            weeks_in_data = filtered_site_df['workweek'].nunique()
 
-            # Machine selection header
-            st.markdown("##### 🔍 Select a Machine for Socket Health")
+            # =====================================================================
+            # SINGLE MACHINE FILTER AT TOP
+            # =====================================================================
+            filter_col1, filter_col2 = st.columns([1, 3])
+            with filter_col1:
+                selected_machine = st.selectbox(
+                    "Filter by Machine",
+                    options=["All Machines"] + machines,
+                    format_func=lambda x: x.upper() if x != "All Machines" else x,
+                    key="smt6_global_machine_filter"
+                )
 
-            # Create clickable buttons for each machine
-            machine_cols = st.columns(min(len(machines), 6))
+            # Apply machine filter
+            if selected_machine != "All Machines":
+                analysis_df = filtered_site_df[filtered_site_df['machine_id'] == selected_machine.lower()].copy()
+            else:
+                analysis_df = filtered_site_df.copy()
 
-            # Initialize session state for selected machine
-            if 'smt6_selected_machine' not in st.session_state:
-                st.session_state.smt6_selected_machine = None
+            if analysis_df.empty:
+                st.warning("No data for selected machine.")
+            else:
+                # =====================================================================
+                # FLEET HEALTH SUMMARY (Always shown)
+                # =====================================================================
+                st.markdown("##### 📊 Fleet Health Summary")
 
-            for i, machine in enumerate(machines):
-                col_idx = i % min(len(machines), 6)
-                with machine_cols[col_idx]:
-                    # Highlight selected machine
-                    btn_type = "primary" if st.session_state.smt6_selected_machine == machine else "secondary"
-                    if st.button(
-                        machine.upper(),
-                        key=f"smt6_machine_btn_{machine}",
-                        type=btn_type,
-                        use_container_width=True
-                    ):
-                        if st.session_state.smt6_selected_machine == machine:
-                            st.session_state.smt6_selected_machine = None  # Toggle off
+                # Calculate fleet metrics
+                fleet_summary = analysis_df.groupby('machine_id').agg({
+                    'uin_adj': 'sum',
+                    'upass_adj': 'sum'
+                }).reset_index()
+                fleet_summary['yield_pct'] = (fleet_summary['upass_adj'] / fleet_summary['uin_adj'] * 100).round(2)
+
+                # Quick fleet stats
+                total_machines = fleet_summary['machine_id'].nunique()
+                avg_yield = fleet_summary['yield_pct'].mean()
+                min_yield = fleet_summary['yield_pct'].min()
+                worst_machine = fleet_summary.loc[fleet_summary['yield_pct'].idxmin(), 'machine_id'] if not fleet_summary.empty else "N/A"
+
+                # Fleet metrics in cards
+                metric_cols = st.columns(4)
+                with metric_cols[0]:
+                    st.metric("Machines", total_machines)
+                with metric_cols[1]:
+                    st.metric("Avg Yield", f"{avg_yield:.2f}%")
+                with metric_cols[2]:
+                    st.metric("Min Yield", f"{min_yield:.2f}%")
+                with metric_cols[3]:
+                    st.metric("Worst Machine", worst_machine.upper())
+
+                # =====================================================================
+                # SITE TREND ANALYSIS (Only with Full Range data)
+                # =====================================================================
+                if site_mode == "Full Range" and weeks_in_data > 1:
+                    st.markdown("---")
+                    st.markdown("##### 📈 Site Trend Analysis")
+                    st.caption(f"Analyzing {weeks_in_data} weeks of data")
+
+                    # Get trend analysis
+                    trend_df = analyze_site_trends(analysis_df, target_yield=99.0)
+
+                    if not trend_df.empty:
+                        trend_counts = trend_df['trend_class'].value_counts()
+                        total_sites = len(trend_df)
+                        healthy_count = trend_counts.get('STABLE_GOOD', 0) + trend_counts.get('IMPROVING', 0)
+                        attention_count = trend_counts.get('DEGRADING', 0) + trend_counts.get('STABLE_BAD', 0)
+                        health_pct = (healthy_count / total_sites * 100) if total_sites > 0 else 0
+
+                        # Color-coded trend cards
+                        trend_cards_html = f"""
+                        <div style="display: flex; gap: 8px; margin: 10px 0 15px 0;">
+                            <div style="flex: 1; background: linear-gradient(135deg, #00C853 0%, #00E676 100%); border-radius: 8px; padding: 12px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: white;">{trend_counts.get('STABLE_GOOD', 0)}</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.9);">✅ Stable Good</div>
+                            </div>
+                            <div style="flex: 1; background: linear-gradient(135deg, #2196F3 0%, #42A5F5 100%); border-radius: 8px; padding: 12px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: white;">{trend_counts.get('IMPROVING', 0)}</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.9);">📈 Improving</div>
+                            </div>
+                            <div style="flex: 1; background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%); border-radius: 8px; padding: 12px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: white;">{trend_counts.get('VOLATILE', 0)}</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.9);">⚡ Volatile</div>
+                            </div>
+                            <div style="flex: 1; background: linear-gradient(135deg, #FF5722 0%, #FF8A65 100%); border-radius: 8px; padding: 12px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: white;">{trend_counts.get('DEGRADING', 0)}</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.9);">📉 Degrading</div>
+                            </div>
+                            <div style="flex: 1; background: linear-gradient(135deg, #F44336 0%, #E57373 100%); border-radius: 8px; padding: 12px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: white;">{trend_counts.get('STABLE_BAD', 0)}</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.9);">❌ Stable Bad</div>
+                            </div>
+                        </div>
+                        """
+                        st.markdown(trend_cards_html, unsafe_allow_html=True)
+
+                        # Performance Insights
+                        if health_pct >= 80:
+                            health_color, health_icon, health_status = "#00C853", "✅", "Excellent"
+                        elif health_pct >= 60:
+                            health_color, health_icon, health_status = "#2196F3", "👍", "Good"
+                        elif health_pct >= 40:
+                            health_color, health_icon, health_status = "#FF9800", "⚠️", "Needs Attention"
                         else:
-                            st.session_state.smt6_selected_machine = machine
-                        st.rerun()
+                            health_color, health_icon, health_status = "#F44336", "🚨", "Critical"
 
-            # If a machine is selected, show site-level analysis
-            if st.session_state.smt6_selected_machine:
-                selected_machine = st.session_state.smt6_selected_machine
+                        attention_sites = trend_df[trend_df['trend_class'].isin(['DEGRADING', 'STABLE_BAD'])].sort_values('avg_yield').head(5)
+                        improving_sites = trend_df[trend_df['trend_class'] == 'IMPROVING'].sort_values('avg_yield', ascending=False).head(3)
 
-                # Filter site data for selected machine
-                machine_site_df = filtered_site_df[filtered_site_df['machine_id'] == selected_machine].copy()
+                        insights_html = f"""
+                        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 10px; padding: 15px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                <span style="font-size: 18px; margin-right: 8px;">📊</span>
+                                <span style="font-size: 14px; font-weight: bold; color: white;">Performance Insights</span>
+                                <span style="margin-left: auto; background: {health_color}; color: white; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: bold;">
+                                    {health_icon} {health_status}: {health_pct:.0f}% Healthy
+                                </span>
+                            </div>
+                        """
+                        if not attention_sites.empty:
+                            insights_html += '<div style="margin-bottom: 10px;"><div style="color: #FF8A65; font-weight: bold; font-size: 12px; margin-bottom: 5px;">⚠️ Sites Needing Attention</div>'
+                            for _, row in attention_sites.iterrows():
+                                icon = "📉" if row['trend_class'] == 'DEGRADING' else "❌"
+                                insights_html += f'<div style="color: #ddd; font-size: 11px; padding: 2px 0;">{icon} <b>{row["site"]}</b> — {row["avg_yield"]:.1f}%</div>'
+                            insights_html += '</div>'
+                        if not improving_sites.empty:
+                            insights_html += '<div><div style="color: #81C784; font-weight: bold; font-size: 12px; margin-bottom: 5px;">🎯 Positive Momentum</div>'
+                            for _, row in improving_sites.iterrows():
+                                insights_html += f'<div style="color: #ddd; font-size: 11px; padding: 2px 0;">📈 <b>{row["site"]}</b> — {row["avg_yield"]:.1f}%</div>'
+                            insights_html += '</div>'
+                        insights_html += '</div>'
+                        st.markdown(insights_html, unsafe_allow_html=True)
 
-                if machine_site_df.empty:
-                    st.warning(f"No site data available for {selected_machine.upper()}.")
-                else:
-                    # Determine workweek label based on data
-                    ww_options = sorted(machine_site_df['workweek'].unique(), reverse=True)
-                    if len(ww_options) == 1:
-                        ww_label = f"WW{ww_options[0]}"
-                    else:
-                        ww_label = f"WW{ww_options[-1]}-{ww_options[0]}"
+                    # =====================================================================
+                    # SITE TREND HEATMAP
+                    # =====================================================================
+                    with st.expander("🗺️ Site Yield Heatmap (Sites × Weeks)", expanded=True):
+                        pivot = analysis_df.pivot_table(index='site', columns='workweek', values='yield_pct', aggfunc='mean')
+                        if not pivot.empty:
+                            pivot = pivot.reindex(sorted(pivot.columns), axis=1).sort_index()
+                            chart_height = max(350, len(pivot.index) * 16 + 100)
 
-                    # View mode selector - simplified to 2 views
-                    view_col1, view_col2 = st.columns([1, 2])
-                    with view_col1:
-                        view_mode = st.radio(
-                            "View Mode",
-                            ["Slice Map", "Socket Health"],
-                            key="smt6_view_mode",
-                            horizontal=True,
-                            help="Slice Map: Full diagnostic view with channels/positions. Socket Health: Quick monitoring view."
-                        )
-
-                    # Use all fetched data
-                    display_df = machine_site_df
-
-                    # Generate visualization based on view mode
-                    if view_mode == "Slice Map":
-                        # Always show S0-S3 and All options
-                        with view_col2:
-                            slice_options = ["All", "S0", "S1", "S2", "S3"]
-                            selected_slice_option = st.selectbox(
-                                "Filter Slice",
-                                options=slice_options,
-                                index=0,  # Default to "All"
-                                key="smt6_slice_filter",
-                                help="Show all slices or filter to a specific slice (S0-S3)"
+                            fig = go.Figure(data=go.Heatmap(
+                                z=pivot.values,
+                                x=[str(ww) for ww in pivot.columns],
+                                y=pivot.index.tolist(),
+                                colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
+                                zmin=94, zmax=100,
+                                text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
+                                texttemplate="%{text}", textfont={"size": 8},
+                                hovertemplate="<b>Site:</b> %{y}<br><b>Week:</b> WW%{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>",
+                                colorbar=dict(title="Yield %", ticksuffix="%")
+                            ))
+                            fig.update_layout(
+                                xaxis_title="Work Week", yaxis_title="Site",
+                                xaxis=dict(type='category', tickprefix="WW"),
+                                yaxis=dict(autorange='reversed'),
+                                height=chart_height, margin=dict(l=80, r=50, t=30, b=50)
                             )
-                            selected_slice = None if selected_slice_option == "All" else selected_slice_option
+                            st.plotly_chart(fig, use_container_width=True)
+                            st.caption(f"Showing {len(pivot.index)} sites × {len(pivot.columns)} weeks")
 
-                        # Slice-based channel map showing channels inside each slice
-                        grid_html = create_slice_channel_map_html(
-                            display_df,
-                            machine_id=selected_machine,
-                            selected_slice=selected_slice
-                        )
-                        # Calculate height based on number of slices shown
-                        if selected_slice:
-                            num_slices = 1
-                        else:
-                            num_slices = display_df['site'].apply(
-                                lambda x: re.match(r'S(\d+)', x).group(1) if re.match(r'S(\d+)', x) else '0'
-                            ).nunique()
-                        num_channels = display_df['site'].apply(
-                            lambda x: re.match(r'S\d+C(\d+)', x).group(1) if re.match(r'S\d+C(\d+)', x) else '0'
-                        ).nunique()
-                        # Height: header + slice boxes + legend + footer
-                        # For 2x2 grid (4 slices), rows = 2
-                        if num_slices <= 2:
-                            slice_rows = 1
-                        else:
-                            slice_rows = 2  # 2x2 grid for 3-4 slices
-                        grid_height = 200 + (slice_rows * (180 + num_channels * 40)) + 60
+                    # =====================================================================
+                    # SITE PERFORMANCE TABLE
+                    # =====================================================================
+                    with st.expander("📋 Site Performance Table", expanded=False):
+                        if not trend_df.empty:
+                            site_summary = analysis_df.groupby('site').agg({
+                                'uin_adj': 'sum', 'upass_adj': 'sum', 'workweek': 'nunique', 'machine_id': 'first'
+                            }).reset_index()
+                            site_summary['yield_pct'] = (site_summary['upass_adj'] / site_summary['uin_adj'] * 100).round(2)
+                            site_summary = site_summary.merge(trend_df[['site', 'trend_class', 'avg_yield', 'std_yield']], on='site', how='left')
 
-                    else:  # Socket Health
-                        num_sockets = display_df['site'].apply(
-                            lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
-                        ).nunique()
+                            trend_display = {'STABLE_GOOD': '✅ Good', 'IMPROVING': '📈 Up', 'VOLATILE': '⚡ Volatile', 'DEGRADING': '📉 Down', 'STABLE_BAD': '❌ Bad'}
+                            site_summary['Trend'] = site_summary['trend_class'].map(trend_display).fillna('—')
+                            site_summary = site_summary.rename(columns={'site': 'Site', 'machine_id': 'Machine', 'uin_adj': 'UIN', 'upass_adj': 'UPASS', 'yield_pct': 'Yield %', 'workweek': 'Weeks', 'std_yield': 'Std Dev'})
+
+                            cols = ['Site', 'Machine', 'UIN', 'Yield %', 'Trend', 'Std Dev'] if selected_machine == "All Machines" else ['Site', 'UIN', 'Yield %', 'Trend', 'Std Dev']
+                            st.dataframe(site_summary[cols].sort_values('Yield %'), use_container_width=True, hide_index=True,
+                                column_config={'Yield %': st.column_config.NumberColumn(format="%.2f%%"), 'Std Dev': st.column_config.NumberColumn(format="%.2f")})
+
+                # =====================================================================
+                # SOCKET HEALTH VIEW (Only when specific machine selected)
+                # =====================================================================
+                if selected_machine != "All Machines":
+                    st.markdown("---")
+                    with st.expander(f"🔧 Socket Health: {selected_machine.upper()}", expanded=True):
+                        ww_options = sorted(analysis_df['workweek'].unique(), reverse=True)
+                        ww_label = f"WW{ww_options[0]}" if len(ww_options) == 1 else f"WW{ww_options[-1]}-{ww_options[0]}"
 
                         grid_html = create_site_grid_html(
-                            display_df,
+                            analysis_df,
                             machine_id=selected_machine,
                             title=f"🔧 {selected_machine.upper()} - Socket Health ({ww_label})",
                             view_mode="socket"
                         )
-                        if num_sockets <= 4:
-                            grid_height = 420
-                        else:
-                            rows = (num_sockets + 3) // 4
-                            grid_height = 200 + (rows * 180)
-
-                    if grid_html:
-                        components.html(grid_html, height=grid_height, scrolling=False)
-                    else:
-                        st.warning("Could not generate site grid.")
-
-            # =====================================================================
-            # SITE TREND ANALYSIS (when Full Range data is fetched)
-            # =====================================================================
-            site_mode = st.session_state.get("smt6_site_fetch_mode_used", "Latest Week")
-            weeks_in_data = filtered_site_df['workweek'].nunique()
-
-            if site_mode == "Full Range" and weeks_in_data > 1:
-                st.markdown("---")
-                st.markdown("##### 📊 Site Yield Trend Analysis")
-                st.caption(f"Analyzing {weeks_in_data} weeks of data to identify yield patterns and problem sites")
-
-                # Trend analysis tabs
-                trend_tab1, trend_tab2, trend_tab3 = st.tabs([
-                    "Trend Heatmap",
-                    "Problem Sites Summary",
-                    "Detailed Site View"
-                ])
-
-                with trend_tab1:
-                    # Site trend heatmap (weeks × sites)
-                    st.markdown("##### Yield Trend by Site Over Time")
-                    st.caption("Colors indicate yield: Green=Healthy (≥99%), Yellow=Warning (97-99%), Red=Critical (<97%)")
-
-                    # Machine filter for heatmap
-                    machines = sorted(filtered_site_df['machine_id'].unique())
-                    trend_machine = st.selectbox(
-                        "Filter by Machine (optional)",
-                        options=["All Machines"] + machines,
-                        format_func=lambda x: x.upper() if x != "All Machines" else x,
-                        key="smt6_trend_machine_select"
-                    )
-
-                    trend_heatmap = create_site_trend_heatmap(
-                        filtered_site_df,
-                        machine_id=None if trend_machine == "All Machines" else trend_machine
-                    )
-                    if trend_heatmap:
-                        chart_html = trend_heatmap.to_html(
-                            full_html=True,
-                            include_plotlyjs='https://cdn.plot.ly/plotly-2.27.0.min.js',
-                            config={'displayModeBar': True, 'responsive': True}
-                        )
-                        components.html(chart_html, height=600, scrolling=True)
-                    else:
-                        st.warning("Not enough data to generate trend heatmap.")
-
-                with trend_tab2:
-                    # Problem sites summary
-                    st.markdown("##### Site Trend Classification")
-                    st.caption("Sites classified by yield pattern: Stable Good, Stable Bad, Improving, Degrading, or Volatile")
-
-                    trend_df = analyze_site_trends(filtered_site_df, target_yield=99.0)
-                    if not trend_df.empty:
-                        # Summary metrics
-                        trend_counts = trend_df['trend_class'].value_counts()
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        with col1:
-                            st.metric("Stable Good", trend_counts.get('STABLE_GOOD', 0), help="Consistently above target")
-                        with col2:
-                            st.metric("Improving", trend_counts.get('IMPROVING', 0), delta="↑", help="Trending upward")
-                        with col3:
-                            st.metric("Volatile", trend_counts.get('VOLATILE', 0), help="High variability")
-                        with col4:
-                            st.metric("Degrading", trend_counts.get('DEGRADING', 0), delta="↓", delta_color="inverse", help="Trending downward")
-                        with col5:
-                            st.metric("Stable Bad", trend_counts.get('STABLE_BAD', 0), help="Consistently below target")
-
-                        # Problem sites HTML summary
-                        summary_html = create_site_trend_summary_html(trend_df)
-                        if summary_html:
-                            components.html(summary_html, height=500, scrolling=True)
-                    else:
-                        st.warning("Not enough data to analyze trends.")
-
-                with trend_tab3:
-                    # Detailed site view (existing functionality)
-                    st.markdown("##### Detailed Site Breakdown")
-                    col_ww, col_machine = st.columns(2)
-
-                    with col_ww:
-                        available_wws = sorted(filtered_site_df['workweek'].unique(), reverse=True)
-                        selected_site_ww = st.selectbox(
-                            "Select Workweek",
-                            options=["All"] + [str(ww) for ww in available_wws],
-                            key="smt6_site_ww_filter_trend"
-                        )
-
-                    with col_machine:
-                        selected_detail_machine = st.selectbox(
-                            "Select Machine",
-                            options=["All"] + machines,
-                            format_func=lambda x: x.upper() if x != "All" else x,
-                            key="smt6_machine_select_trend"
-                        )
-
-                    # Apply filters
-                    site_view_df = filtered_site_df.copy()
-                    if selected_site_ww != "All":
-                        site_view_df = site_view_df[site_view_df['workweek'] == int(selected_site_ww)]
-                    if selected_detail_machine != "All":
-                        site_view_df = site_view_df[site_view_df['machine_id'] == selected_detail_machine]
-
-                    if not site_view_df.empty:
-                        fig_site = create_site_yield_heatmap(
-                            site_view_df,
-                            machine_id=None if selected_detail_machine == "All" else selected_detail_machine,
-                            dark_mode=True
-                        )
-                        if fig_site:
-                            chart_html = fig_site.to_html(
-                                full_html=True,
-                                include_plotlyjs='https://cdn.plot.ly/plotly-2.27.0.min.js',
-                                config={'displayModeBar': True, 'responsive': True}
-                            )
-                            components.html(chart_html, height=500, scrolling=True)
-
-                        if selected_detail_machine != "All":
-                            site_table_html = create_site_summary_table(site_view_df, selected_detail_machine, dark_mode=True)
-                            if site_table_html:
-                                components.html(site_table_html, height=400, scrolling=True)
-                    else:
-                        st.warning("No data available for the selected filters.")
+                        if grid_html:
+                            num_sockets = analysis_df['site'].apply(lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0').nunique()
+                            grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
+                            components.html(grid_html, height=grid_height, scrolling=False)
         else:
-            st.info("👆 Click **Fetch Site Data** above to load socket-level data, then select a machine to view its Socket Health.")
+            st.info("👆 Click **Fetch Site Data** above to load socket-level data.")
 
     else:
         st.info("Click 'Fetch Machine Data' to load machine-level yield data, or 'Fetch Site Data' for site-level breakdown.")
@@ -2441,11 +2409,6 @@ def render_dashboard(processor: DataProcessor, filters: dict[str, Any] = None) -
     # Heatmaps section (collapsible)
     with st.expander("🗺️ Yield by Density & Speed", expanded=True):
         render_density_speed_heatmap(processor)
-
-    # SMT6 Machine Yield Trend section
-    if filters:
-        with st.expander("🔧 SMT6 Machine Yield", expanded=False):
-            render_smt6_yield_section(filters)
 
 
 def fetch_elc_data(filters: dict[str, Any], use_cache: bool = True) -> pd.DataFrame:
@@ -3487,6 +3450,399 @@ def render_pareto_tab(filters: dict[str, Any]) -> None:
         render_register_fallout_subtab(filters)
 
 
+def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
+    """Render GRACE Motherboard Health Monitoring section."""
+    st.markdown("### GRACE Motherboard Health Monitoring")
+    st.markdown("""
+    Monitor NVGRACE motherboard performance for HMB1/QMON test steps.
+    Track health metrics, failure composition, and identify chronic issues.
+    """)
+
+    # Use filters from main dashboard - Required
+    start_ww = str(filters.get("start_ww", "202610"))
+    end_ww = str(filters.get("end_ww", "202614"))
+    form_factors = [ff.lower() for ff in filters.get("form_factors", ["SOCAMM", "SOCAMM2"])]
+
+    # Optional filters from main dashboard (ensure they are lists)
+    design_ids = filters.get("design_ids", []) or []
+    densities = filters.get("densities", []) or []
+    speeds = filters.get("speeds", []) or []
+    facility = filters.get("facility", "") or ""
+
+    # Ensure lists are actually lists (not strings or None)
+    if not isinstance(design_ids, list):
+        design_ids = [design_ids] if design_ids else []
+    if not isinstance(densities, list):
+        densities = [densities] if densities else []
+    if not isinstance(speeds, list):
+        speeds = [speeds] if speeds else []
+
+    # Build filter context display
+    filter_parts = [
+        f"{', '.join([ff.upper() for ff in form_factors])}",
+        "HMB1, QMON",
+        f"WW{start_ww}-{end_ww}"
+    ]
+    # Add optional filters if specified
+    if design_ids:
+        filter_parts.append(f"DIDs: {', '.join(design_ids)}")
+    if densities:
+        filter_parts.append(f"Density: {', '.join(densities)}")
+    if speeds:
+        filter_parts.append(f"Speed: {', '.join(speeds)}")
+    if facility:
+        filter_parts.append(f"Facility: {facility}")
+
+    st.caption(f"**Filters:** {' | '.join(filter_parts)}")
+
+    # Fetch button
+    fetch_btn = st.button("🔄 Fetch GRACE Data", key="fetch_grace_data", type="primary")
+
+    # Session state for GRACE data
+    if 'grace_health_df' not in st.session_state:
+        st.session_state.grace_health_df = None
+    if 'grace_weekly_df' not in st.session_state:
+        st.session_state.grace_weekly_df = None
+    if 'grace_machine_df' not in st.session_state:
+        st.session_state.grace_machine_df = None
+    if 'grace_last_filters' not in st.session_state:
+        st.session_state.grace_last_filters = None
+
+    # Build current filter key for cache invalidation
+    optional_key = f"{','.join(design_ids)}_{','.join(densities)}_{','.join(speeds)}_{facility}"
+    current_filter_key = f"{start_ww}_{end_ww}_{','.join(sorted(form_factors))}_{optional_key}"
+
+    # Fetch data if button clicked or filters changed
+    if fetch_btn:
+        with st.spinner("Fetching GRACE motherboard data from mtsums..."):
+            raw_df = fetch_grace_health_data(
+                start_ww=start_ww,
+                end_ww=end_ww,
+                form_factors=form_factors,
+                steps=['hmb1', 'qmon'],
+                design_ids=design_ids if design_ids else None,
+                densities=densities if densities else None,
+                speeds=speeds if speeds else None,
+                facility=facility if facility else None
+            )
+
+            if raw_df is not None and not raw_df.empty:
+                st.session_state.grace_health_df = raw_df
+                st.session_state.grace_weekly_df = calculate_rolling_metrics(
+                    aggregate_weekly_health(raw_df)
+                )
+                st.session_state.grace_machine_df = aggregate_by_machine(raw_df)
+                st.session_state.grace_last_filters = current_filter_key
+                st.success(f"Loaded {len(raw_df):,} records for {raw_df['MACHINE_ID'].nunique()} NVGRACE motherboards")
+            else:
+                st.error("No GRACE motherboard data found for the specified filters.")
+
+    # Display data if available
+    if st.session_state.grace_weekly_df is not None and not st.session_state.grace_weekly_df.empty:
+        weekly_df = st.session_state.grace_weekly_df
+        machine_df = st.session_state.grace_machine_df
+
+        # ============================================
+        # PAGE 1: Health Overview
+        # ============================================
+        st.markdown("---")
+        st.markdown("#### 📊 Health Overview")
+
+        # Latest week metrics
+        latest = weekly_df.iloc[-1]
+        prev = weekly_df.iloc[-2] if len(weekly_df) > 1 else latest
+
+        # RAG Status
+        status_text, status_color = get_health_status(latest['dpm'])
+
+        # Metrics row
+        metric_cols = st.columns(5)
+        with metric_cols[0]:
+            # Health Status Card
+            status_html = f"""
+            <div style="background: linear-gradient(135deg, {status_color}33 0%, {status_color}11 100%);
+                        border-left: 4px solid {status_color}; border-radius: 8px; padding: 15px;">
+                <div style="font-size: 12px; color: #888;">Health Status</div>
+                <div style="font-size: 24px; font-weight: bold; color: {status_color};">{status_text}</div>
+                <div style="font-size: 11px; color: #666;">WW{latest['week']}</div>
+            </div>
+            """
+            st.markdown(status_html, unsafe_allow_html=True)
+
+        with metric_cols[1]:
+            st.metric(
+                "Weekly DPM",
+                f"{latest['dpm']:,.0f}",
+                delta=f"{latest['wow_delta_dpm']:+,.0f}" if pd.notna(latest['wow_delta_dpm']) else None,
+                delta_color="inverse"
+            )
+
+        with metric_cols[2]:
+            st.metric(
+                "4-Week Rolling DPM",
+                f"{latest['rolling_dpm']:,.0f}",
+                help="Rolling 4-week DPM for trend smoothing"
+            )
+
+        with metric_cols[3]:
+            st.metric(
+                "Modules Tested",
+                f"{latest['tested']:,}",
+                delta=f"{latest['tested'] - prev['tested']:+,}" if len(weekly_df) > 1 else None
+            )
+
+        with metric_cols[4]:
+            st.metric(
+                "Total Fails",
+                f"{latest['total_fails']:,}",
+                delta=f"{latest['total_fails'] - prev['total_fails']:+,}" if len(weekly_df) > 1 else None,
+                delta_color="inverse"
+            )
+
+        # DPM Trend Chart
+        st.markdown("##### Weekly DPM vs 4-Week Rolling")
+
+        fig = go.Figure()
+
+        # Weekly DPM bars
+        fig.add_trace(go.Bar(
+            x=[f"WW{w}" for w in weekly_df['week']],
+            y=weekly_df['dpm'],
+            name='Weekly DPM',
+            marker_color='rgba(99, 110, 250, 0.7)',
+            text=weekly_df['dpm'].round(0).astype(int),
+            textposition='outside',
+            textfont=dict(size=10)
+        ))
+
+        # Rolling DPM line
+        fig.add_trace(go.Scatter(
+            x=[f"WW{w}" for w in weekly_df['week']],
+            y=weekly_df['rolling_dpm'],
+            name='4-Week Rolling DPM',
+            mode='lines+markers',
+            line=dict(color='#FF6B6B', width=3),
+            marker=dict(size=8)
+        ))
+
+        # Add threshold lines
+        fig.add_hline(y=2000, line_dash="dot", line_color="#00C853",
+                      annotation_text="Good (<2000)", annotation_position="right")
+        fig.add_hline(y=5000, line_dash="dot", line_color="#FFB300",
+                      annotation_text="Warning (<5000)", annotation_position="right")
+
+        fig.update_layout(
+            height=350,
+            margin=dict(l=50, r=50, t=30, b=50),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+            xaxis_title="Work Week",
+            yaxis_title="DPM",
+            hovermode="x unified"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # ============================================
+        # PAGE 2: Failure Composition
+        # ============================================
+        st.markdown("---")
+        st.markdown("#### 📈 Failure Composition")
+
+        # Fail type breakdown
+        fail_cols = st.columns(4)
+        with fail_cols[0]:
+            st.metric(
+                "System Fails (Mod-Sys)",
+                f"{latest['system_fails']:,}",
+                delta=f"{latest['system_fails'] - prev['system_fails']:+,}" if len(weekly_df) > 1 else None,
+                delta_color="inverse"
+            )
+        with fail_cols[1]:
+            st.metric(
+                "Hang Fails",
+                f"{latest['hang_fails']:,}",
+                delta=f"{latest['hang_fails'] - prev['hang_fails']:+,}" if len(weekly_df) > 1 else None,
+                delta_color="inverse"
+            )
+        with fail_cols[2]:
+            st.metric(
+                "Boot Fails",
+                f"{latest['boot_fails']:,}",
+                delta=f"{latest['boot_fails'] - prev['boot_fails']:+,}" if len(weekly_df) > 1 else None,
+                delta_color="inverse"
+            )
+        with fail_cols[3]:
+            st.metric(
+                "Other Fails",
+                f"{latest['other_fails']:,}",
+                delta=f"{latest['other_fails'] - prev['other_fails']:+,}" if len(weekly_df) > 1 else None,
+                delta_color="inverse"
+            )
+
+        # Stacked bar chart for fail composition over time
+        fig_comp = go.Figure()
+
+        fig_comp.add_trace(go.Bar(
+            x=[f"WW{w}" for w in weekly_df['week']],
+            y=weekly_df['system_fails'],
+            name='System (Mod-Sys)',
+            marker_color='#FF6B6B'
+        ))
+        fig_comp.add_trace(go.Bar(
+            x=[f"WW{w}" for w in weekly_df['week']],
+            y=weekly_df['hang_fails'],
+            name='Hang',
+            marker_color='#4ECDC4'
+        ))
+        fig_comp.add_trace(go.Bar(
+            x=[f"WW{w}" for w in weekly_df['week']],
+            y=weekly_df['boot_fails'],
+            name='Boot',
+            marker_color='#45B7D1'
+        ))
+        fig_comp.add_trace(go.Bar(
+            x=[f"WW{w}" for w in weekly_df['week']],
+            y=weekly_df['other_fails'],
+            name='Other',
+            marker_color='#96CEB4'
+        ))
+
+        fig_comp.update_layout(
+            barmode='stack',
+            height=300,
+            margin=dict(l=50, r=50, t=30, b=50),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+            xaxis_title="Work Week",
+            yaxis_title="Fail Count",
+            hovermode="x unified"
+        )
+
+        st.plotly_chart(fig_comp, use_container_width=True)
+
+        # ============================================
+        # PAGE 3: Chronic Exposure (Problem Boards)
+        # ============================================
+        st.markdown("---")
+        st.markdown("#### 🔧 Chronic Exposure - Problem Boards")
+
+        if machine_df is not None and not machine_df.empty:
+            # Filter to boards with fails
+            problem_boards = machine_df[machine_df['fails'] > 0].head(20)
+
+            if not problem_boards.empty:
+                # Summary metrics
+                total_boards = len(machine_df)
+                problem_count = len(machine_df[machine_df['fails'] > 0])
+                chronic_count = len(machine_df[machine_df['fails'] >= 3])
+
+                board_cols = st.columns(4)
+                with board_cols[0]:
+                    st.metric("Total Boards", f"{total_boards:,}")
+                with board_cols[1]:
+                    st.metric("Boards with Fails", f"{problem_count:,}")
+                with board_cols[2]:
+                    st.metric("Chronic Boards (≥3 fails)", f"{chronic_count:,}")
+                with board_cols[3]:
+                    pct_problem = (problem_count / total_boards * 100) if total_boards > 0 else 0
+                    st.metric("% Problem Boards", f"{pct_problem:.1f}%")
+
+                # Problem boards table
+                st.markdown("##### Top 20 Problem Boards by DPM")
+
+                # Prepare display dataframe
+                display_df = problem_boards[['machine_id', 'tested', 'fails', 'dpm', 'yield_pct', 'weeks_active']].copy()
+                display_df.columns = ['Machine ID', 'Tested', 'Fails', 'DPM', 'Yield %', 'Weeks Active']
+                display_df['DPM'] = display_df['DPM'].apply(lambda x: f"{x:,.0f}")
+                display_df['Yield %'] = display_df['Yield %'].apply(lambda x: f"{x:.2f}%")
+
+                st.dataframe(
+                    display_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "Machine ID": st.column_config.TextColumn("Machine ID", width="medium"),
+                        "Tested": st.column_config.NumberColumn("Tested", format="%d"),
+                        "Fails": st.column_config.NumberColumn("Fails", format="%d"),
+                        "DPM": st.column_config.TextColumn("DPM"),
+                        "Yield %": st.column_config.TextColumn("Yield %"),
+                        "Weeks Active": st.column_config.NumberColumn("Weeks", format="%d")
+                    }
+                )
+
+                # Top problem boards bar chart
+                top_10 = problem_boards.head(10)
+                fig_boards = go.Figure()
+
+                fig_boards.add_trace(go.Bar(
+                    x=top_10['machine_id'],
+                    y=top_10['dpm'],
+                    marker_color=['#FF1744' if d >= 5000 else '#FFB300' if d >= 2000 else '#00C853' for d in top_10['dpm']],
+                    text=top_10['dpm'].round(0).astype(int),
+                    textposition='outside'
+                ))
+
+                fig_boards.update_layout(
+                    height=300,
+                    margin=dict(l=50, r=50, t=30, b=80),
+                    xaxis_title="Machine ID",
+                    yaxis_title="DPM",
+                    xaxis_tickangle=-45
+                )
+
+                st.plotly_chart(fig_boards, use_container_width=True)
+
+            else:
+                st.success("No problem boards detected! All NVGRACE motherboards are performing well.")
+
+        # ============================================
+        # Weekly Summary Table
+        # ============================================
+        with st.expander("📋 Weekly Summary Table", expanded=False):
+            summary_display = weekly_df[['week', 'tested', 'total_fails', 'system_fails', 'hang_fails', 'other_fails', 'dpm', 'rolling_dpm', 'yield_pct']].copy()
+            summary_display.columns = ['Work Week', 'Tested', 'Total Fails', 'System', 'Hang', 'Other', 'DPM', '4W Rolling DPM', 'Yield %']
+            summary_display['Work Week'] = summary_display['Work Week'].apply(lambda x: f"WW{x}")
+            summary_display['DPM'] = summary_display['DPM'].apply(lambda x: f"{x:,.0f}")
+            summary_display['4W Rolling DPM'] = summary_display['4W Rolling DPM'].apply(lambda x: f"{x:,.0f}")
+            summary_display['Yield %'] = summary_display['Yield %'].apply(lambda x: f"{x:.2f}%")
+
+            st.dataframe(summary_display, use_container_width=True, hide_index=True)
+
+    else:
+        # No data - show placeholder
+        st.info("👆 Enter work week range and click **Fetch GRACE Data** to load motherboard health metrics.")
+
+        placeholder_html = """
+        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 40px; margin: 20px 0; text-align: center; border: 2px dashed rgba(255,255,255,0.2);">
+            <div style="font-size: 48px; margin-bottom: 15px;">🖥️</div>
+            <div style="font-size: 18px; color: #888; margin-bottom: 10px;">GRACE Motherboard Health Monitoring</div>
+            <div style="font-size: 14px; color: #666;">Data source: MTSUMS (HMB1, QMON steps for NVGRACE machines)</div>
+        </div>
+        """
+        st.markdown(placeholder_html, unsafe_allow_html=True)
+
+
+def render_machine_trend_tab(filters: dict[str, Any]) -> None:
+    """Render the Machine Trend Analysis tab for SMT6 tester monitoring and GRACE Motherboard analysis."""
+    st.subheader("Machine Trend Analysis")
+    st.markdown("""
+    Monitor SMT6 tester fleet performance, track machine-level yield trends, and analyze hardware health.
+    """)
+
+    # Sub-tabs within Machine Trend Analysis
+    machine_subtab1, machine_subtab2 = st.tabs([
+        "🔧 SMT6 Tester Yield",
+        "🖥️ GRACE Motherboard"
+    ])
+
+    with machine_subtab1:
+        # SMT6 Yield Trend content
+        render_smt6_yield_section(filters)
+
+    with machine_subtab2:
+        # GRACE Motherboard Health Monitoring
+        render_grace_motherboard_section(filters)
+
+
 def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
     """Render the Fail Viewer tab for visualizing fail address patterns."""
     import os
@@ -4010,7 +4366,7 @@ def main() -> None:
     st.session_state.use_cache = use_cache
 
     # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["Yield Analysis", "Module ELC Yield", "Pareto Analysis", "Fail Viewer"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Yield Analysis", "Module ELC Yield", "Pareto Analysis", "Fail Viewer", "Machine Trend Analysis"])
 
     with tab1:
         # Fetch button for Module Yield data
@@ -4094,6 +4450,9 @@ def main() -> None:
 
     with tab4:
         render_fail_viewer_tab(filters)
+
+    with tab5:
+        render_machine_trend_tab(filters)
 
 
 if __name__ == "__main__":
