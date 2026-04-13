@@ -3570,66 +3570,74 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
         # ============================================
         st.markdown(f"#### 📈 Hang cDPM by Machine (WW{selected_ww})")
 
-        # Filter data for selected week only
+        # Filter data for selected week only - ALL machines
         week_data = fm_df[fm_df['MFG_WORKWEEK'] == int(selected_ww)].copy()
 
         if not week_data.empty:
-            # Sort by Hang cDPM descending, take top machines with Hang > 0
-            week_data = week_data[week_data['Hang'] > 0].sort_values('Hang', ascending=False)
+            # Sort by Hang cDPM descending (problem machines first)
+            week_data = week_data.sort_values('Hang', ascending=False)
 
-            if not week_data.empty:
-                # Limit to top 20 machines for readability
-                chart_data = week_data.head(20)
+            # Summary metrics
+            total_machines = len(week_data)
+            machines_with_hang = len(week_data[week_data['Hang'] > 0])
+            total_uin = week_data['UIN'].sum()
 
-                # Create combined chart
-                fig_trend = go.Figure()
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Machines", f"{total_machines:,}")
+            with col2:
+                st.metric("Machines with Hang > 0", f"{machines_with_hang:,}")
+            with col3:
+                st.metric("Total UIN", f"{total_uin:,}")
 
-                # Bar chart for UIN (Volume) - secondary y-axis
-                fig_trend.add_trace(go.Bar(
-                    x=chart_data['MACHINE_ID'],
-                    y=chart_data['UIN'],
-                    name='Volume (UIN)',
-                    marker_color='rgba(99, 110, 250, 0.4)',
-                    yaxis='y2',
-                    text=chart_data['UIN'].apply(lambda x: f"{x:,.0f}"),
-                    textposition='outside',
-                    textfont=dict(size=8)
-                ))
+            # Create chart with ALL machines
+            fig_trend = go.Figure()
 
-                # Bar chart for Hang cDPM - primary y-axis
-                fig_trend.add_trace(go.Bar(
-                    x=chart_data['MACHINE_ID'],
-                    y=chart_data['Hang'],
-                    name='Hang cDPM',
-                    marker_color='#FF6B6B',
-                    text=chart_data['Hang'].apply(lambda x: f"{x:,.0f}"),
-                    textposition='outside',
-                    textfont=dict(size=9, color='#FF6B6B')
-                ))
+            # Bar chart for UIN (Volume) - secondary y-axis
+            fig_trend.add_trace(go.Bar(
+                x=week_data['MACHINE_ID'],
+                y=week_data['UIN'],
+                name='Volume (UIN)',
+                marker_color='rgba(99, 110, 250, 0.4)',
+                yaxis='y2'
+            ))
 
-                fig_trend.update_layout(
-                    height=400,
-                    margin=dict(l=50, r=50, t=30, b=100),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
-                    xaxis=dict(title="Machine ID", tickangle=-45),
-                    yaxis=dict(
-                        title=dict(text="Hang cDPM", font=dict(color='#FF6B6B')),
-                        tickfont=dict(color='#FF6B6B'),
-                        side='left'
-                    ),
-                    yaxis2=dict(
-                        title=dict(text="Volume (UIN)", font=dict(color='rgba(99, 110, 250, 0.8)')),
-                        tickfont=dict(color='rgba(99, 110, 250, 0.8)'),
-                        overlaying='y',
-                        side='right'
-                    ),
-                    hovermode="x unified",
-                    barmode='group'
-                )
+            # Bar chart for Hang cDPM - primary y-axis
+            # Color code: red for Hang > 0, light gray for Hang = 0
+            colors = ['#FF6B6B' if h > 0 else 'rgba(200, 200, 200, 0.3)' for h in week_data['Hang']]
+            fig_trend.add_trace(go.Bar(
+                x=week_data['MACHINE_ID'],
+                y=week_data['Hang'],
+                name='Hang cDPM',
+                marker_color=colors
+            ))
 
-                st.plotly_chart(fig_trend, use_container_width=True)
-            else:
-                st.success(f"No machines with Hang cDPM > 0 in WW{selected_ww}")
+            fig_trend.update_layout(
+                height=450,
+                margin=dict(l=50, r=50, t=30, b=100),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+                xaxis=dict(
+                    title="Machine ID",
+                    tickangle=-45,
+                    tickfont=dict(size=8),
+                    rangeslider=dict(visible=True)  # Add range slider for navigation
+                ),
+                yaxis=dict(
+                    title=dict(text="Hang cDPM", font=dict(color='#FF6B6B')),
+                    tickfont=dict(color='#FF6B6B'),
+                    side='left'
+                ),
+                yaxis2=dict(
+                    title=dict(text="Volume (UIN)", font=dict(color='rgba(99, 110, 250, 0.8)')),
+                    tickfont=dict(color='rgba(99, 110, 250, 0.8)'),
+                    overlaying='y',
+                    side='right'
+                ),
+                hovermode="x unified",
+                barmode='group'
+            )
+
+            st.plotly_chart(fig_trend, use_container_width=True)
         else:
             st.warning(f"No data found for WW{selected_ww}")
 
