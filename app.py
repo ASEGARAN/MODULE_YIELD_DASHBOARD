@@ -3577,10 +3577,25 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
             # Sort by Hang cDPM descending (problem machines first)
             week_data = week_data.sort_values('Hang', ascending=False)
 
+            # Get previous week data for comparison
+            prev_week_data = fm_df[fm_df['MFG_WORKWEEK'] == int(prev_ww)].copy() if prev_ww else pd.DataFrame()
+
             # Summary metrics
             total_machines = len(week_data)
             machines_with_hang = len(week_data[week_data['Hang'] > 0])
-            total_uin = week_data['UIN'].sum()
+            prev_machines_with_hang = len(prev_week_data[prev_week_data['Hang'] > 0]) if not prev_week_data.empty else 0
+
+            # Calculate WoW change
+            hang_delta = machines_with_hang - prev_machines_with_hang
+            if hang_delta < 0:
+                wow_status = "✅ Improved"
+                delta_color = "normal"
+            elif hang_delta > 0:
+                wow_status = "⚠️ Declined"
+                delta_color = "inverse"
+            else:
+                wow_status = "➖ No Change"
+                delta_color = "off"
 
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -3588,7 +3603,13 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
             with col2:
                 st.metric("Machines with Hang > 0", f"{machines_with_hang:,}")
             with col3:
-                st.metric("Total UIN", f"{total_uin:,}")
+                st.metric(
+                    f"vs WW{prev_ww}",
+                    wow_status,
+                    delta=f"{hang_delta:+d} machines" if hang_delta != 0 else None,
+                    delta_color=delta_color,
+                    help=f"WW{selected_ww}: {machines_with_hang} machines | WW{prev_ww}: {prev_machines_with_hang} machines"
+                )
 
             # Create chart with ALL machines
             fig_trend = go.Figure()
@@ -3649,186 +3670,156 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
             st.warning(f"No data found for WW{selected_ww}")
 
         # Check if selected week has data
-        if selected_ww in available_weeks:
+        if selected_ww in available_weeks and prev_ww in available_weeks:
             # ============================================
-            # Machines with Hang cDPM > 0
+            # Week-over-Week Hang Comparison (Consolidated)
             # ============================================
-            st.markdown(f"#### 🔥 Machines with Hang Failures (WW{selected_ww} vs WW{prev_ww})")
+            st.markdown(f"#### 🔥 Hang Failures: Week-over-Week (WW{selected_ww} vs WW{prev_ww})")
 
-            hang_machines = get_hang_machines(fm_df, selected_ww)
+            comparison_df = compare_weeks(fm_df, selected_ww, prev_ww)
 
-            if not hang_machines.empty:
-                st.warning(f"Found **{len(hang_machines)}** machines with Hang cDPM > 0 in WW{selected_ww}")
+            if not comparison_df.empty:
+                # Summary metrics
+                new_issues = len(comparison_df[comparison_df['is_new']])
+                resolved = len(comparison_df[comparison_df['is_resolved']])
+                chronic = len(comparison_df[comparison_df['is_chronic']])
+                current_week_issues = new_issues + chronic  # Machines with Hang > 0 in current week
 
-                # Get previous week's Hang cDPM for delta calculation
-                prev_hang = get_hang_machines(fm_df, prev_ww) if prev_ww in available_weeks else pd.DataFrame()
-                prev_hang_dict = {}
-                if not prev_hang.empty:
-                    prev_hang_dict = dict(zip(prev_hang['MACHINE_ID'], prev_hang['Hang_cDPM']))
+                comp_cols = st.columns(4)
+                with comp_cols[0]:
+                    st.metric("🆕 New Issues", f"{new_issues}", help="Newly failing: Hang > 0 this week, but was 0 last week")
+                with comp_cols[1]:
+                    st.metric("✅ Fixed", f"{resolved}", delta=f"+{resolved}" if resolved > 0 else None, delta_color="normal", help="Problem resolved: Hang > 0 last week, but is 0 this week")
+                with comp_cols[2]:
+                    st.metric("🔄 Recurring", f"{chronic}", delta_color="inverse", help="Ongoing chronic issue: Hang > 0 in both weeks")
+                with comp_cols[3]:
+                    st.metric("Total Tracked", f"{len(comparison_df)}", help="All machines that had Hang > 0 in either week")
 
-                # Build display table with delta
-                hang_display = hang_machines.copy()
-                hang_display['Prev_Hang'] = hang_display['MACHINE_ID'].map(lambda x: prev_hang_dict.get(x, 0))
-                hang_display['Delta'] = hang_display['Hang_cDPM'] - hang_display['Prev_Hang']
+                # Prepare display dataframe
+                comp_display = comparison_df.copy()
 
-                # Format for display
-                hang_display['Hang_cDPM_fmt'] = hang_display['Hang_cDPM'].apply(lambda x: f"{x:,.0f}")
-                hang_display['Prev_Hang_fmt'] = hang_display['Prev_Hang'].apply(lambda x: f"{x:,.0f}")
-                hang_display['Delta_fmt'] = hang_display['Delta'].apply(lambda x: f"{x:+,.0f}" if x != 0 else "0")
-                hang_display['UIN_fmt'] = hang_display['UIN'].apply(lambda x: f"{x:,}")
+                # Add status column with clearer labels
+                def get_status(row):
+                    if row['is_new']:
+                        return "🆕 New Issue"
+                    elif row['is_resolved']:
+                        return "✅ Fixed"
+                    elif row['is_chronic']:
+                        return "🔄 Recurring"
+                    return "—"
 
-                # Select display columns
-                display_df = hang_display[['MACHINE_ID', 'Hang_cDPM_fmt', 'Prev_Hang_fmt', 'Delta_fmt', 'UIN_fmt']].copy()
-                display_df.columns = ['Machine ID', f'Hang WW{selected_ww}', f'Hang WW{prev_ww}', 'Delta', 'UIN']
+                comp_display['Status'] = comp_display.apply(get_status, axis=1)
 
-                st.dataframe(
-                    display_df,
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config={
-                        "Machine ID": st.column_config.TextColumn("Machine ID", width="medium"),
-                        f"Hang WW{selected_ww}": st.column_config.TextColumn(f"Hang WW{selected_ww}"),
-                        f"Hang WW{prev_ww}": st.column_config.TextColumn(f"Hang WW{prev_ww}"),
-                        "Delta": st.column_config.TextColumn("Delta (cDPM)"),
-                        "UIN": st.column_config.TextColumn("UIN")
-                    }
-                )
+                # Select and rename columns for display
+                display_cols = ['machine_id', 'Status', f'hang_cDPM_{selected_ww}', f'hang_cDPM_{prev_ww}', 'hang_delta', f'uin_{selected_ww}', f'uin_{prev_ww}']
+                comp_display = comp_display[display_cols].copy()
+                hang_col_curr = f'Hang WW{selected_ww}'
+                hang_col_prev = f'Hang WW{prev_ww}'
+                comp_display.columns = ['Machine ID', 'Status', hang_col_curr, hang_col_prev, 'Delta', f'UIN WW{selected_ww}', f'UIN WW{prev_ww}']
 
-                # Week-over-week comparison
-                if prev_ww and prev_ww in available_weeks:
-                    st.markdown("---")
-                    st.markdown(f"#### 📊 Week-over-Week Comparison (WW{selected_ww} vs WW{prev_ww})")
+                # Highlight rows based on status
+                def highlight_status(row):
+                    if '🔄 Recurring' in str(row['Status']):
+                        return ['background-color: #FFCDD2; font-weight: bold'] * len(row)  # Light red - alarm
+                    elif '🆕 New Issue' in str(row['Status']):
+                        return ['background-color: #FFF9C4'] * len(row)  # Light yellow - alert
+                    return [''] * len(row)
 
-                    comparison_df = compare_weeks(fm_df, selected_ww, prev_ww)
-
-                    if not comparison_df.empty:
-                        # Summary metrics
-                        new_issues = len(comparison_df[comparison_df['is_new']])
-                        resolved = len(comparison_df[comparison_df['is_resolved']])
-                        chronic = len(comparison_df[comparison_df['is_chronic']])
-
-                        comp_cols = st.columns(4)
-                        with comp_cols[0]:
-                            st.metric("🆕 New Issues", f"{new_issues}", help="Newly failing: Hang > 0 this week, but was 0 last week")
-                        with comp_cols[1]:
-                            st.metric("✅ Fixed", f"{resolved}", delta=f"+{resolved}" if resolved > 0 else None, delta_color="normal", help="Problem resolved: Hang > 0 last week, but is 0 this week")
-                        with comp_cols[2]:
-                            st.metric("🔄 Recurring", f"{chronic}", delta_color="inverse", help="Ongoing chronic issue: Hang > 0 in both weeks")
-                        with comp_cols[3]:
-                            st.metric("Total Tracked", f"{len(comparison_df)}", help="All machines that had Hang > 0 in either week")
-
-                        # Comparison table with status explanation tooltip
-                        status_help = (
-                            "**Status Categories:**\n\n"
-                            "- **🆕 New Issue**: Hang > 0 this week, but was 0 last week (newly failing)\n\n"
-                            "- **✅ Fixed**: Hang > 0 last week, but is 0 this week (problem resolved)\n\n"
-                            "- **🔄 Recurring**: Hang > 0 in both weeks (ongoing chronic issue)"
-                        )
-                        with st.expander(f"📋 Detailed Comparison Table", expanded=True):
-                            st.caption(f"ℹ️ {status_help}")
-                            comp_display = comparison_df.copy()
-
-                            # Add status column with clearer labels
-                            def get_status(row):
-                                if row['is_new']:
-                                    return "🆕 New Issue"
-                                elif row['is_resolved']:
-                                    return "✅ Fixed"
-                                elif row['is_chronic']:
-                                    return "🔄 Recurring"
-                                return "—"
-
-                            comp_display['Status'] = comp_display.apply(get_status, axis=1)
-
-                            # Select and rename columns for display
-                            display_cols = ['machine_id', 'Status', f'hang_cDPM_{selected_ww}', f'hang_cDPM_{prev_ww}', 'hang_delta', f'uin_{selected_ww}', f'uin_{prev_ww}']
-                            comp_display = comp_display[display_cols].copy()
-                            comp_display.columns = ['Machine ID', 'Status', f'Hang WW{selected_ww}', f'Hang WW{prev_ww}', 'Delta', f'UIN WW{selected_ww}', f'UIN WW{prev_ww}']
-
-                            st.dataframe(comp_display, use_container_width=True, hide_index=True)
+                # Format cDPM columns to 2 decimal places
+                styled_df = comp_display.style.apply(highlight_status, axis=1).format({
+                    hang_col_curr: '{:.2f}',
+                    hang_col_prev: '{:.2f}',
+                    'Delta': '{:+.2f}'
+                })
+                st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
                 # ============================================
                 # Drill-down: UIN=4, UPASS=0 Analysis
                 # ============================================
-                st.markdown("---")
-                st.markdown("#### 🔍 Drill-Down: 100% Fail Cases (UIN=4, UPASS=0)")
+                # Only show drill-down for machines with current week issues (New + Recurring)
+                current_issue_machines = comparison_df[
+                    (comparison_df['is_new']) | (comparison_df['is_chronic'])
+                ]['machine_id'].tolist()
 
-                # Machine selector for drill-down
-                machine_options = hang_machines['MACHINE_ID'].tolist()
-                selected_machine = st.selectbox(
-                    "Select Machine for Drill-Down",
-                    options=machine_options,
-                    key="grace_drill_machine"
-                )
+                if current_issue_machines:
+                    st.markdown("---")
+                    st.markdown("#### 🔍 Drill-Down: 100% Fail Cases (UIN=4, UPASS=0)")
 
-                if selected_machine:
-                    drill_btn = st.button(f"🔎 Analyze {selected_machine}", key="grace_drill_btn")
+                    # Machine selector for drill-down
+                    selected_machine = st.selectbox(
+                        "Select Machine for Drill-Down",
+                        options=current_issue_machines,
+                        key="grace_drill_machine"
+                    )
 
-                    if drill_btn:
-                        with st.spinner(f"Running tsums drill-down for {selected_machine}..."):
-                            analysis = analyze_hang_failures(
-                                machine_id=selected_machine,
-                                current_ww=selected_ww,
-                                previous_ww=prev_ww if prev_ww else get_previous_workweek(selected_ww),
-                                days=30
-                            )
-                            st.session_state.grace_hang_analysis[selected_machine] = analysis
+                    if selected_machine:
+                        drill_btn = st.button(f"🔎 Analyze {selected_machine}", key="grace_drill_btn")
 
-                    # Display analysis results if available
-                    if selected_machine in st.session_state.grace_hang_analysis:
-                        analysis = st.session_state.grace_hang_analysis[selected_machine]
-
-                        if 'error' in analysis and analysis['error']:
-                            st.error(f"Analysis error: {analysis['error']}")
-                        else:
-                            # Analysis summary
-                            analysis_cols = st.columns(4)
-                            with analysis_cols[0]:
-                                st.metric(
-                                    f"100% Fails WW{analysis.get('current_ww', selected_ww)}",
-                                    f"{analysis.get('current_ww_count', 0)}"
+                        if drill_btn:
+                            with st.spinner(f"Running tsums drill-down for {selected_machine}..."):
+                                analysis = analyze_hang_failures(
+                                    machine_id=selected_machine,
+                                    current_ww=selected_ww,
+                                    previous_ww=prev_ww if prev_ww else get_previous_workweek(selected_ww),
+                                    days=30
                                 )
-                            with analysis_cols[1]:
-                                st.metric(
-                                    f"100% Fails WW{analysis.get('previous_ww', prev_ww)}",
-                                    f"{analysis.get('previous_ww_count', 0)}"
-                                )
-                            with analysis_cols[2]:
-                                is_chronic = analysis.get('is_chronic', False)
-                                st.metric(
-                                    "Chronic Issue?",
-                                    "YES" if is_chronic else "NO",
-                                    delta="⚠️" if is_chronic else None,
-                                    delta_color="inverse" if is_chronic else "normal"
-                                )
-                            with analysis_cols[3]:
-                                bios_versions = analysis.get('bios_versions', [])
-                                st.metric("BIOS Versions", f"{len(bios_versions)}")
+                                st.session_state.grace_hang_analysis[selected_machine] = analysis
 
-                            # Current week failures
-                            current_failures = analysis.get('current_ww_failures', [])
-                            if current_failures:
-                                st.markdown(f"##### 100% Fail Lots in WW{analysis.get('current_ww', selected_ww)}")
-                                current_df = pd.DataFrame(current_failures)
-                                st.dataframe(current_df, use_container_width=True, hide_index=True)
+                        # Display analysis results if available
+                        if selected_machine in st.session_state.grace_hang_analysis:
+                            analysis = st.session_state.grace_hang_analysis[selected_machine]
+
+                            if 'error' in analysis and analysis['error']:
+                                st.error(f"Analysis error: {analysis['error']}")
                             else:
-                                st.info(f"No 100% fail cases found in WW{analysis.get('current_ww', selected_ww)}")
+                                # Analysis summary
+                                analysis_cols = st.columns(4)
+                                with analysis_cols[0]:
+                                    st.metric(
+                                        f"100% Fails WW{analysis.get('current_ww', selected_ww)}",
+                                        f"{analysis.get('current_ww_count', 0)}"
+                                    )
+                                with analysis_cols[1]:
+                                    st.metric(
+                                        f"100% Fails WW{analysis.get('previous_ww', prev_ww)}",
+                                        f"{analysis.get('previous_ww_count', 0)}"
+                                    )
+                                with analysis_cols[2]:
+                                    is_chronic = analysis.get('is_chronic', False)
+                                    st.metric(
+                                        "Chronic Issue?",
+                                        "YES" if is_chronic else "NO",
+                                        delta="⚠️" if is_chronic else None,
+                                        delta_color="inverse" if is_chronic else "normal"
+                                    )
+                                with analysis_cols[3]:
+                                    bios_versions = analysis.get('bios_versions', [])
+                                    st.metric("BIOS Versions", f"{len(bios_versions)}")
 
-                            # Previous week failures
-                            prev_failures = analysis.get('previous_ww_failures', [])
-                            if prev_failures:
-                                st.markdown(f"##### 100% Fail Lots in WW{analysis.get('previous_ww', prev_ww)}")
-                                prev_df = pd.DataFrame(prev_failures)
-                                st.dataframe(prev_df, use_container_width=True, hide_index=True)
+                                # Current week failures
+                                current_failures = analysis.get('current_ww_failures', [])
+                                if current_failures:
+                                    st.markdown(f"##### 100% Fail Lots in WW{analysis.get('current_ww', selected_ww)}")
+                                    current_df = pd.DataFrame(current_failures)
+                                    st.dataframe(current_df, use_container_width=True, hide_index=True)
+                                else:
+                                    st.info(f"No 100% fail cases found in WW{analysis.get('current_ww', selected_ww)}")
 
-                            # BIOS versions seen
-                            if bios_versions:
-                                with st.expander("🔧 BIOS Versions Observed"):
-                                    for bv in bios_versions:
-                                        st.code(bv)
+                                # Previous week failures
+                                prev_failures = analysis.get('previous_ww_failures', [])
+                                if prev_failures:
+                                    st.markdown(f"##### 100% Fail Lots in WW{analysis.get('previous_ww', prev_ww)}")
+                                    prev_df = pd.DataFrame(prev_failures)
+                                    st.dataframe(prev_df, use_container_width=True, hide_index=True)
+
+                                # BIOS versions seen
+                                if bios_versions:
+                                    with st.expander("🔧 BIOS Versions Observed"):
+                                        for bv in bios_versions:
+                                            st.code(bv)
 
             else:
-                st.success(f"No machines with Hang cDPM > 0 in WW{selected_ww}")
+                st.success(f"No machines with Hang failures in WW{selected_ww} or WW{prev_ww}")
 
             # ============================================
             # Full FM Data Summary (Collapsible)
