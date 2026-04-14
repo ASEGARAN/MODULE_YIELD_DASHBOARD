@@ -3832,6 +3832,113 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                             with metric_cols[2]:
                                 st.metric("⚠️ SOP Violations", sop_violation_count)
 
+                            # SOP Violation Visualization (if any violations exist)
+                            if sop_violation_count > 0:
+                                sop_df = drill_df[drill_df['sop_violation'] == True].copy()
+
+                                # Parse violation type from remarks
+                                def get_violation_type(remarks):
+                                    if 'MSN-level' in str(remarks):
+                                        return 'MSN-level (HUNG progression)'
+                                    elif 'lot-level' in str(remarks):
+                                        return 'Lot-level (retest on same MOBO)'
+                                    return 'Unknown'
+
+                                def get_violation_count(remarks):
+                                    """Extract violation count from remarks."""
+                                    import re
+                                    # Try MSN-level pattern first
+                                    msn_match = re.search(r'(\d+) module\(s\)', str(remarks))
+                                    if msn_match:
+                                        return int(msn_match.group(1))
+                                    # Try lot-level pattern
+                                    lot_match = re.search(r'(\d+) lot\(s\)', str(remarks))
+                                    if lot_match:
+                                        return int(lot_match.group(1))
+                                    return 1
+
+                                sop_df['violation_type'] = sop_df['remarks'].apply(get_violation_type)
+                                sop_df['violation_count'] = sop_df['remarks'].apply(get_violation_count)
+
+                                # Create horizontal bar chart for SOP violations
+                                fig_sop = go.Figure()
+
+                                # Color map for violation types
+                                color_map = {
+                                    'MSN-level (HUNG progression)': '#FF6B6B',  # Red - more severe
+                                    'Lot-level (retest on same MOBO)': '#FFA726',  # Orange
+                                    'Unknown': '#BDBDBD'
+                                }
+
+                                # Sort by violation count descending
+                                sop_df_sorted = sop_df.sort_values('violation_count', ascending=True)
+
+                                for v_type in sop_df_sorted['violation_type'].unique():
+                                    subset = sop_df_sorted[sop_df_sorted['violation_type'] == v_type]
+                                    fig_sop.add_trace(go.Bar(
+                                        y=subset['machine_id'],
+                                        x=subset['violation_count'],
+                                        name=v_type,
+                                        orientation='h',
+                                        marker_color=color_map.get(v_type, '#BDBDBD'),
+                                        text=subset['violation_count'],
+                                        textposition='outside',
+                                        hovertemplate=(
+                                            '<b>%{y}</b><br>'
+                                            'Violations: %{x}<br>'
+                                            'Type: ' + v_type + '<br>'
+                                            '<extra></extra>'
+                                        )
+                                    ))
+
+                                fig_sop.update_layout(
+                                    title=dict(
+                                        text=f'⚠️ SOP Violations by Machine (WW{selected_ww})',
+                                        font=dict(size=16, color='#FF6B6B')
+                                    ),
+                                    xaxis_title='Number of Violations',
+                                    yaxis_title='Machine ID',
+                                    barmode='stack',
+                                    height=max(200, len(sop_df) * 40 + 100),
+                                    margin=dict(l=120, r=40, t=60, b=40),
+                                    legend=dict(
+                                        orientation='h',
+                                        yanchor='bottom',
+                                        y=1.02,
+                                        xanchor='right',
+                                        x=1
+                                    ),
+                                    plot_bgcolor='rgba(0,0,0,0)',
+                                    paper_bgcolor='rgba(0,0,0,0)',
+                                    font=dict(color='#E0E0E0')
+                                )
+
+                                fig_sop.update_xaxes(gridcolor='rgba(255,255,255,0.1)', showgrid=True)
+                                fig_sop.update_yaxes(gridcolor='rgba(255,255,255,0.1)', showgrid=False)
+
+                                st.plotly_chart(fig_sop, use_container_width=True)
+
+                                # SOP Violation Details expander
+                                with st.expander("📋 SOP Violation Details", expanded=False):
+                                    st.markdown("""
+**What is an SOP Violation?**
+- When a module fails with HANG, SOP requires moving it to a **different motherboard**
+- **Lot-level violation**: Same lot retested on same MOBO after HANG
+- **MSN-level violation**: Same module serial number shows HUNG1 → HUNG2 → HUNG progression (retested on same MOBO)
+
+**SBIN Progression:**
+- `HUNG1` = First HANG (should move to different MOBO)
+- `HUNG2` = Second HANG on same MOBO (**SOP Violation!**)
+- `HUNG` = Third+ HANG on same MOBO (**Severe Violation!**)
+                                    """)
+
+                                    # Show violation lots/MSNs
+                                    for _, row in sop_df.iterrows():
+                                        st.markdown(f"**{row['machine_id']}** - {row['violation_type']}")
+                                        if row['sop_violation_lots']:
+                                            st.code(row['sop_violation_lots'], language=None)
+                                        st.markdown("---")
+
                             # 100% Fail Analysis Table
                             fail_display = drill_df[['machine_id', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
                             fail_display.columns = ['Machine ID', 'Status', f'WW{selected_ww}', f'Recovery (WW{next_ww})', 'Remarks']
@@ -4527,43 +4634,80 @@ def main() -> None:
             query_lower = user_query.lower()
             response = None
 
-            # Feature matching logic
-            if any(kw in query_lower for kw in ['yield', 'trend', 'weekly', 'bin', 'heatmap', 'density', 'speed']):
+            # Helper function: count keyword matches (requires at least 2 for a match)
+            def count_matches(keywords: list[str], query: str) -> int:
+                return sum(1 for kw in keywords if kw in query)
+
+            # Define keyword sets for each feature
+            yield_kw = ['yield', 'trend', 'weekly', 'bin', 'heatmap', 'density', 'speed', 'uin', 'upass']
+            elc_kw = ['elc', 'hmfn', 'slt', 'hmb1', 'qmon', 'end of line', 'target', 'end line', 'module yield']
+            pareto_kw = ['pareto', 'failure', 'failcrawler', 'register', 'fallout', 'top fail', 'dpm', 'fail mode', 'cdpm']
+            fail_viewer_kw = ['fail viewer', 'die map', 'dq', 'bank', 'address', 'pattern', 'csv', 'upload', 'diemap', 'visualization']
+            machine_kw = ['machine', 'smt6', 'tester', 'socket', 'site', 'grace', 'motherboard', 'hang', 'sop', 'mobo', 'nvgrace']
+
+            # Calculate match scores (require at least 2 keyword matches)
+            scores = {
+                'yield': count_matches(yield_kw, query_lower),
+                'elc': count_matches(elc_kw, query_lower),
+                'pareto': count_matches(pareto_kw, query_lower),
+                'fail_viewer': count_matches(fail_viewer_kw, query_lower),
+                'machine': count_matches(machine_kw, query_lower),
+            }
+
+            # Find best match with at least 2 keywords
+            best_match = max(scores, key=scores.get)
+            best_score = scores[best_match]
+
+            # Feature matching logic - require at least 2 keyword matches
+            if best_score >= 2 and best_match == 'yield':
                 response = {
                     'tab': '📊 Yield Analysis',
                     'desc': 'View weekly yield trends, bin distribution charts, and density/speed heatmaps.',
                     'steps': '1. Select **WW range**, **Form Factor**, **DID**, **Facility**, **Step** in sidebar\n2. Go to **📊 Yield Analysis** tab\n3. Click **Fetch Module Yield Data**'
                 }
-            elif any(kw in query_lower for kw in ['elc', 'hmfn', 'slt', 'hbm1', 'qmon', 'end of line', 'target']):
+            elif best_score >= 2 and best_match == 'elc':
                 response = {
                     'tab': '📈 Module ELC Yield',
                     'desc': 'Track HMFN → SLT → ELC yield flow with target lines and DID breakdown.',
                     'steps': '1. Select **WW range**, **Form Factor**, **DID**, **Facility**, **Steps (HMFN/HMB1/QMON)** in sidebar\n2. Go to **📈 Module ELC Yield** tab\n3. Click **Fetch ELC Data**'
                 }
-            elif any(kw in query_lower for kw in ['pareto', 'failure', 'failcrawler', 'register', 'fallout', 'top fail', 'dpm']):
+            elif best_score >= 2 and best_match == 'pareto':
                 response = {
                     'tab': '📉 Pareto Analysis',
                     'desc': 'Identify top failures with FAILCRAWLER DPM and Register Fallout analysis.',
                     'steps': '1. Select **WW range**, **Form Factor**, **DID**, **Facility**, **Step** in sidebar\n2. Go to **📉 Pareto Analysis** tab\n3. Choose **FAILCRAWLER DPM** or **Register Fallout** subtab'
                 }
-            elif any(kw in query_lower for kw in ['fail viewer', 'die map', 'dq', 'bank', 'address', 'pattern', 'csv', 'upload']):
+            elif best_score >= 2 and best_match == 'fail_viewer':
                 response = {
                     'tab': '🔍 Fail Viewer',
                     'desc': 'Visualize fail address patterns with die maps and DQ/Bank distribution.',
                     'steps': '1. Go to **🔍 Fail Viewer** tab\n2. Upload a **CSV file** with fail addresses OR generate sample data\n3. Select **Part Type** and **Color By** options'
                 }
-            elif any(kw in query_lower for kw in ['machine', 'smt6', 'tester', 'socket', 'site', 'grace', 'motherboard', 'hang', 'sop', 'mobo']):
+            elif best_score >= 2 and best_match == 'machine':
                 response = {
                     'tab': '🔧 Machine Trend Analysis',
                     'desc': 'Monitor SMT6 tester performance and GRACE motherboard health.',
                     'steps': '**For SMT6 Tester Yield:**\n1. Select **Step=HMFN** in sidebar\n2. Go to **🔧 Machine Trend Analysis** → **SMT6 Tester Yield**\n\n**For GRACE Motherboard:**\n1. Select **WW range**, **Form Factor**, **Facility** in sidebar\n2. Go to **🔧 Machine Trend Analysis** → **GRACE Motherboard**\n3. Click **Fetch GRACE Data** (uses HMB1+QMON integrated)'
                 }
             else:
+                # No match with 2+ keywords - show guide
                 response = {
-                    'tab': '🔎 Not sure?',
-                    'desc': "I couldn't find an exact match, but here's a quick guide:",
-                    'steps': '• **Yield trends & bins** → 📊 Yield Analysis\n• **ELC/HMFN/SLT** → 📈 Module ELC Yield\n• **Top failures** → 📉 Pareto Analysis\n• **Fail patterns** → 🔍 Fail Viewer\n• **Machine/Motherboard** → 🔧 Machine Trends'
+                    'tab': '🔎 Need more details',
+                    'desc': f"I found {best_score} keyword match(es). Try adding more specific terms:",
+                    'steps': '• **Yield trends & bins** → 📊 Yield Analysis (try: "weekly yield trend")\n• **ELC/HMFN/SLT** → 📈 Module ELC Yield (try: "elc target yield")\n• **Top failures** → 📉 Pareto Analysis (try: "failcrawler dpm")\n• **Fail patterns** → 🔍 Fail Viewer (try: "die map pattern")\n• **Machine/Motherboard** → 🔧 Machine Trends (try: "grace motherboard hang")'
                 }
+
+            # Log query to CSV for learning
+            import csv
+            from pathlib import Path
+            log_file = Path("/home/asegaran/MODULE_YIELD_DASHBOARD/help_assistant_log.csv")
+            matched_kw_str = f"{best_match}:{best_score}"
+
+            # Store in session state for feedback tracking
+            st.session_state.last_help_query = user_query
+            st.session_state.last_help_tab = response['tab']
+            st.session_state.last_help_score = best_score
+            st.session_state.last_help_match = best_match
 
             # Display response
             st.markdown(f"""
@@ -4573,6 +4717,24 @@ def main() -> None:
             </div>
             """, unsafe_allow_html=True)
             st.markdown(f"**How to get there:**\n\n{response['steps']}")
+
+            # Feedback buttons
+            st.markdown("<br>", unsafe_allow_html=True)
+            fb_col1, fb_col2, fb_col3 = st.columns([1, 1, 4])
+            with fb_col1:
+                if st.button("👍 Helpful", key="fb_yes", use_container_width=True):
+                    # Log successful suggestion
+                    with open(log_file, 'a', newline='') as f:
+                        writer = csv.writer(f)
+                        writer.writerow([datetime.now().isoformat(), user_query, response['tab'], matched_kw_str, best_score, 'helpful'])
+                    st.success("Thanks! Logged as helpful.")
+            with fb_col2:
+                if st.button("👎 Wrong", key="fb_no", use_container_width=True):
+                    # Log unsuccessful suggestion
+                    with open(log_file, 'a', newline='') as f:
+                        writer = csv.writer(f)
+                        writer.writerow([datetime.now().isoformat(), user_query, response['tab'], matched_kw_str, best_score, 'wrong'])
+                    st.warning("Thanks! I'll learn from this.")
 
         # Quick Start Guide - Emerald Theme
         st.markdown("""
