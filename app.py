@@ -3639,12 +3639,12 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
 
             fig_trend.update_layout(
                 height=450,
-                margin=dict(l=50, r=50, t=30, b=100),
+                margin=dict(l=50, r=50, t=30, b=120),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
                 xaxis=dict(
                     title="Machine ID",
                     tickangle=-45,
-                    tickfont=dict(size=8),
+                    tickfont=dict(size=11, family="Arial Black, sans-serif"),  # Bigger and bolder
                     rangeslider=dict(visible=True)  # Add range slider for navigation
                 ),
                 yaxis=dict(
@@ -3832,7 +3832,28 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                             with metric_cols[2]:
                                 st.metric("⚠️ SOP Violations", sop_violation_count)
 
-                            # SOP Violation Visualization (if any violations exist)
+                            # 100% Fail Analysis Table (moved to top)
+                            fail_display = drill_df[['machine_id', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
+                            fail_display.columns = ['Machine ID', 'Status', f'WW{selected_ww}', f'Recovery (WW{next_ww})', 'Remarks']
+
+                            def highlight_fail_status(row):
+                                # Only highlight concerning items that need action
+                                remarks = str(row.get('Remarks', ''))
+                                recovery = str(row.get(f'Recovery (WW{next_ww})', ''))
+
+                                # Priority 1: SOP Violation (Critical - operator not following procedure)
+                                if 'SOP Violation' in remarks:
+                                    return ['background-color: #FFAB91; font-weight: bold'] * len(row)  # Orange
+                                # Priority 2: Still Failing (needs attention - machine not recovered)
+                                elif '❌ Still Failing' in recovery:
+                                    return ['background-color: #FFCDD2; font-weight: bold'] * len(row)  # Light red
+                                # No highlight for recovered or healthy machines
+                                return [''] * len(row)
+
+                            styled_fail = fail_display.style.apply(highlight_fail_status, axis=1)
+                            st.dataframe(styled_fail, use_container_width=True, hide_index=True, height=280)
+
+                            # SOP Violation Visualization (below table, if any violations exist)
                             if sop_violation_count > 0:
                                 sop_df = drill_df[drill_df['sop_violation'] == True].copy()
 
@@ -3938,27 +3959,6 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                                         if row['sop_violation_lots']:
                                             st.code(row['sop_violation_lots'], language=None)
                                         st.markdown("---")
-
-                            # 100% Fail Analysis Table
-                            fail_display = drill_df[['machine_id', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
-                            fail_display.columns = ['Machine ID', 'Status', f'WW{selected_ww}', f'Recovery (WW{next_ww})', 'Remarks']
-
-                            def highlight_fail_status(row):
-                                # Only highlight concerning items that need action
-                                remarks = str(row.get('Remarks', ''))
-                                recovery = str(row.get(f'Recovery (WW{next_ww})', ''))
-
-                                # Priority 1: SOP Violation (Critical - operator not following procedure)
-                                if 'SOP Violation' in remarks:
-                                    return ['background-color: #FFAB91; font-weight: bold'] * len(row)  # Orange
-                                # Priority 2: Still Failing (needs attention - machine not recovered)
-                                elif '❌ Still Failing' in recovery:
-                                    return ['background-color: #FFCDD2; font-weight: bold'] * len(row)  # Light red
-                                # No highlight for recovered or healthy machines
-                                return [''] * len(row)
-
-                            styled_fail = fail_display.style.apply(highlight_fail_status, axis=1)
-                            st.dataframe(styled_fail, use_container_width=True, hide_index=True, height=280)
 
                         else:
                             # Placeholder when no analysis yet
