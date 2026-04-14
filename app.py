@@ -3214,13 +3214,28 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                         detailed_changes = h.get('detailed_changes', [])
                         transition = "Base" if i == 0 else f"{history[i-1]['curve']}→{curve_name}"
                         if detailed_changes:
-                            remark = " | ".join([f"{c['step']}: {c['from']:.1f}→{c['to']:.1f}%" for c in detailed_changes[:2]])
+                            # Group by step and show all changes
+                            step_changes = {}
+                            for c in detailed_changes:
+                                step = c['step']
+                                period = c.get('period', '')
+                                if step not in step_changes:
+                                    step_changes[step] = []
+                                step_changes[step].append(f"{c['from']:.1f}→{c['to']:.1f}% ({period})" if period else f"{c['from']:.1f}→{c['to']:.1f}%")
+                            # Format: STEP: change1, change2 | STEP2: change
+                            remark_parts = []
+                            for step, changes in step_changes.items():
+                                if len(changes) > 1:
+                                    remark_parts.append(f"{step}: {', '.join(changes)}")
+                                else:
+                                    remark_parts.append(f"{step}: {changes[0]}")
+                            remark = " | ".join(remark_parts)
                         else:
                             remark = "Initial" if i == 0 else "No change"
                         if detailed_changes or i == 0:
                             changes_data.append({"Curve": transition, "": "🟢" if is_active else "", "Change": remark})
                     if changes_data:
-                        st.dataframe(pd.DataFrame(changes_data[::-1]), use_container_width=True, hide_index=True, height=150)
+                        st.dataframe(pd.DataFrame(changes_data[::-1]), use_container_width=True, hide_index=True, height=180)
                         st.caption(f"_Config: {target_key}_")
                 else:
                     st.caption("_No history_")
