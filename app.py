@@ -3030,7 +3030,7 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                             )
 
                 # ============================================================
-                # ADD FUTURE TARGET LINE (ELC only, extends x-axis)
+                # ADD FUTURE TARGET LINES (SLT & ELC, extends x-axis)
                 # Shows upcoming target values from selected curve
                 # ============================================================
                 show_future_targets = st.session_state.get("elc_show_future_targets", False)
@@ -3042,7 +3042,6 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     # Generate next 8 weeks' workweeks
                     last_ww = int(sorted_workweeks[-1])
                     forecast_wws = []
-                    forecast_y = []
 
                     for i in range(1, 9):  # Next 8 weeks
                         next_ww = last_ww + i
@@ -3051,34 +3050,61 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                         if week > 52:
                             year += 1
                             week = week - 52
-                        ww_str = f"{year}{week:02d}"
-                        forecast_wws.append(ww_str)
+                        forecast_wws.append(f"{year}{week:02d}")
 
-                        # Get ELC target from curve for this future week
-                        cal_year, cal_month = get_calendar_year_month(ww_str)
-                        target = get_curve_target(selected_curve, target_key, cal_year, cal_month)
-                        forecast_y.append(target if target else None)
+                    # SLT Future Targets (if SLT is in selected yields)
+                    if show_slt_target:
+                        slt_future_y = []
+                        for ww_str in forecast_wws:
+                            cal_year, cal_month = get_calendar_year_month(ww_str)
+                            target = get_target(SLT_TARGETS, chart_selected_dids[0], chart_selected_densities[0], chart_selected_speeds[0], cal_year, cal_month)
+                            slt_future_y.append(target if target else None)
 
-                    # Filter out None values
-                    valid_forecast = [(w, y) for w, y in zip(forecast_wws, forecast_y) if y is not None]
-
-                    if valid_forecast:
-                        future_wws, forecast_y = zip(*valid_forecast)
-                        future_wws = list(future_wws)
-                        fig.add_trace(
-                            go.Scatter(
-                                x=future_wws,
-                                y=list(forecast_y),
-                                mode="lines+markers",
-                                name=f"Future ELC Target [{selected_curve}]",
-                                line=dict(color="#9C27B0", width=2, dash="dash"),
-                                marker=dict(size=6, symbol="diamond"),
-                                hovertemplate="<b>Future Week:</b> %{x}<br>" +
-                                              f"<b>Target Curve:</b> {selected_curve}<br>" +
-                                              "<b>ELC Target:</b> %{y:.2f}%<br>" +
-                                              "<extra></extra>",
+                        valid_slt = [(w, y) for w, y in zip(forecast_wws, slt_future_y) if y is not None]
+                        if valid_slt:
+                            slt_wws, slt_y = zip(*valid_slt)
+                            future_wws = list(slt_wws)  # Use for x-axis extension
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=list(slt_wws),
+                                    y=list(slt_y),
+                                    mode="lines+markers",
+                                    name=f"Future SLT Target [{selected_curve}]",
+                                    line=dict(color="#FF1744", width=2, dash="dash"),
+                                    marker=dict(size=6, symbol="diamond"),
+                                    hovertemplate="<b>Future Week:</b> %{x}<br>" +
+                                                  f"<b>Target Curve:</b> {selected_curve}<br>" +
+                                                  "<b>SLT Target:</b> %{y:.2f}%<br>" +
+                                                  "<extra></extra>",
+                                )
                             )
-                        )
+
+                    # ELC Future Targets (if ELC is in selected yields)
+                    if show_elc_target:
+                        elc_future_y = []
+                        for ww_str in forecast_wws:
+                            cal_year, cal_month = get_calendar_year_month(ww_str)
+                            target = get_curve_target(selected_curve, target_key, cal_year, cal_month)
+                            elc_future_y.append(target if target else None)
+
+                        valid_elc = [(w, y) for w, y in zip(forecast_wws, elc_future_y) if y is not None]
+                        if valid_elc:
+                            elc_wws, elc_y = zip(*valid_elc)
+                            future_wws = list(elc_wws)  # Use for x-axis extension
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=list(elc_wws),
+                                    y=list(elc_y),
+                                    mode="lines+markers",
+                                    name=f"Future ELC Target [{selected_curve}]",
+                                    line=dict(color="#9C27B0", width=2, dash="dash"),
+                                    marker=dict(size=6, symbol="diamond"),
+                                    hovertemplate="<b>Future Week:</b> %{x}<br>" +
+                                                  f"<b>Target Curve:</b> {selected_curve}<br>" +
+                                                  "<b>ELC Target:</b> %{y:.2f}%<br>" +
+                                                  "<extra></extra>",
+                                )
+                            )
 
                 # ============================================================
                 # ADD ANNOTATION MARKERS (vertical lines with notes)
