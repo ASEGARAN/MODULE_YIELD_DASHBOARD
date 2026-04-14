@@ -3107,29 +3107,86 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                             )
 
                 # ============================================================
-                # ADD ANNOTATION MARKERS (vertical lines with notes)
+                # ADD ANNOTATION MARKERS (callouts on data points)
+                # Places highlighted markers on actual yield values with note balloons
                 # ============================================================
-                if st.session_state.get("elc_annotations"):
-                    for ann in st.session_state.elc_annotations:
+                if st.session_state.get("elc_annotations") and selected_series:
+                    ann_colors = ["#FF6B6B", "#FFB347", "#87CEEB", "#DDA0DD", "#90EE90"]
+
+                    for ann_idx, ann in enumerate(st.session_state.elc_annotations):
                         if ann["workweek"] in sorted_workweeks:
-                            # Add vertical line using shape (works with categorical x-axis)
-                            fig.add_shape(
-                                type="line",
-                                x0=ann["workweek"], x1=ann["workweek"],
-                                y0=0, y1=1,
-                                yref="paper",
-                                line=dict(color="#FF6B6B", width=2, dash="dash"),
-                            )
-                            # Add annotation text separately
-                            ann_text = f"📝 {ann['note'][:20]}..." if len(ann['note']) > 20 else f"📝 {ann['note']}"
-                            fig.add_annotation(
-                                x=ann["workweek"],
-                                y=1.02,
-                                yref="paper",
-                                text=ann_text,
-                                showarrow=False,
-                                font=dict(size=10, color="#FF6B6B"),
-                            )
+                            ann_color = ann_colors[ann_idx % len(ann_colors)]
+                            ann_text = ann['note'][:25] + "..." if len(ann['note']) > 25 else ann['note']
+
+                            # Find yield values at this workweek for selected series
+                            ann_x = []
+                            ann_y = []
+                            ann_labels = []
+
+                            for series in selected_series:
+                                parts = series.split("_")
+                                if len(parts) >= 4:
+                                    did, yield_type, density, speed = parts[0], parts[1], parts[2], parts[3]
+
+                                    # Get the yield value at this workweek
+                                    mask = (
+                                        (elc_df["design_id"].str.upper() == did.upper()) &
+                                        (elc_df["workweek"].astype(str) == str(ann["workweek"]))
+                                    )
+                                    if "density" in elc_df.columns:
+                                        mask &= (elc_df["density"].str.upper() == density.upper())
+                                    if "speed" in elc_df.columns:
+                                        mask &= (elc_df["speed"].str.upper() == speed.upper())
+
+                                    matched = elc_df[mask]
+                                    if not matched.empty and yield_type in matched.columns:
+                                        y_val = matched[yield_type].iloc[0]
+                                        if pd.notna(y_val):
+                                            ann_x.append(ann["workweek"])
+                                            ann_y.append(y_val)
+                                            ann_labels.append(f"{yield_type}: {y_val:.2f}%")
+
+                            # Add highlighted markers at annotation points
+                            if ann_x:
+                                fig.add_trace(
+                                    go.Scatter(
+                                        x=ann_x,
+                                        y=ann_y,
+                                        mode="markers",
+                                        marker=dict(
+                                            size=18,
+                                            color=ann_color,
+                                            symbol="circle",
+                                            line=dict(width=3, color="white")
+                                        ),
+                                        name=f"📝 {ann_text[:15]}",
+                                        hovertemplate=f"<b>📝 Note:</b> {ann_text}<br>" +
+                                                      "<b>WW:</b> %{x}<br>" +
+                                                      "<b>Yield:</b> %{y:.2f}%<br>" +
+                                                      "<extra></extra>",
+                                        showlegend=True,
+                                    )
+                                )
+
+                                # Add callout annotation for first point (avoid clutter)
+                                fig.add_annotation(
+                                    x=ann_x[0],
+                                    y=ann_y[0],
+                                    text=f"📝 {ann_text}",
+                                    showarrow=True,
+                                    arrowhead=2,
+                                    arrowsize=1,
+                                    arrowwidth=2,
+                                    arrowcolor=ann_color,
+                                    ax=40,
+                                    ay=-40,
+                                    bordercolor=ann_color,
+                                    borderwidth=2,
+                                    borderpad=4,
+                                    bgcolor="white",
+                                    opacity=0.9,
+                                    font=dict(size=10, color=ann_color),
+                                )
 
                 # Extend x-axis with future weeks if showing future targets
                 all_workweeks = sorted_workweeks + future_wws
