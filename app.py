@@ -6,11 +6,15 @@ import re
 from datetime import datetime
 from typing import Any, Optional
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
+from urllib.parse import urlencode, parse_qs
+import base64
+import io
 
 from src.frpt_runner import FrptRunner, FrptCommand
 
@@ -311,6 +315,8 @@ def init_session_state() -> None:
         st.session_state.elc_data = pd.DataFrame()
     if "elc_last_fetch_time" not in st.session_state:
         st.session_state.elc_last_fetch_time = None
+    if "elc_annotations" not in st.session_state:
+        st.session_state.elc_annotations = []
     # Pareto tab session state
     if "pareto_data" not in st.session_state:
         st.session_state.pareto_data = pd.DataFrame()
@@ -2781,10 +2787,12 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
             )
 
         # Chart options
-        col1, col2 = st.columns(2)
-        with col1:
+        opt_col1, opt_col2, opt_col3 = st.columns(3)
+        with opt_col1:
             show_elc_labels = st.checkbox("Show data labels", value=False, key="elc_trend_show_labels")
-        with col2:
+            show_forecast = st.checkbox("Show 4-week forecast", value=False, key="elc_show_forecast",
+                                        help="Add linear trend projection for next 4 weeks")
+        with opt_col2:
             y_min = st.slider(
                 "Y-axis minimum (%)",
                 min_value=0,
@@ -2794,6 +2802,25 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                 key="elc_yaxis_min",
                 help="Adjust to zoom in on data points close together"
             )
+        with opt_col3:
+            # Share link button
+            if st.button("🔗 Copy Share Link", key="elc_copy_link", help="Copy URL with current filters"):
+                # Build shareable URL with filter params
+                share_params = {
+                    "tab": "elc",
+                    "did": ",".join(filters.get("design_ids", [])),
+                    "ff": ",".join(filters.get("form_factors", [])),
+                    "density": ",".join(filters.get("densities", [])) if filters.get("densities") else "",
+                    "speed": ",".join(filters.get("speeds", [])) if filters.get("speeds") else "",
+                    "start_ww": filters.get("start_ww", ""),
+                    "end_ww": filters.get("end_ww", ""),
+                    "series": ",".join(selected_series) if selected_series else "",
+                }
+                # Remove empty params
+                share_params = {k: v for k, v in share_params.items() if v}
+                share_url = f"?{urlencode(share_params)}"
+                st.code(share_url, language=None)
+                st.success("📋 Copy the URL above to share this view!")
 
         # Extract selected yield types from selected series for target configuration
         selected_yields = list(set(
@@ -2904,6 +2931,57 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                         )
                     )
 
+                    # ============================================================
+                    # ADD FORECAST LINE (if enabled)
+                    # Linear regression to project next 4 weeks
+                    # ============================================================
+                    if show_forecast and len(y_vals) >= 3:
+                        # Convert workweeks to numeric for regression
+                        x_numeric = np.arange(len(y_vals))
+                        y_numeric = np.array(y_vals)
+
+                        # Linear regression
+                        coeffs = np.polyfit(x_numeric, y_numeric, 1)
+                        slope, intercept = coeffs
+
+                        # Generate forecast for next 4 weeks
+                        last_ww = int(sorted_workweeks[-1])
+                        forecast_wws = []
+                        for i in range(1, 5):
+                            # Calculate next workweek (handle year rollover)
+                            next_ww = last_ww + i
+                            year = next_ww // 100
+                            week = next_ww % 100
+                            if week > 52:
+                                year += 1
+                                week = week - 52
+                            forecast_wws.append(f"{year}{week:02d}")
+
+                        # Predict values
+                        forecast_x = np.arange(len(y_vals), len(y_vals) + 4)
+                        forecast_y = slope * forecast_x + intercept
+
+                        # Clip forecast to reasonable range (0-100%)
+                        forecast_y = np.clip(forecast_y, 0, 100)
+
+                        # Add forecast line (dashed, lighter color)
+                        base_color = colors.get(yield_type, "#636EFA")
+                        fig.add_trace(
+                            go.Scatter(
+                                x=forecast_wws,
+                                y=forecast_y.tolist(),
+                                mode="lines+markers",
+                                name=f"{combined_series} (Forecast)",
+                                line=dict(color=base_color, width=2, dash="dash"),
+                                marker=dict(size=6, symbol="diamond"),
+                                hovertemplate="<b>Forecast Week:</b> %{x}<br>" +
+                                              f"<b>Series:</b> {combined_series}<br>" +
+                                              "<b>Projected Yield:</b> %{y:.2f}%<br>" +
+                                              f"<b>Trend:</b> {'+' if slope > 0 else ''}{slope:.3f}%/week<br>" +
+                                              "<extra></extra>",
+                            )
+                        )
+
                 # ============================================================
                 # ADD TARGET LINES (based on checkbox states in Section 4)
                 # Checkboxes directly control target visibility - no button needed
@@ -2990,6 +3068,24 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                                     showlegend=True,
                                     hovertemplate=f"<b>ELC Target [{selected_curve}] ({target_label}):</b> %{{y:.2f}}%<extra></extra>",
                                 )
+                            )
+
+                # ============================================================
+                # ADD ANNOTATION MARKERS (vertical lines with notes)
+                # ============================================================
+                if st.session_state.get("elc_annotations"):
+                    for ann in st.session_state.elc_annotations:
+                        if ann["workweek"] in sorted_workweeks:
+                            # Add vertical line at annotation point
+                            fig.add_vline(
+                                x=ann["workweek"],
+                                line_width=2,
+                                line_dash="dash",
+                                line_color="#FF6B6B",
+                                annotation_text=f"📝 {ann['note'][:20]}..." if len(ann['note']) > 20 else f"📝 {ann['note']}",
+                                annotation_position="top",
+                                annotation_font_size=10,
+                                annotation_font_color="#FF6B6B",
                             )
 
                 fig.update_layout(
@@ -3122,9 +3218,65 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
         st.divider()
 
         # ========================================================================
-        # SECTION 5: TARGET HISTORY & DATA TABLE (Side by Side)
+        # SECTION 5: ANNOTATIONS (Add notes to data points)
         # ========================================================================
-        st.subheader("5️⃣ Reference Data")
+        st.subheader("5️⃣ Chart Annotations")
+
+        # Initialize annotations in session state if not exists
+        if "elc_annotations" not in st.session_state:
+            st.session_state.elc_annotations = []
+
+        ann_col1, ann_col2, ann_col3 = st.columns([1, 2, 1])
+
+        with ann_col1:
+            # Workweek selector for annotation
+            ann_ww = st.selectbox(
+                "Work Week",
+                options=sorted_workweeks if 'sorted_workweeks' in dir() and sorted_workweeks else [],
+                key="elc_ann_ww",
+                help="Select the work week to annotate"
+            )
+        with ann_col2:
+            # Note text input
+            ann_note = st.text_input(
+                "Note",
+                placeholder="e.g., Process change implemented, Equipment issue...",
+                key="elc_ann_note"
+            )
+        with ann_col3:
+            # Add annotation button
+            st.markdown("<br>", unsafe_allow_html=True)  # Spacing
+            if st.button("📝 Add Note", key="elc_add_ann"):
+                if ann_ww and ann_note:
+                    new_ann = {
+                        "workweek": ann_ww,
+                        "note": ann_note,
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    }
+                    st.session_state.elc_annotations.append(new_ann)
+                    st.success(f"Added note for WW{ann_ww}")
+                    st.rerun()
+
+        # Display existing annotations
+        if st.session_state.elc_annotations:
+            st.markdown("**Current Annotations:**")
+            for idx, ann in enumerate(st.session_state.elc_annotations):
+                col1, col2 = st.columns([5, 1])
+                with col1:
+                    st.markdown(f"📌 **WW{ann['workweek']}**: {ann['note']} *({ann['timestamp']})*")
+                with col2:
+                    if st.button("🗑️", key=f"del_ann_{idx}", help="Delete this annotation"):
+                        st.session_state.elc_annotations.pop(idx)
+                        st.rerun()
+        else:
+            st.caption("No annotations yet. Add notes above to mark important events on the chart.")
+
+        st.divider()
+
+        # ========================================================================
+        # SECTION 6: REFERENCE DATA & EXPORT
+        # ========================================================================
+        st.subheader("6️⃣ Reference Data & Export")
 
         hist_col, data_col = st.columns(2)
 
@@ -3226,6 +3378,97 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                 mime="text/csv",
                 key="elc_csv_download"
             )
+
+        # PDF Report Export (full width below)
+        st.divider()
+        st.markdown("**📄 Export Report**")
+
+        pdf_col1, pdf_col2 = st.columns([2, 1])
+        with pdf_col1:
+            st.caption("Generate a PDF report with current chart, data, filters, and annotations.")
+        with pdf_col2:
+            if st.button("📄 Generate PDF Report", key="elc_pdf_export", type="primary"):
+                # Build HTML report content
+                report_html = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>ELC Yield Report - {datetime.now().strftime('%Y-%m-%d')}</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                        h1 {{ color: #1f77b4; border-bottom: 2px solid #1f77b4; padding-bottom: 10px; }}
+                        h2 {{ color: #333; margin-top: 30px; }}
+                        .filter-box {{ background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+                        .metric {{ display: inline-block; margin: 10px 20px; text-align: center; }}
+                        .metric-value {{ font-size: 24px; font-weight: bold; color: #1f77b4; }}
+                        .metric-label {{ font-size: 12px; color: #666; }}
+                        table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                        th {{ background-color: #1f77b4; color: white; }}
+                        tr:nth-child(even) {{ background-color: #f9f9f9; }}
+                        .annotation {{ background: #fff3cd; padding: 10px; margin: 5px 0; border-left: 4px solid #ffc107; }}
+                        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #666; }}
+                    </style>
+                </head>
+                <body>
+                    <h1>📊 ELC Yield Report</h1>
+                    <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+
+                    <div class="filter-box">
+                        <h3>📋 Report Filters</h3>
+                        <p><strong>DID:</strong> {', '.join(filters.get('design_ids', ['All']))}</p>
+                        <p><strong>Form Factor:</strong> {', '.join(filters.get('form_factors', ['All']))}</p>
+                        <p><strong>Density:</strong> {', '.join(filters.get('densities', [])) or 'All'}</p>
+                        <p><strong>Speed:</strong> {', '.join(filters.get('speeds', [])) or 'All'}</p>
+                        <p><strong>Work Week Range:</strong> {filters.get('start_ww', 'N/A')} - {filters.get('end_ww', 'N/A')}</p>
+                    </div>
+
+                    <h2>📈 Summary Metrics</h2>
+                    <div>
+                        <div class="metric">
+                            <div class="metric-value">{elc_df['HMFN'].mean():.2f}%</div>
+                            <div class="metric-label">Avg HMFN Yield</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">{elc_df['SLT'].mean() if 'SLT' in elc_df.columns else 0:.2f}%</div>
+                            <div class="metric-label">Avg SLT Yield</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">{elc_df['ELC'].mean() if 'ELC' in elc_df.columns else 0:.2f}%</div>
+                            <div class="metric-label">Avg ELC Yield</div>
+                        </div>
+                    </div>
+                """
+
+                # Add annotations if any
+                if st.session_state.get("elc_annotations"):
+                    report_html += "<h2>📝 Annotations</h2>"
+                    for ann in st.session_state.elc_annotations:
+                        report_html += f'<div class="annotation"><strong>WW{ann["workweek"]}:</strong> {ann["note"]} <em>({ann["timestamp"]})</em></div>'
+
+                # Add data table
+                report_html += "<h2>📋 Yield Data</h2>"
+                report_html += sorted_df.to_html(index=False, classes="data-table")
+
+                # Footer
+                report_html += f"""
+                    <div class="footer">
+                        <p>Report generated by Module Yield Dashboard | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                        <p>Data based on frpt query results</p>
+                    </div>
+                </body>
+                </html>
+                """
+
+                # Provide HTML download (user can print to PDF from browser)
+                st.download_button(
+                    label="📥 Download HTML Report",
+                    data=report_html,
+                    file_name=f"elc_yield_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+                    mime="text/html",
+                    key="elc_html_download"
+                )
+                st.info("💡 Open the HTML file in a browser and use Print → Save as PDF for a PDF version.")
 
         # Heatmap by density/speed (full width below)
         if "density" in elc_df.columns and "speed" in elc_df.columns and "ELC" in elc_df.columns:
