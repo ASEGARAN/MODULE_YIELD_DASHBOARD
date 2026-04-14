@@ -910,7 +910,7 @@ def analyze_machines_100pct_fails(
 
                 # Add recovery remark
                 if 'Recovered' in recovery_status:
-                    remarks.append("🔧 Activity detected - machine recovered")
+                    remarks.append("🔧 Potential PM done, machine recovered")
 
                 # SOP Violation Check (Level 1): Same lot with multiple 100% fails on same machine
                 # indicates retest on same MOBO instead of moving to different one
@@ -919,7 +919,7 @@ def analyze_machines_100pct_fails(
                 if repeated_lots:
                     sop_violation = True
                     sop_violation_lots = repeated_lots
-                    remarks.append(f"⚠️ SOP Violation (lot-level): {len(repeated_lots)} lot(s) retested on same MOBO")
+                    remarks.append(f"⚠️ SOP Violation (lot-level) WW{current_ww}: {len(repeated_lots)} lot(s) retested on same MOBO")
 
                 # SOP Violation Check (Level 2): MSN-level SBIN tracking
                 # Look for HUNG1 -> HUNG2 -> HUNG progression on same MSN
@@ -927,7 +927,7 @@ def analyze_machines_100pct_fails(
                 if msn_violation.get('has_violation'):
                     sop_violation = True
                     violation_count = msn_violation.get('violation_count', 0)
-                    remarks.append(f"⚠️ SOP Violation (MSN-level): {violation_count} module(s) with HUNG progression")
+                    remarks.append(f"⚠️ SOP Violation (MSN-level) WW{current_ww}: {violation_count} module(s) with HUNG progression")
             else:
                 recovery_status = '—'
 

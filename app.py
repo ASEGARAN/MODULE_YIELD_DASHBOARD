@@ -3731,123 +3731,36 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
 
                 comp_display['Hang Status'] = comp_display.apply(get_hang_status, axis=1)
 
-                # Get list of problematic machines (New Issue + Recurring)
-                current_issue_machines = comparison_df[
+                # Get list of problematic machines (New Issue + Recurring), sorted by Hang cDPM, limit to top 10
+                problematic_machines_df = comparison_df[
                     (comparison_df['is_new']) | (comparison_df['is_chronic'])
-                ]['machine_id'].tolist()
+                ].sort_values(f'hang_cDPM_{selected_ww}', ascending=False).head(10)
+                current_issue_machines = problematic_machines_df['machine_id'].tolist()
 
                 # Calculate next week
                 next_ww = f"{int(selected_ww[:4])}{int(selected_ww[4:])+1:02d}" if int(selected_ww[4:]) < 52 else f"{int(selected_ww[:4])+1}01"
 
-                # Button to run 100% fail analysis (adds columns to table)
-                if current_issue_machines:
-                    # Description for 100% Fail Analysis
-                    with st.expander("ℹ️ 100% Fail Analysis Methodology", expanded=False):
-                        st.markdown(f"""
-**Purpose:** Deep-dive into problematic machines to find 100% fail cases (all 4 modules failed).
-
-**Data Source:** `tsums` (lot-level summary)
-
-**Command:**
-```
-tsums -machine_id=NVGRACE-XXXXXX -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
-```
-
-**100% Fail Condition:** `UIN=4` and `UPASS=0` (all 4 units tested, 0 passed)
-
-**Categorization:**
-| Status | Condition |
-|--------|-----------|
-| 🔄 **Chronic 100% Fail** | 100% fail in both WW{selected_ww} and WW{prev_ww} |
-| 🆕 **New 100% Fail** | 100% fail only in WW{selected_ww} |
-| ✅ **Resolved** | 100% fail only in WW{prev_ww} (no longer failing) |
-| ✅ **No 100% Fail** | No 100% fail cases detected |
-
-**Recovery Check (WW{next_ww}):**
-- ✅ **Recovered** - Machine ran successfully (UIN=4, UPASS=4) in the following week
-- ❌ **Still Failing** - Machine still has 100% fails in the following week
-- ⏳ **No Data Yet** - No runs recorded in the following week
-
-**⚠️ SOP Violation Detection (Two-Level):**
-Per the *Global Motherboard Failure Technician Procedure*, after a HANG failure, the module should be retested on a **DIFFERENT motherboard**, not the same one.
-
-**Level 1 (Lot-Level):** Flagged when the **same lot** has multiple 100% fail entries on the **same machine** - indicating it was retested on the same MOBO instead of being moved.
-
-**Level 2 (MSN-Level - SBIN Tracking):** Uses `mtsums -msn` to track individual module serial numbers and their SBIN progression:
-| SBIN | Meaning | Action Required |
-|------|---------|-----------------|
-| HUNG1 | First HANG failure | Move to different MOBO |
-| HUNG2 | Second HANG on same MOBO | **SOP Violation!** |
-| HUNG | Third+ HANG on same MOBO | **Severe SOP Violation!** |
-
-If a module shows HUNG2 or HUNG on the same machine, it means the operator retested it on the same MOBO multiple times instead of moving it.
-
-Rows with SOP violations are highlighted in **orange**.
-                        """)
-
-                    analyze_btn = st.button(
-                        f"🔎 Analyze 100% Fails for {len(current_issue_machines)} Problematic Machines",
-                        key="grace_batch_analyze",
-                        help="Runs tsums drill-down to check for UIN=4, UPASS=0 cases and recovery status"
-                    )
-
-                    if analyze_btn:
-                        with st.spinner(f"Running tsums drill-down for {len(current_issue_machines)} machines..."):
-                            drill_df = analyze_machines_100pct_fails(
-                                machine_ids=current_issue_machines,
-                                current_ww=selected_ww,
-                                previous_ww=prev_ww,
-                                days=30
-                            )
-                            st.session_state.grace_drill_results = drill_df
-
-                # Check if drill-down results are available to merge
+                # Check if drill-down results are available
                 has_drill_results = 'grace_drill_results' in st.session_state and st.session_state.grace_drill_results is not None
 
-                if has_drill_results:
-                    drill_df = st.session_state.grace_drill_results
+                # Prepare problematic_display for left column (always visible)
+                problematic_display = comp_display[
+                    (comp_display['Hang Status'].str.contains('New Issue|Recurring', regex=True, na=False))
+                ].sort_values(f'hang_cDPM_{selected_ww}', ascending=False).head(10)
 
-                    # Merge drill-down results into comp_display
-                    drill_merge = drill_df[['machine_id', 'status', 'count_current', 'count_prev', 'recovery_status', 'sop_violation', 'remarks']].copy()
-                    drill_merge.columns = ['machine_id', '100% Fail Status', '100% Fail Curr', '100% Fail Prev', 'Recovery', 'SOP Violation', 'Remarks']
+                if current_issue_machines:
+                    st.markdown(f"**Top {len(problematic_display)} Problematic Motherboards** (sorted by Hang cDPM)")
 
-                    comp_display = comp_display.merge(drill_merge, on='machine_id', how='left')
+                    # Two-column layout: Left = WoW Hang | Right = 100% Fail Analysis
+                    left_col, right_col = st.columns(2)
 
-                    # Fill NaN for machines not in drill-down (Fixed machines)
-                    comp_display['100% Fail Status'] = comp_display['100% Fail Status'].fillna('—')
-                    comp_display['Recovery'] = comp_display['Recovery'].fillna('—')
-                    comp_display['SOP Violation'] = comp_display['SOP Violation'].fillna(False)
-                    comp_display['Remarks'] = comp_display['Remarks'].fillna('')
-                    comp_display['100% Fail Curr'] = comp_display['100% Fail Curr'].fillna(0).astype(int)
-                    comp_display['100% Fail Prev'] = comp_display['100% Fail Prev'].fillna(0).astype(int)
-
-                    # Summary metrics - Recovery Status & SOP Violations
-                    recovered_count = len(drill_df[drill_df['recovery_status'].str.contains('Recovered', na=False)])
-                    still_failing_count = len(drill_df[drill_df['recovery_status'].str.contains('Still Failing', na=False)])
-                    chronic_100_count = len(drill_df[drill_df['status'] == '🔄 Chronic 100% Fail'])
-                    sop_violation_count = len(drill_df[drill_df['sop_violation'] == True])
-
-                    st.markdown(f"**Recovery Check (WW{next_ww}) & SOP Compliance:**")
-                    recovery_cols = st.columns(4)
-                    with recovery_cols[0]:
-                        st.metric("✅ Recovered", recovered_count, help=f"No 100% fails in WW{next_ww}")
-                    with recovery_cols[1]:
-                        st.metric("❌ Still Failing", still_failing_count, help=f"Still has 100% fails in WW{next_ww}")
-                    with recovery_cols[2]:
-                        st.metric("🔄 Chronic 100%", chronic_100_count, help="100% fail in both weeks")
-                    with recovery_cols[3]:
-                        st.metric("⚠️ SOP Violations", sop_violation_count,
-                                 help="Same lot retested multiple times on same MOBO (should move to different MOBO after HANG failure)")
-
-                    # Two-column parallel view: WoW Comparison | 100% Fail Analysis
-                    table_col1, table_col2 = st.columns(2)
-
-                    # Left Column: WoW Comparison Table
-                    with table_col1:
-                        st.markdown("**📊 Week-over-Week Hang Comparison**")
+                    # ========== LEFT COLUMN: WoW Hang Comparison (Always Visible) ==========
+                    with left_col:
+                        st.markdown("### 📊 WoW Hang Comparison")
+                        st.caption("First-level findings: Machines with Hang cDPM > 0")
 
                         wow_cols = ['machine_id', 'Hang Status', f'hang_cDPM_{selected_ww}', f'hang_cDPM_{prev_ww}', 'hang_delta']
-                        wow_display = comp_display[wow_cols].copy()
+                        wow_display = problematic_display[wow_cols].copy()
                         wow_display.columns = ['Machine ID', 'Status', f'WW{selected_ww}', f'WW{prev_ww}', 'Delta']
 
                         def highlight_wow_status(row):
@@ -3855,8 +3768,6 @@ Rows with SOP violations are highlighted in **orange**.
                                 return ['background-color: #FFCDD2; font-weight: bold'] * len(row)  # Light red
                             elif '🆕 New Issue' in str(row['Status']):
                                 return ['background-color: #FFF9C4'] * len(row)  # Light yellow
-                            elif '✅ Fixed' in str(row['Status']):
-                                return ['background-color: #C8E6C9'] * len(row)  # Light green
                             return [''] * len(row)
 
                         styled_wow = wow_display.style.apply(highlight_wow_status, axis=1).format({
@@ -3864,85 +3775,123 @@ Rows with SOP violations are highlighted in **orange**.
                             f'WW{prev_ww}': '{:.2f}',
                             'Delta': '{:+.2f}'
                         })
-                        st.dataframe(styled_wow, use_container_width=True, hide_index=True, height=400)
+                        st.dataframe(styled_wow, use_container_width=True, hide_index=True, height=450)
 
-                    # Right Column: 100% Fail Analysis Table
-                    with table_col2:
-                        st.markdown("**🔬 100% Fail Analysis (UIN=4, UPASS=0)**")
+                    # ========== RIGHT COLUMN: 100% Fail Analysis ==========
+                    with right_col:
+                        st.markdown("### 🔬 100% Fail Analysis")
+                        st.caption("Deep-dive: UIN=4, UPASS=0 (all modules failed)")
 
-                        fail_cols = ['machine_id', '100% Fail Status', '100% Fail Curr', '100% Fail Prev', 'Recovery', 'Remarks']
-                        fail_display = comp_display[fail_cols].copy()
-                        fail_display.columns = ['Machine ID', 'Status', f'WW{selected_ww}', f'WW{prev_ww}', f'WW{next_ww}', 'Remarks']
+                        # Methodology expander
+                        with st.expander("ℹ️ Methodology", expanded=False):
+                            st.markdown(f"""
+**Data Source:** `tsums` (lot-level) + `mtsums -msn` (module-level)
 
-                        def highlight_fail_status(row):
-                            remarks = str(row.get('Remarks', ''))
-                            if 'SOP Violation' in remarks:
-                                return ['background-color: #FFAB91; font-weight: bold'] * len(row)  # Orange for SOP violation
-                            elif '🔄 Chronic' in str(row['Status']):
-                                return ['background-color: #FFCDD2; font-weight: bold'] * len(row)  # Light red
-                            elif '🆕 New' in str(row['Status']):
-                                return ['background-color: #FFF9C4'] * len(row)  # Light yellow
-                            elif '✅ Recovered' in str(row[f'WW{next_ww}']):
-                                return ['background-color: #C8E6C9'] * len(row)  # Light green
-                            return [''] * len(row)
+**100% Fail:** `UIN=4` and `UPASS=0`
 
-                        styled_fail = fail_display.style.apply(highlight_fail_status, axis=1)
-                        st.dataframe(styled_fail, use_container_width=True, hide_index=True, height=400)
+**Status:**
+- 🔄 **Chronic** - 100% fail in both WW{selected_ww} and WW{prev_ww}
+- 🆕 **New** - Only in WW{selected_ww}
+- ✅ **Resolved** - Only in WW{prev_ww}
 
-                    # Lot details expander (full width below the tables)
-                    with st.expander("📋 Lot Details (100% Fail Cases)", expanded=False):
-                        fail_machines = drill_df[drill_df['status'].str.contains('Chronic|New', regex=True)]
-                        if not fail_machines.empty:
-                            lot_col1, lot_col2 = st.columns(2)
-                            machines_list = fail_machines.to_dict('records')
-                            half = len(machines_list) // 2 + len(machines_list) % 2
+**Recovery (WW{next_ww}):** Checks if machine passed next week
 
-                            with lot_col1:
-                                for row in machines_list[:half]:
-                                    st.markdown(f"**{row['machine_id']}** - {row['status']}")
-                                    if row['recovery_status']:
-                                        st.markdown(f"  Recovery: {row['recovery_status']}")
-                                    if row['lots_current']:
-                                        st.markdown(f"  - WW{selected_ww}: `{row['lots_current']}`")
-                                    if row['lots_prev']:
-                                        st.markdown(f"  - WW{prev_ww}: `{row['lots_prev']}`")
-                                    st.markdown("---")
+**⚠️ SOP Violation:** Same lot/MSN retested on same MOBO after HANG
+- HUNG1 → Move to different MOBO
+- HUNG2/HUNG → **Violation!** (retested on same MOBO)
+                            """)
 
-                            with lot_col2:
-                                for row in machines_list[half:]:
-                                    st.markdown(f"**{row['machine_id']}** - {row['status']}")
-                                    if row['recovery_status']:
-                                        st.markdown(f"  Recovery: {row['recovery_status']}")
-                                    if row['lots_current']:
-                                        st.markdown(f"  - WW{selected_ww}: `{row['lots_current']}`")
-                                    if row['lots_prev']:
-                                        st.markdown(f"  - WW{prev_ww}: `{row['lots_prev']}`")
-                                    st.markdown("---")
+                        # Analyze button
+                        analyze_btn = st.button(
+                            f"🔎 Analyze {len(current_issue_machines)} Machines",
+                            key="grace_batch_analyze",
+                            help="Runs tsums drill-down for 100% fail cases"
+                        )
+
+                        if analyze_btn:
+                            with st.spinner(f"Analyzing {len(current_issue_machines)} machines..."):
+                                drill_df = analyze_machines_100pct_fails(
+                                    machine_ids=current_issue_machines,
+                                    current_ww=selected_ww,
+                                    previous_ww=prev_ww,
+                                    days=30
+                                )
+                                st.session_state.grace_drill_results = drill_df
+                                has_drill_results = True
+
+                        # Show results if available
+                        if has_drill_results:
+                            drill_df = st.session_state.grace_drill_results
+
+                            # Summary metrics row
+                            recovered_count = len(drill_df[drill_df['recovery_status'].str.contains('Recovered', na=False)])
+                            still_failing_count = len(drill_df[drill_df['recovery_status'].str.contains('Still Failing', na=False)])
+                            sop_violation_count = len(drill_df[drill_df['sop_violation'] == True])
+
+                            metric_cols = st.columns(3)
+                            with metric_cols[0]:
+                                st.metric("✅ Recovered", recovered_count)
+                            with metric_cols[1]:
+                                st.metric("❌ Still Failing", still_failing_count)
+                            with metric_cols[2]:
+                                st.metric("⚠️ SOP Violations", sop_violation_count)
+
+                            # 100% Fail Analysis Table
+                            fail_display = drill_df[['machine_id', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
+                            fail_display.columns = ['Machine ID', 'Status', f'WW{selected_ww}', f'Recovery (WW{next_ww})', 'Remarks']
+
+                            def highlight_fail_status(row):
+                                remarks = str(row.get('Remarks', ''))
+                                if 'SOP Violation' in remarks:
+                                    return ['background-color: #FFAB91; font-weight: bold'] * len(row)  # Orange
+                                elif '🔄 Chronic' in str(row['Status']):
+                                    return ['background-color: #FFCDD2; font-weight: bold'] * len(row)  # Light red
+                                elif '🆕 New' in str(row['Status']):
+                                    return ['background-color: #FFF9C4'] * len(row)  # Light yellow
+                                elif '✅ Recovered' in str(row[f'Recovery (WW{next_ww})']):
+                                    return ['background-color: #C8E6C9'] * len(row)  # Light green
+                                return [''] * len(row)
+
+                            styled_fail = fail_display.style.apply(highlight_fail_status, axis=1)
+                            st.dataframe(styled_fail, use_container_width=True, hide_index=True, height=280)
+
                         else:
-                            st.info("No 100% fail cases found")
+                            # Placeholder when no analysis yet
+                            st.info("👆 Click **Analyze** to run 100% fail drill-down")
 
-                else:
-                    # No drill-down yet - show basic table
-                    display_cols = ['machine_id', 'Hang Status', f'hang_cDPM_{selected_ww}', f'hang_cDPM_{prev_ww}', 'hang_delta']
-                    basic_display = comp_display[display_cols].copy()
-                    basic_display.columns = ['Machine ID', 'Hang Status', f'Hang WW{selected_ww}', f'Hang WW{prev_ww}', 'Delta']
+                    # Lot details expander (full width below the columns)
+                    if has_drill_results:
+                        drill_df = st.session_state.grace_drill_results
+                        with st.expander("📋 Lot Details (100% Fail Cases)", expanded=False):
+                            fail_machines = drill_df[drill_df['status'].str.contains('Chronic|New', regex=True)]
+                            if not fail_machines.empty:
+                                lot_col1, lot_col2 = st.columns(2)
+                                machines_list = fail_machines.to_dict('records')
+                                half = len(machines_list) // 2 + len(machines_list) % 2
 
-                    def highlight_basic_status(row):
-                        if '🔄 Recurring' in str(row['Hang Status']):
-                            return ['background-color: #FFCDD2; font-weight: bold'] * len(row)
-                        elif '🆕 New Issue' in str(row['Hang Status']):
-                            return ['background-color: #FFF9C4'] * len(row)
-                        return [''] * len(row)
+                                with lot_col1:
+                                    for row in machines_list[:half]:
+                                        st.markdown(f"**{row['machine_id']}** - {row['status']}")
+                                        if row['recovery_status']:
+                                            st.markdown(f"  Recovery: {row['recovery_status']}")
+                                        if row['lots_current']:
+                                            st.markdown(f"  - WW{selected_ww}: `{row['lots_current']}`")
+                                        if row['lots_prev']:
+                                            st.markdown(f"  - WW{prev_ww}: `{row['lots_prev']}`")
+                                        st.markdown("---")
 
-                    styled_df = basic_display.style.apply(highlight_basic_status, axis=1).format({
-                        f'Hang WW{selected_ww}': '{:.2f}',
-                        f'Hang WW{prev_ww}': '{:.2f}',
-                        'Delta': '{:+.2f}'
-                    })
-                    st.dataframe(styled_df, use_container_width=True, hide_index=True)
-
-                    if current_issue_machines:
-                        st.caption(f"👆 Click the button above to analyze 100% fail cases and recovery status for {len(current_issue_machines)} problematic machines")
+                                with lot_col2:
+                                    for row in machines_list[half:]:
+                                        st.markdown(f"**{row['machine_id']}** - {row['status']}")
+                                        if row['recovery_status']:
+                                            st.markdown(f"  Recovery: {row['recovery_status']}")
+                                        if row['lots_current']:
+                                            st.markdown(f"  - WW{selected_ww}: `{row['lots_current']}`")
+                                        if row['lots_prev']:
+                                            st.markdown(f"  - WW{prev_ww}: `{row['lots_prev']}`")
+                                        st.markdown("---")
+                            else:
+                                st.info("No 100% fail cases found")
 
             else:
                 st.success(f"No machines with Hang failures in WW{selected_ww} or WW{prev_ww}")
