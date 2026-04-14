@@ -508,7 +508,7 @@ def fetch_machine_tsums(
     """
     step_list = ','.join(steps)
 
-    cmd = f"tsums -machine_id={machine_id} -step={step_list} -standard_flow=yes -{days} -ta -format+=mfg_workweek,bios_version +echo"
+    cmd = f"/u/summary/bin/tsums -machine_id={machine_id} -step={step_list} -standard_flow=yes -{days} -ta -format+=mfg_workweek,bios_version +echo"
 
     logger.info(f"Running tsums command: {cmd}")
 
@@ -645,3 +645,320 @@ def get_previous_workweek(ww: str) -> str:
     else:
         # Handle year boundary - assume previous year has 52 weeks
         return f"{year-1}52"
+
+
+def get_next_workweek(ww: str) -> str:
+    """
+    Get the next work week given a work week string.
+
+    Args:
+        ww: Work week in YYYYWW format (e.g., '202614')
+
+    Returns:
+        Next work week (e.g., '202615')
+    """
+    year = int(ww[:4])
+    week = int(ww[4:])
+
+    if week < 52:
+        return f"{year}{week+1:02d}"
+    else:
+        # Handle year boundary
+        return f"{year+1}01"
+
+
+def fetch_msn_sbin_data(
+    machine_id: str,
+    workweek: str,
+    steps: list[str] = ['hmb1', 'qmon']
+) -> Optional[pd.DataFrame]:
+    """
+    Fetch MSN-level data with SBIN values for SOP violation detection.
+
+    Uses: mtsums -machine_id=NVGRACE-XXXXXX -ww=YYYYWW -step=hmb1,qmon -msn
+          -format=lot,msn,sbin,step,mfg_workweek +csv +quiet
+
+    Args:
+        machine_id: Machine ID (e.g., 'NVGRACE-099562')
+        workweek: Work week to query (YYYYWW format)
+        steps: Test steps to include
+
+    Returns:
+        DataFrame with columns: LOT, MSN, SBIN, STEP, MFG_WORKWEEK
+    """
+    step_list = ','.join(steps)
+
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        f'-machine_id={machine_id}',
+        f'-ww={workweek}',
+        f'-step={step_list}',
+        '-msn',
+        '-format=lot,msn,sbin,step,mfg_workweek',
+        '+csv',
+        '+quiet'
+    ]
+
+    logger.info(f"Running mtsums MSN command: {' '.join(cmd)}")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if result.returncode != 0:
+            logger.error(f"mtsums MSN failed: {result.stderr}")
+            return None
+
+        output = result.stdout
+        if not output.strip():
+            logger.warning("mtsums MSN returned empty output")
+            return None
+
+        df = pd.read_csv(StringIO(output))
+        logger.info(f"Fetched {len(df)} MSN records for {machine_id}")
+        return df
+
+    except subprocess.TimeoutExpired:
+        logger.error("mtsums MSN command timed out")
+        return None
+    except Exception as e:
+        logger.error(f"Error fetching MSN data: {e}")
+        return None
+
+
+def detect_sop_violations_msn(
+    machine_id: str,
+    workweek: str,
+    steps: list[str] = ['hmb1', 'qmon']
+) -> dict:
+    """
+    Detect SOP violations using MSN-level SBIN tracking.
+
+    SOP Violation Pattern (per HMB1 HANG Failure SOP):
+    - Same MSN with multiple HUNG1, HUNG2, HUNG on same MACHINE_ID
+    - After HANG failure, module should be moved to DIFFERENT motherboard
+    - Retesting on same MOBO is an SOP violation
+
+    SBIN Progression:
+    - HUNG1: First HANG failure (should trigger MOBO change)
+    - HUNG2: Second HANG on same MOBO (SOP violation!)
+    - HUNG: Third+ HANG on same MOBO (severe SOP violation!)
+
+    Args:
+        machine_id: Machine ID to analyze
+        workweek: Work week to check
+        steps: Test steps to include
+
+    Returns:
+        Dict with violation details:
+        - has_violation: True if SOP violation detected
+        - violation_msns: List of MSNs with violations
+        - hang_progression: Dict mapping MSN to SBIN sequence
+        - total_hangs: Total HANG-related SBIN count
+    """
+    df = fetch_msn_sbin_data(machine_id, workweek, steps)
+
+    if df is None or df.empty:
+        return {
+            'has_violation': False,
+            'violation_msns': [],
+            'hang_progression': {},
+            'total_hangs': 0,
+            'error': 'No MSN data available'
+        }
+
+    # HANG-related SBIN values
+    hang_sbins = ['HUNG1', 'HUNG2', 'HUNG', 'HANG1', 'HANG2', 'HANG']
+
+    # Filter for HANG-related SBINs
+    hang_df = df[df['SBIN'].isin(hang_sbins)].copy()
+
+    if hang_df.empty:
+        return {
+            'has_violation': False,
+            'violation_msns': [],
+            'hang_progression': {},
+            'total_hangs': 0
+        }
+
+    # Track SBIN progression per MSN
+    hang_progression = {}
+    violation_msns = []
+
+    for msn in hang_df['MSN'].unique():
+        msn_sbins = hang_df[hang_df['MSN'] == msn]['SBIN'].tolist()
+        hang_progression[msn] = msn_sbins
+
+        # SOP Violation: MSN has multiple HANG SBINs on same machine
+        # HUNG2 or HUNG indicates retest on same MOBO (violation)
+        has_hung2_or_hung = any(s in ['HUNG2', 'HUNG', 'HANG2', 'HANG'] for s in msn_sbins)
+        has_multiple_hangs = len(msn_sbins) > 1
+
+        if has_hung2_or_hung or has_multiple_hangs:
+            violation_msns.append(msn)
+
+    return {
+        'has_violation': len(violation_msns) > 0,
+        'violation_msns': violation_msns,
+        'hang_progression': hang_progression,
+        'total_hangs': len(hang_df),
+        'violation_count': len(violation_msns)
+    }
+
+
+def analyze_machines_100pct_fails(
+    machine_ids: list[str],
+    current_ww: str,
+    previous_ww: str,
+    days: int = 30
+) -> pd.DataFrame:
+    """
+    Analyze 100% fail cases (UIN=4, UPASS=0) for multiple machines.
+
+    Categorizes each machine based on when 100% fails were observed:
+    - New 100% Fail: Only in current week
+    - Chronic 100% Fail: In both weeks
+    - Resolved: Only in previous week (no longer failing)
+    - No 100% Fail: No 100% fail cases detected
+
+    Also checks recovery status in the upcoming week (current_ww + 1).
+
+    Args:
+        machine_ids: List of machine IDs to analyze
+        current_ww: Current work week (YYYYWW format)
+        previous_ww: Previous work week (YYYYWW format)
+        days: Days to look back for tsums data
+
+    Returns:
+        DataFrame with columns: machine_id, status, count_current, count_prev,
+                               recovery_status, count_next, lots_current, lots_prev
+    """
+    results = []
+    next_ww = get_next_workweek(current_ww)
+
+    for machine_id in machine_ids:
+        try:
+            tsums_df = fetch_machine_tsums(machine_id, days=days)
+
+            if tsums_df is None or tsums_df.empty:
+                results.append({
+                    'machine_id': machine_id,
+                    'status': '⚠️ No Data',
+                    'count_current': 0,
+                    'count_prev': 0,
+                    'recovery_status': '—',
+                    'count_next': 0,
+                    'sop_violation': False,
+                    'sop_violation_lots': '',
+                    'remarks': '',
+                    'lots_current': '',
+                    'lots_prev': ''
+                })
+                continue
+
+            # Filter for 100% fail cases (UIN=4, UPASS=0)
+            fail_100pct = tsums_df[(tsums_df['uin'] == 4) & (tsums_df['upass'] == 0)]
+
+            current_fails = fail_100pct[fail_100pct['mfg_workweek'] == current_ww]
+            prev_fails = fail_100pct[fail_100pct['mfg_workweek'] == previous_ww]
+            next_fails = fail_100pct[fail_100pct['mfg_workweek'] == next_ww]
+
+            count_current = len(current_fails)
+            count_prev = len(prev_fails)
+            count_next = len(next_fails)
+
+            # Get lot IDs for reference
+            lots_current = ', '.join(current_fails['lot'].unique().tolist()) if count_current > 0 else ''
+            lots_prev = ', '.join(prev_fails['lot'].unique().tolist()) if count_prev > 0 else ''
+
+            # Determine status
+            if count_current > 0 and count_prev > 0:
+                status = '🔄 Chronic 100% Fail'
+            elif count_current > 0 and count_prev == 0:
+                status = '🆕 New 100% Fail'
+            elif count_current == 0 and count_prev > 0:
+                status = '✅ Resolved'
+            else:
+                status = '✅ No 100% Fail'
+
+            # Check recovery status in next week
+            # Only relevant for machines with 100% fails in current week
+            remarks = []
+            sop_violation = False
+            sop_violation_lots = []
+
+            if count_current > 0:
+                # Check if there's any data in next week
+                next_ww_data = tsums_df[tsums_df['mfg_workweek'] == next_ww]
+                if next_ww_data.empty:
+                    recovery_status = '⏳ No Data Yet'
+                elif count_next > 0:
+                    # Still has 100% fails in next week
+                    recovery_status = f'❌ Still Failing ({count_next})'
+                else:
+                    # Has data but no 100% fails - check for successful runs
+                    next_pass = next_ww_data[(next_ww_data['uin'] == 4) & (next_ww_data['upass'] == 4)]
+                    if len(next_pass) > 0:
+                        recovery_status = f'✅ Recovered ({len(next_pass)} pass)'
+                    else:
+                        # Partial or other results
+                        recovery_status = f'🔶 Partial ({len(next_ww_data)} runs)'
+
+                # Add recovery remark
+                if 'Recovered' in recovery_status:
+                    remarks.append("🔧 Activity detected - machine recovered")
+
+                # SOP Violation Check (Level 1): Same lot with multiple 100% fails on same machine
+                # indicates retest on same MOBO instead of moving to different one
+                lot_fail_counts = current_fails.groupby('lot').size()
+                repeated_lots = lot_fail_counts[lot_fail_counts > 1].index.tolist()
+                if repeated_lots:
+                    sop_violation = True
+                    sop_violation_lots = repeated_lots
+                    remarks.append(f"⚠️ SOP Violation (lot-level): {len(repeated_lots)} lot(s) retested on same MOBO")
+
+                # SOP Violation Check (Level 2): MSN-level SBIN tracking
+                # Look for HUNG1 -> HUNG2 -> HUNG progression on same MSN
+                msn_violation = detect_sop_violations_msn(machine_id, current_ww)
+                if msn_violation.get('has_violation'):
+                    sop_violation = True
+                    violation_count = msn_violation.get('violation_count', 0)
+                    remarks.append(f"⚠️ SOP Violation (MSN-level): {violation_count} module(s) with HUNG progression")
+            else:
+                recovery_status = '—'
+
+            results.append({
+                'machine_id': machine_id,
+                'status': status,
+                'count_current': count_current,
+                'count_prev': count_prev,
+                'recovery_status': recovery_status,
+                'count_next': count_next,
+                'sop_violation': sop_violation,
+                'sop_violation_lots': ', '.join(sop_violation_lots) if sop_violation_lots else '',
+                'remarks': ' | '.join(remarks) if remarks else '',
+                'lots_current': lots_current,
+                'lots_prev': lots_prev
+            })
+
+        except Exception as e:
+            logger.error(f"Error analyzing machine {machine_id}: {e}")
+            results.append({
+                'machine_id': machine_id,
+                'status': '❌ Error',
+                'count_current': 0,
+                'count_prev': 0,
+                'recovery_status': '—',
+                'count_next': 0,
+                'sop_violation': False,
+                'sop_violation_lots': '',
+                'remarks': str(e)[:50],
+                'lots_current': '',
+                'lots_prev': ''
+            })
+
+    return pd.DataFrame(results)
