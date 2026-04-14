@@ -2786,39 +2786,27 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                 f"To narrow down options, select specific {' and '.join(filter_note_parts)} values in the sidebar filters before fetching data.*"
             )
 
-        # Chart options
-        opt_col1, opt_col2, opt_col3 = st.columns(3)
-        with opt_col1:
+        # Chart options row 1: Display options
+        opt_row1 = st.columns([1, 1, 1, 1])
+        with opt_row1[0]:
             show_elc_labels = st.checkbox("Show data labels", value=False, key="elc_trend_show_labels")
-        with opt_col2:
-            y_min = st.slider(
-                "Y-axis minimum (%)",
-                min_value=0,
-                max_value=98,
-                value=90,
-                step=1,
-                key="elc_yaxis_min",
-                help="Adjust to zoom in on data points close together"
+        with opt_row1[1]:
+            y_min = st.slider("Y-axis min %", min_value=0, max_value=98, value=90, step=1, key="elc_yaxis_min")
+        with opt_row1[2]:
+            # Target curve selector (moved from Section 4)
+            selected_curve = st.selectbox(
+                "Target Curve",
+                options=CURVE_ORDER[::-1],
+                index=0,
+                key="elc_target_curve",
+                help="Select curve for target lines"
             )
-        with opt_col3:
-            # Share link button
-            if st.button("🔗 Copy Share Link", key="elc_copy_link", help="Copy URL with current filters"):
-                # Build shareable URL with filter params
-                share_params = {
-                    "tab": "elc",
-                    "did": ",".join(filters.get("design_ids", [])),
-                    "ff": ",".join(filters.get("form_factors", [])),
-                    "density": ",".join(filters.get("densities", [])) if filters.get("densities") else "",
-                    "speed": ",".join(filters.get("speeds", [])) if filters.get("speeds") else "",
-                    "start_ww": filters.get("start_ww", ""),
-                    "end_ww": filters.get("end_ww", ""),
-                    "series": ",".join(selected_series) if selected_series else "",
-                }
-                # Remove empty params
-                share_params = {k: v for k, v in share_params.items() if v}
-                share_url = f"?{urlencode(share_params)}"
-                st.code(share_url, language=None)
-                st.success("📋 Copy the URL above to share this view!")
+        with opt_row1[3]:
+            # Single "Show Targets" toggle - auto-shows targets for selected yield types
+            show_targets = st.checkbox("Show Targets", value=False, key="elc_show_targets",
+                                       help="Show target lines for selected series")
+            show_future = st.checkbox("+ Future (8wk)", value=False, key="elc_show_future_targets",
+                                      help="Extend with next 8 weeks' targets")
 
         # Extract selected yield types from selected series for target configuration
         selected_yields = list(set(
@@ -2953,16 +2941,17 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
 
 
                 # ============================================================
-                # ADD TARGET LINES (based on checkbox states in Section 4)
-                # Checkboxes directly control target visibility - no button needed
+                # ADD TARGET LINES (auto-show for selected yield types when "Show Targets" is on)
                 # ============================================================
-                # Get target checkbox states from session state
-                show_hmfn_target = st.session_state.get("elc_show_hmfn_target", False)
-                show_slt_target = st.session_state.get("elc_show_slt_target", False)
-                show_elc_target = st.session_state.get("elc_show_elc_target", False)
+                show_targets = st.session_state.get("elc_show_targets", False)
                 selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
 
-                if can_show_targets and target_key and (show_hmfn_target or show_slt_target or show_elc_target):
+                # Auto-derive which targets to show based on selected series
+                show_hmfn_target = show_targets and "HMFN" in selected_yields
+                show_slt_target = show_targets and "SLT" in selected_yields
+                show_elc_target = show_targets and "ELC" in selected_yields
+
+                if can_show_targets and target_key and show_targets:
 
                     # HMFN Target (from HMFN_TARGETS)
                     if show_hmfn_target:
@@ -3139,59 +3128,21 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
         st.divider()
 
         # ========================================================================
-        # SECTION 4: TARGETS, ANNOTATIONS & DATA (Combined)
+        # SECTION 4: ANNOTATIONS & DATA
         # ========================================================================
-        st.subheader("4️⃣ Targets, Annotations & Data")
+        st.subheader("4️⃣ Annotations & Data")
 
         # Initialize annotations
         if "elc_annotations" not in st.session_state:
             st.session_state.elc_annotations = []
 
-        # ---- ROW 1: Curve Selection + Target Checkboxes ----
-        if can_show_targets and target_key:
-            curve_row = st.columns([1.2, 0.6, 1.5, 0.8, 0.8, 0.8, 1])
-            with curve_row[0]:
-                selected_curve = st.selectbox(
-                    "Target Curve",
-                    options=CURVE_ORDER[::-1],
-                    index=0,
-                    key="elc_target_curve",
-                    help="D1 is the current active curve"
-                )
-            with curve_row[1]:
-                badge_color = "#00C853" if selected_curve == ACTIVE_CURVE else "#FF9800"
-                badge_text = "✓ ACTIVE" if selected_curve == ACTIVE_CURVE else "HISTORICAL"
-                st.markdown(f'<div style="padding-top:1.7rem;"><span style="background:{badge_color};color:white;padding:0.3rem 0.6rem;border-radius:12px;font-size:0.7rem;font-weight:600;">{badge_text}</span></div>', unsafe_allow_html=True)
-            with curve_row[2]:
-                if selected_curve in CURVE_INFO:
-                    st.caption(f"_{CURVE_INFO[selected_curve]['description']}_")
-            with curve_row[3]:
-                if "HMFN" in selected_yields:
-                    st.checkbox("HMFN", value=False, key="elc_show_hmfn_target")
-            with curve_row[4]:
-                if "SLT" in selected_yields:
-                    st.checkbox("SLT", value=False, key="elc_show_slt_target")
-            with curve_row[5]:
-                if "ELC" in selected_yields:
-                    st.checkbox("ELC", value=False, key="elc_show_elc_target")
-            with curve_row[6]:
-                st.checkbox("Future Targets", value=False, key="elc_show_future_targets",
-                            help="Show next 8 weeks' target values from selected curve")
-
-            if selected_curve != ACTIVE_CURVE:
-                st.caption(f"📊 *Viewing curve **{selected_curve}** (historical). Active: **{ACTIVE_CURVE}***")
-        else:
-            if not selected_series:
-                st.info("📊 Select series in the chart above, then configure targets here.")
-            else:
-                missing = []
-                if len(chart_selected_dids) != 1:
-                    missing.append(f"DID ({len(chart_selected_dids)})")
-                if len(chart_selected_densities) != 1:
-                    missing.append(f"Density ({len(chart_selected_densities)})")
-                if len(chart_selected_speeds) != 1:
-                    missing.append(f"Speed ({len(chart_selected_speeds)})")
-                st.warning(f"⚠️ Select exactly ONE: {', '.join(missing)}")
+        # Show curve info badge if targets are enabled
+        selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
+        if st.session_state.get("elc_show_targets", False) and can_show_targets:
+            badge_color = "#00C853" if selected_curve == ACTIVE_CURVE else "#FF9800"
+            badge_text = "✓ ACTIVE" if selected_curve == ACTIVE_CURVE else "HISTORICAL"
+            curve_desc = CURVE_INFO.get(selected_curve, {}).get('description', '')
+            st.caption(f"📊 Target Curve: **{selected_curve}** ({badge_text}) - _{curve_desc}_")
 
         # ---- ROW 2: Two-column layout (Annotations | Data & Export) ----
         left_col, right_col = st.columns([1, 1.2])
