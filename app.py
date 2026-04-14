@@ -2592,12 +2592,7 @@ def calculate_elc_yields(df: pd.DataFrame) -> pd.DataFrame:
 def render_elc_yield_tab(filters: dict[str, Any]) -> None:
     """Render the Module ELC Yield tab content."""
     st.header("Module ELC Yield")
-    st.markdown("""
-    **Yield Calculations:**
-    - **HMFN**: Hot Module Final Test yield
-    - **SLT**: System Level Test yield = HMB1 × QMON
-    - **ELC**: End-of-Line yield = HMFN × SLT
-    """)
+    st.caption("**ELC** = HMFN × SLT | **SLT** = HMB1×QMON (or single step if only one selected) — *Required: WW range, Form Factor, DID, Facility, Step (HMFN/HMB1/QMON)* | *Optional: Density, Speed*")
 
     # Cache controls
     use_cache = st.session_state.get("use_cache", True)
@@ -3462,6 +3457,7 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
 def render_pareto_tab(filters: dict[str, Any]) -> None:
     """Render the Pareto Analysis tab with sub-tabs for FAILCRAWLER and Register Fallout."""
     st.header("Pareto Analysis")
+    st.caption("**FAILCRAWLER DPM:** cDPM by fail mode with MSN_STATUS correlation | **Register Fallout:** Top failed registers by fallout % — *Required: WW range, Form Factor, DID, Facility, Step*")
 
     # Create sub-tabs
     fc_tab, reg_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout"])
@@ -3841,15 +3837,17 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                             fail_display.columns = ['Machine ID', 'Status', f'WW{selected_ww}', f'Recovery (WW{next_ww})', 'Remarks']
 
                             def highlight_fail_status(row):
+                                # Only highlight concerning items that need action
                                 remarks = str(row.get('Remarks', ''))
+                                recovery = str(row.get(f'Recovery (WW{next_ww})', ''))
+
+                                # Priority 1: SOP Violation (Critical - operator not following procedure)
                                 if 'SOP Violation' in remarks:
                                     return ['background-color: #FFAB91; font-weight: bold'] * len(row)  # Orange
-                                elif '🔄 Chronic' in str(row['Status']):
+                                # Priority 2: Still Failing (needs attention - machine not recovered)
+                                elif '❌ Still Failing' in recovery:
                                     return ['background-color: #FFCDD2; font-weight: bold'] * len(row)  # Light red
-                                elif '🆕 New' in str(row['Status']):
-                                    return ['background-color: #FFF9C4'] * len(row)  # Light yellow
-                                elif '✅ Recovered' in str(row[f'Recovery (WW{next_ww})']):
-                                    return ['background-color: #C8E6C9'] * len(row)  # Light green
+                                # No highlight for recovered or healthy machines
                                 return [''] * len(row)
 
                             styled_fail = fail_display.style.apply(highlight_fail_status, axis=1)
@@ -3924,9 +3922,7 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
 def render_machine_trend_tab(filters: dict[str, Any]) -> None:
     """Render the Machine Trend Analysis tab for SMT6 tester monitoring and GRACE Motherboard analysis."""
     st.subheader("Machine Trend Analysis")
-    st.markdown("""
-    Monitor SMT6 tester fleet performance, track machine-level yield trends, and analyze hardware health.
-    """)
+    st.caption("**SMT6 Tester Yield:** Socket & site yield trends — *Required: Step=HMFN* | **GRACE Motherboard:** Hang & SOP violation tracking (HMB1+QMON integrated) — *Required: WW range, Form Factor, Facility* | *Optional: DID, Density, Speed*")
 
     # Sub-tabs within Machine Trend Analysis
     machine_subtab1, machine_subtab2 = st.tabs([
@@ -3949,10 +3945,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
     import numpy as np
 
     st.subheader("Fail Viewer")
-    st.markdown("""
-    Visualize raw fail address data from ATE testing. Upload a CSV file with fail addresses
-    or generate sample data to explore the viewer.
-    """)
+    st.caption("Visualize fail address patterns from ATE testing with die map, DQ/Bank distribution — *Required: Upload CSV or generate sample data* | *Options: Part Type, Color By*")
 
     # Part type selection
     col1, col2, col3 = st.columns(3)
@@ -4469,6 +4462,7 @@ def main() -> None:
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["Yield Analysis", "Module ELC Yield", "Pareto Analysis", "Fail Viewer", "Machine Trend Analysis"])
 
     with tab1:
+        st.caption("Weekly yield trends, bin distribution, density/speed heatmaps — *Required: WW range, Form Factor, DID, Facility, Step* | *Optional: Density, Speed*")
         # Fetch button for Module Yield data
         col1, col2 = st.columns([1, 4])
         with col1:
