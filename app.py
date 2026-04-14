@@ -2929,53 +2929,6 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                         )
                     )
 
-                    # ============================================================
-                    # ADD FUTURE TARGET LINE (if enabled)
-                    # Shows upcoming target values from selected curve
-                    # ============================================================
-                    show_future_targets = st.session_state.get("elc_show_future_targets", False)
-                    if show_future_targets and yield_type == "ELC" and can_show_targets and target_key:
-                        selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
-
-                        # Generate next 8 weeks' workweeks
-                        last_ww = int(sorted_workweeks[-1])
-                        forecast_wws = []
-                        forecast_y = []
-
-                        for i in range(1, 9):  # Next 8 weeks
-                            next_ww = last_ww + i
-                            year = next_ww // 100
-                            week = next_ww % 100
-                            if week > 52:
-                                year += 1
-                                week = week - 52
-                            ww_str = f"{year}{week:02d}"
-                            forecast_wws.append(ww_str)
-
-                            # Get target from curve for this future week
-                            cal_year, cal_month = get_calendar_year_month(ww_str)
-                            target = get_curve_target(selected_curve, target_key, cal_year, cal_month)
-                            forecast_y.append(target if target else None)
-
-                        # Filter out None values
-                        valid_forecast = [(w, y) for w, y in zip(forecast_wws, forecast_y) if y is not None]
-
-                        if valid_forecast:
-                            forecast_wws, forecast_y = zip(*valid_forecast)
-                            fig.add_trace(
-                                go.Scatter(
-                                    x=list(forecast_wws),
-                                    y=list(forecast_y),
-                                    mode="lines+markers",
-                                    name=f"Future Target [{selected_curve}]",
-                                    line=dict(color="#9C27B0", width=2, dash="dash"),
-                                    marker=dict(size=6, symbol="diamond"),
-                                    hovertemplate="<b>Future Week:</b> %{x}<br>" +
-                                                  f"<b>Target Curve:</b> {selected_curve}<br>" +
-                                                  "<b>Target Yield:</b> %{y:.2f}%<br>" +
-                                                  "<extra></extra>",
-                                )
-                            )
 
                 # ============================================================
                 # ADD TARGET LINES (based on checkbox states in Section 4)
@@ -3066,6 +3019,57 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                             )
 
                 # ============================================================
+                # ADD FUTURE TARGET LINE (ELC only, extends x-axis)
+                # Shows upcoming target values from selected curve
+                # ============================================================
+                show_future_targets = st.session_state.get("elc_show_future_targets", False)
+                future_wws = []  # Will be used to extend x-axis
+
+                if show_future_targets and can_show_targets and target_key:
+                    selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
+
+                    # Generate next 8 weeks' workweeks
+                    last_ww = int(sorted_workweeks[-1])
+                    forecast_wws = []
+                    forecast_y = []
+
+                    for i in range(1, 9):  # Next 8 weeks
+                        next_ww = last_ww + i
+                        year = next_ww // 100
+                        week = next_ww % 100
+                        if week > 52:
+                            year += 1
+                            week = week - 52
+                        ww_str = f"{year}{week:02d}"
+                        forecast_wws.append(ww_str)
+
+                        # Get ELC target from curve for this future week
+                        cal_year, cal_month = get_calendar_year_month(ww_str)
+                        target = get_curve_target(selected_curve, target_key, cal_year, cal_month)
+                        forecast_y.append(target if target else None)
+
+                    # Filter out None values
+                    valid_forecast = [(w, y) for w, y in zip(forecast_wws, forecast_y) if y is not None]
+
+                    if valid_forecast:
+                        future_wws, forecast_y = zip(*valid_forecast)
+                        future_wws = list(future_wws)
+                        fig.add_trace(
+                            go.Scatter(
+                                x=future_wws,
+                                y=list(forecast_y),
+                                mode="lines+markers",
+                                name=f"Future ELC Target [{selected_curve}]",
+                                line=dict(color="#9C27B0", width=2, dash="dash"),
+                                marker=dict(size=6, symbol="diamond"),
+                                hovertemplate="<b>Future Week:</b> %{x}<br>" +
+                                              f"<b>Target Curve:</b> {selected_curve}<br>" +
+                                              "<b>ELC Target:</b> %{y:.2f}%<br>" +
+                                              "<extra></extra>",
+                            )
+                        )
+
+                # ============================================================
                 # ADD ANNOTATION MARKERS (vertical lines with notes)
                 # ============================================================
                 if st.session_state.get("elc_annotations"):
@@ -3083,6 +3087,9 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                                 annotation_font_color="#FF6B6B",
                             )
 
+                # Extend x-axis with future weeks if showing future targets
+                all_workweeks = sorted_workweeks + future_wws
+
                 fig.update_layout(
                     title="HMFN, SLT & ELC Yield Trend",
                     xaxis_title="Work Week (YYYYWW)",
@@ -3093,16 +3100,16 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     xaxis=dict(
                         type="category",
                         categoryorder="array",
-                        categoryarray=sorted_workweeks
+                        categoryarray=all_workweeks
                     )
                 )
 
                 # Add Micron fiscal month labels below workweek on x-axis
-                tick_labels = get_workweek_labels_with_months(sorted_workweeks)
+                tick_labels = get_workweek_labels_with_months(all_workweeks)
 
                 fig.update_xaxes(
                     ticktext=tick_labels,
-                    tickvals=sorted_workweeks,
+                    tickvals=all_workweeks,
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
