@@ -2608,58 +2608,6 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
     st.header("Module ELC Yield")
     st.info("📈 **ELC = HMFN × SLT** | SLT = HMB1×QMON (or single step if only one selected) — Required: WW range, Form Factor, DID, Facility, Step (HMFN/HMB1/QMON) | Optional: Density, Speed")
 
-    # Target Curve Selector with Active Badge
-    curve_col1, curve_col2, curve_col3 = st.columns([1.5, 0.8, 3])
-    with curve_col1:
-        selected_curve = st.selectbox(
-            "Target Curve",
-            options=CURVE_ORDER[::-1],  # Newest first (D1, D0, C2, ...)
-            index=0,  # Default to D1 (newest)
-            key="elc_target_curve",
-            help="Select which curve's targets to display on the chart. D1 is the current active curve."
-        )
-    with curve_col2:
-        # Active Curve Badge - show next to dropdown
-        if selected_curve == ACTIVE_CURVE:
-            st.markdown(
-                f"""
-                <div style="display: flex; align-items: center; height: 100%; padding-top: 1.7rem;">
-                    <span style="
-                        background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
-                        color: white;
-                        padding: 0.3rem 0.8rem;
-                        border-radius: 15px;
-                        font-weight: 600;
-                        font-size: 0.75rem;
-                        box-shadow: 0 2px 6px rgba(0,200,83,0.3);
-                    ">✓ ACTIVE</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                f"""
-                <div style="display: flex; align-items: center; height: 100%; padding-top: 1.7rem;">
-                    <span style="
-                        background: linear-gradient(135deg, #FF9800 0%, #FFC107 100%);
-                        color: white;
-                        padding: 0.3rem 0.8rem;
-                        border-radius: 15px;
-                        font-weight: 600;
-                        font-size: 0.75rem;
-                        box-shadow: 0 2px 6px rgba(255,152,0,0.3);
-                    ">HISTORICAL</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-    with curve_col3:
-        # Show curve description only (no date)
-        if selected_curve in CURVE_INFO:
-            curve_info = CURVE_INFO[selected_curve]
-            st.caption(f"{curve_info['description']}")
-
     # Cache controls
     use_cache = st.session_state.get("use_cache", True)
 
@@ -2672,7 +2620,10 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
         total_queries = 0
         est_time = 0
 
-    # Fetch button for ELC data
+    # ========================================================================
+    # SECTION 1: DATA FETCH
+    # ========================================================================
+    st.subheader("1️⃣ Fetch ELC Data")
     col1, col2 = st.columns([1, 4])
     with col1:
         fetch_elc = st.button(
@@ -2722,8 +2673,24 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
     if not st.session_state.elc_data.empty:
         elc_df = st.session_state.elc_data.copy()
 
+        # Build filter context string for display
+        filter_parts = []
+        if filters.get("design_ids"):
+            filter_parts.append(f"DID: {', '.join(filters['design_ids'])}")
+        if filters.get("form_factors"):
+            filter_parts.append(f"Form: {', '.join(filters['form_factors'])}")
+        if filters.get("densities"):
+            filter_parts.append(f"Density: {', '.join(filters['densities'])}")
+        if filters.get("speeds"):
+            filter_parts.append(f"Speed: {', '.join(filters['speeds'])}")
+        if filters.get("start_ww") and filters.get("end_ww"):
+            filter_parts.append(f"WW: {filters['start_ww']}-{filters['end_ww']}")
+        filter_context = " | ".join(filter_parts) if filter_parts else "All data"
+
+        # Show last fetch time and filter context
         if st.session_state.elc_last_fetch_time:
-            st.caption(f"Last fetched: {st.session_state.elc_last_fetch_time}")
+            st.caption(f"📊 **Data based on:** {filter_context}")
+            st.caption(f"🕐 Last fetched: {st.session_state.elc_last_fetch_time}")
 
         # Summary metrics
         col1, col2, col3 = st.columns(3)
@@ -2739,22 +2706,434 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
 
         st.divider()
 
-        # ====================================================================
-        # CURVE HISTORY PANEL (Collapsible)
-        # ====================================================================
-        # Build target key from current filter selection
-        selected_dids = [d.upper() for d in (filters.get("design_ids") or [])]
-        selected_densities = [normalize_density(d) for d in (filters.get("densities") or [])]
-        selected_speeds = [normalize_speed(s) for s in (filters.get("speeds") or [])]
+        # ========================================================================
+        # SECTION 2: CHART CONFIGURATION & SERIES SELECTION
+        # ========================================================================
+        st.subheader("2️⃣ Configure Chart")
 
-        config_key = None
-        if len(selected_dids) == 1 and len(selected_densities) == 1 and len(selected_speeds) == 1:
-            config_key = f"{selected_dids[0]}_{selected_densities[0]}_{selected_speeds[0]}"
+        # Prepare data for chart
+        # Ensure workweek is in YYYYWW format (remove any WW prefix if present)
+        elc_df["workweek"] = elc_df["workweek"].astype(str).str.replace("WW", "")
 
-        if config_key:
-            history = get_curve_history_for_config(config_key)
-            if history:
-                with st.expander(f"📜 Target History for {config_key}", expanded=False):
+        # Sort by workweek numerically
+        elc_df["ww_sort"] = elc_df["workweek"].astype(int)
+        elc_df = elc_df.sort_values("ww_sort")
+
+        # Get sorted workweeks for x-axis ordering
+        sorted_workweeks = elc_df["workweek"].unique().tolist()
+
+        # Available yield types
+        available_yield_types = [c for c in ["HMFN", "SLT", "ELC"] if c in elc_df.columns]
+
+        # Build combined series options: DID_STEP_DENSITY_SPEED format
+        # Create base series identifier (DID_DENSITY_SPEED)
+        base_series_cols = [c for c in ["design_id", "density", "speed"] if c in elc_df.columns]
+        if base_series_cols:
+            elc_df["base_series"] = elc_df[base_series_cols].astype(str).agg("_".join, axis=1)
+        else:
+            elc_df["base_series"] = "All"
+
+        # Get unique base series
+        unique_base_series = elc_df["base_series"].unique().tolist()
+
+        # Build combined options: DID_STEP_DENSITY_SPEED
+        combined_series_options = []
+        for base in unique_base_series:
+            for yield_type in available_yield_types:
+                # Parse base series to rebuild as DID_STEP_DENSITY_SPEED
+                parts = base.split("_")
+                if len(parts) >= 3:
+                    did, density, speed = parts[0], parts[1], parts[2]
+                    combined_label = f"{did}_{yield_type}_{density}_{speed}"
+                else:
+                    combined_label = f"{base}_{yield_type}"
+                combined_series_options.append(combined_label)
+
+        # Sort options for better organization (by DID, then by step)
+        combined_series_options = sorted(combined_series_options)
+
+        # Check if user filtered for specific density/speed
+        user_filtered_density = bool(filters.get("densities"))
+        user_filtered_speed = bool(filters.get("speeds"))
+
+        # Series selection
+        st.markdown("**Select Yield Lines to Display:**")
+        selected_series = st.multiselect(
+            "Series (DID_STEP_DENSITY_SPEED)",
+            options=combined_series_options,
+            default=[],  # No default - user must choose
+            key="elc_series_selection",
+            label_visibility="collapsed",
+            help="Select which yield series to display on the chart. Format: DID_STEP_DENSITY_SPEED"
+        )
+
+        # Show explanatory note about available options
+        if not user_filtered_density or not user_filtered_speed:
+            filter_note_parts = []
+            if not user_filtered_density:
+                filter_note_parts.append("density")
+            if not user_filtered_speed:
+                filter_note_parts.append("speed")
+            st.caption(
+                f"💡 *All available {' and '.join(filter_note_parts)} combinations are shown because no specific "
+                f"{' or '.join(filter_note_parts)} filter was applied in the sidebar. "
+                f"To narrow down options, select specific {' and '.join(filter_note_parts)} values in the sidebar filters before fetching data.*"
+            )
+
+        # Chart options
+        col1, col2 = st.columns(2)
+        with col1:
+            show_elc_labels = st.checkbox("Show data labels", value=False, key="elc_trend_show_labels")
+        with col2:
+            y_min = st.slider(
+                "Y-axis minimum (%)",
+                min_value=0,
+                max_value=98,
+                value=90,
+                step=1,
+                key="elc_yaxis_min",
+                help="Adjust to zoom in on data points close together"
+            )
+
+        # Extract selected yield types from selected series for target configuration
+        selected_yields = list(set(
+            s.split("_")[1] for s in selected_series if len(s.split("_")) >= 2
+        ))
+
+        # Get selected filters for target key building (needed for chart targets)
+        chart_selected_dids = [d.upper() for d in (filters.get("design_ids") or [])]
+        chart_selected_densities = [normalize_density(d) for d in (filters.get("densities") or [])]
+        chart_selected_speeds = [normalize_speed(s) for s in (filters.get("speeds") or [])]
+
+        # Fallback: infer from data if filters are empty but data has single unique value
+        if not chart_selected_densities and "density" in elc_df.columns:
+            unique_densities = elc_df["density"].dropna().unique()
+            if len(unique_densities) == 1:
+                chart_selected_densities = [normalize_density(str(unique_densities[0]))]
+
+        if not chart_selected_speeds and "speed" in elc_df.columns:
+            unique_speeds = elc_df["speed"].dropna().unique()
+            if len(unique_speeds) == 1:
+                chart_selected_speeds = [normalize_speed(str(unique_speeds[0]))]
+
+        if not chart_selected_dids and "design_id" in elc_df.columns:
+            unique_dids = elc_df["design_id"].dropna().unique()
+            if len(unique_dids) == 1:
+                chart_selected_dids = [str(unique_dids[0]).upper()]
+
+        # Check if we can show targets (need single DID + Density + Speed)
+        can_show_targets = (
+            len(chart_selected_dids) == 1 and
+            len(chart_selected_densities) == 1 and
+            len(chart_selected_speeds) == 1
+        )
+
+        # Set defaults for target configuration (will be updated in Section 4 if available)
+        selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
+        target_key = None
+        target_label = None
+        show_hmfn_target = False
+        show_slt_target = False
+        show_elc_target = False
+
+        if can_show_targets:
+            target_key = f"{chart_selected_dids[0]}_{chart_selected_densities[0]}_{chart_selected_speeds[0]}"
+            target_label = f"{chart_selected_dids[0]} {chart_selected_densities[0]} {chart_selected_speeds[0]}"
+
+        st.divider()
+
+        # ========================================================================
+        # SECTION 3: YIELD TREND CHART (Chart renders first!)
+        # ========================================================================
+        if "workweek" in elc_df.columns:
+            st.subheader("3️⃣ ELC Yield Trend Chart")
+
+            if not selected_series:
+                st.info("👆 Select series above to display on the chart (format: DID_STEP_DENSITY_SPEED)")
+            else:
+                # Build chart using graph objects for better control
+                fig = go.Figure()
+
+                # Color map for yield types
+                colors = {"HMFN": "#636EFA", "SLT": "#EF553B", "ELC": "#00CC96"}
+
+                # Plot each selected combined series
+                for combined_series in selected_series:
+                    # Parse combined series: DID_STEP_DENSITY_SPEED
+                    parts = combined_series.split("_")
+                    if len(parts) >= 4:
+                        did = parts[0]
+                        yield_type = parts[1]
+                        density = parts[2]
+                        speed = parts[3]
+                        base_series = f"{did}_{density}_{speed}"
+                    else:
+                        # Fallback for unexpected format
+                        continue
+
+                    # Filter data for this base series
+                    mask = elc_df["base_series"] == base_series
+                    series_data = elc_df[mask].sort_values("workweek")
+
+                    if series_data.empty or yield_type not in series_data.columns:
+                        continue
+
+                    # Determine trace mode based on show_labels
+                    trace_mode = "lines+markers+text" if show_elc_labels else "lines+markers"
+
+                    # Convert to lists for plotly
+                    x_vals = series_data["workweek"].tolist()
+                    y_vals = series_data[yield_type].tolist()
+                    text_vals = [f"{v:.1f}%" for v in y_vals] if show_elc_labels else None
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=x_vals,
+                            y=y_vals,
+                            mode=trace_mode,
+                            name=combined_series,
+                            text=text_vals,
+                            textposition="top center",
+                            textfont=dict(size=9),
+                            line=dict(color=colors.get(yield_type, "#636EFA")),
+                            marker=dict(size=8),
+                            hovertemplate="<b>Work Week:</b> %{x}<br>" +
+                                          f"<b>Series:</b> {combined_series}<br>" +
+                                          "<b>Yield:</b> %{y:.2f}%<br>" +
+                                          "<extra></extra>",
+                        )
+                    )
+
+                # ============================================================
+                # ADD TARGET LINES (based on checkbox states in Section 4)
+                # Checkboxes directly control target visibility - no button needed
+                # ============================================================
+                # Get target checkbox states from session state
+                show_hmfn_target = st.session_state.get("elc_show_hmfn_target", False)
+                show_slt_target = st.session_state.get("elc_show_slt_target", False)
+                show_elc_target = st.session_state.get("elc_show_elc_target", False)
+                selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
+
+                if can_show_targets and target_key and (show_hmfn_target or show_slt_target or show_elc_target):
+
+                    # HMFN Target (from HMFN_TARGETS)
+                    if show_hmfn_target:
+                        hmfn_target_x = []
+                        hmfn_target_y = []
+                        for ww in sorted_workweeks:
+                            year, month = get_calendar_year_month(ww)
+                            target = get_target(HMFN_TARGETS, chart_selected_dids[0], chart_selected_densities[0], chart_selected_speeds[0], year, month)
+                            if target is not None:
+                                hmfn_target_x.append(ww)
+                                hmfn_target_y.append(target)
+
+                        if hmfn_target_y:
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=hmfn_target_x,
+                                    y=hmfn_target_y,
+                                    mode="lines",
+                                    name=f"HMFN Target [{selected_curve}] ({target_label})",
+                                    line=dict(color="#00BFFF", width=3, dash="dot", shape="hv"),
+                                    showlegend=True,
+                                    hovertemplate=f"<b>HMFN Target [{selected_curve}] ({target_label}):</b> %{{y:.2f}}%<extra></extra>",
+                                )
+                            )
+
+                    # SLT Target (from SLT_TARGETS)
+                    if show_slt_target:
+                        slt_target_x = []
+                        slt_target_y = []
+                        for ww in sorted_workweeks:
+                            year, month = get_calendar_year_month(ww)
+                            target = get_target(SLT_TARGETS, chart_selected_dids[0], chart_selected_densities[0], chart_selected_speeds[0], year, month)
+                            if target is not None:
+                                slt_target_x.append(ww)
+                                slt_target_y.append(target)
+
+                        if slt_target_y:
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=slt_target_x,
+                                    y=slt_target_y,
+                                    mode="lines",
+                                    name=f"SLT Target [{selected_curve}] ({target_label})",
+                                    line=dict(color="#FF1744", width=3, dash="dot", shape="hv"),
+                                    showlegend=True,
+                                    hovertemplate=f"<b>SLT Target [{selected_curve}] ({target_label}):</b> %{{y:.2f}}%<extra></extra>",
+                                )
+                            )
+
+                    # ELC Target (from ELC_CURVES based on selected curve)
+                    if show_elc_target:
+                        elc_target_x = []
+                        elc_target_y = []
+                        for ww in sorted_workweeks:
+                            year, month = get_calendar_year_month(ww)
+                            target = get_curve_target(selected_curve, target_key, year, month)
+                            if target is not None:
+                                elc_target_x.append(ww)
+                                elc_target_y.append(target)
+
+                        # Color varies if viewing historical curve: green for D1, orange for others
+                        elc_line_color = "#39FF14" if selected_curve == ACTIVE_CURVE else "#FFA726"
+                        elc_line_style = "dot" if selected_curve == ACTIVE_CURVE else "dash"
+
+                        if elc_target_y:
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=elc_target_x,
+                                    y=elc_target_y,
+                                    mode="lines",
+                                    name=f"ELC Target [{selected_curve}] ({target_label})",
+                                    line=dict(color=elc_line_color, width=3, dash=elc_line_style, shape="hv"),
+                                    showlegend=True,
+                                    hovertemplate=f"<b>ELC Target [{selected_curve}] ({target_label}):</b> %{{y:.2f}}%<extra></extra>",
+                                )
+                            )
+
+                fig.update_layout(
+                    title="HMFN, SLT & ELC Yield Trend",
+                    xaxis_title="Work Week (YYYYWW)",
+                    yaxis_title="Yield %",
+                    yaxis=dict(range=[y_min, 102]),  # Extended to 102 for label visibility
+                    legend_title="Yield Type",
+                    hovermode="x unified",
+                    xaxis=dict(
+                        type="category",
+                        categoryorder="array",
+                        categoryarray=sorted_workweeks
+                    )
+                )
+
+                # Add Micron fiscal month labels below workweek on x-axis
+                tick_labels = get_workweek_labels_with_months(sorted_workweeks)
+
+                fig.update_xaxes(
+                    ticktext=tick_labels,
+                    tickvals=sorted_workweeks,
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ========================================================================
+        # SECTION 4: ADD TARGET LINES (Below chart, not collapsed)
+        # ========================================================================
+        st.subheader("4️⃣ Add Target Lines")
+
+        if can_show_targets and target_key:
+            # Curve selection with badge
+            curve_col1, curve_col2, curve_col3 = st.columns([1.5, 0.8, 3])
+            with curve_col1:
+                selected_curve = st.selectbox(
+                    "Target Curve",
+                    options=CURVE_ORDER[::-1],  # Newest first (D1, D0, C2, ...)
+                    index=0,  # Default to D1 (newest)
+                    key="elc_target_curve",
+                    help="Select which curve's targets to display on the chart. D1 is the current active curve."
+                )
+            with curve_col2:
+                # Active Curve Badge - show next to dropdown
+                if selected_curve == ACTIVE_CURVE:
+                    st.markdown(
+                        f"""
+                        <div style="display: flex; align-items: center; height: 100%; padding-top: 1.7rem;">
+                            <span style="
+                                background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
+                                color: white;
+                                padding: 0.3rem 0.8rem;
+                                border-radius: 15px;
+                                font-weight: 600;
+                                font-size: 0.75rem;
+                                box-shadow: 0 2px 6px rgba(0,200,83,0.3);
+                            ">✓ ACTIVE</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f"""
+                        <div style="display: flex; align-items: center; height: 100%; padding-top: 1.7rem;">
+                            <span style="
+                                background: linear-gradient(135deg, #FF9800 0%, #FFC107 100%);
+                                color: white;
+                                padding: 0.3rem 0.8rem;
+                                border-radius: 15px;
+                                font-weight: 600;
+                                font-size: 0.75rem;
+                                box-shadow: 0 2px 6px rgba(255,152,0,0.3);
+                            ">HISTORICAL</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            with curve_col3:
+                # Show curve description
+                if selected_curve in CURVE_INFO:
+                    curve_info = CURVE_INFO[selected_curve]
+                    st.caption(f"{curve_info['description']}")
+
+            # Target line selection (based on selected yields from chart)
+            # Checkboxes directly control target visibility - targets appear immediately when checked
+            st.markdown("**Select Target Lines to Overlay on Chart:**")
+            target_col1, target_col2, target_col3 = st.columns([1, 1, 1])
+
+            with target_col1:
+                if "HMFN" in selected_yields:
+                    st.checkbox("HMFN Target", value=False, key="elc_show_hmfn_target")
+                else:
+                    st.caption("*Add HMFN series first*")
+            with target_col2:
+                if "SLT" in selected_yields:
+                    st.checkbox("SLT Target", value=False, key="elc_show_slt_target")
+                else:
+                    st.caption("*Add SLT series first*")
+            with target_col3:
+                if "ELC" in selected_yields:
+                    st.checkbox("ELC Target", value=False, key="elc_show_elc_target")
+                else:
+                    st.caption("*Add ELC series first*")
+
+            # Show note if viewing historical curve
+            if selected_curve != ACTIVE_CURVE:
+                st.caption(f"📊 *Showing targets from curve **{selected_curve}** (historical). Active curve is **{ACTIVE_CURVE}**.*")
+
+        else:
+            # Show info about why targets aren't available
+            if not selected_series:
+                st.info("📊 Select series in the chart above first, then configure target lines here.")
+            else:
+                missing = []
+                if len(chart_selected_dids) != 1:
+                    missing.append(f"DID ({len(chart_selected_dids)} selected)")
+                if len(chart_selected_densities) != 1:
+                    missing.append(f"Density ({len(chart_selected_densities)} selected)")
+                if len(chart_selected_speeds) != 1:
+                    missing.append(f"Speed ({len(chart_selected_speeds)} selected)")
+
+                st.warning(
+                    f"⚠️ **Target lines unavailable** — Select exactly ONE value for: {', '.join(missing)}\n\n"
+                    f"Use the sidebar filters to select single DID + Density + Speed to enable target lines."
+                )
+
+        st.divider()
+
+        # ========================================================================
+        # SECTION 5: TARGET HISTORY & DATA TABLE (Side by Side)
+        # ========================================================================
+        st.subheader("5️⃣ Reference Data")
+
+        hist_col, data_col = st.columns(2)
+
+        # Left column: Target History
+        with hist_col:
+            st.markdown("**📜 Target History**")
+            if can_show_targets and target_key:
+                history = get_curve_history_for_config(target_key)
+                if history:
                     # Build 1 row per curve TRANSITION with step details in remark
                     changes_data = []
 
@@ -2811,268 +3190,46 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                                 "Remark": st.column_config.TextColumn("Remark (Step: From → To)", width="large"),
                             }
                         )
-
-                    st.caption("💡 *Select a different Target Curve above to compare actual yields against historical targets*")
-        else:
-            st.caption("ℹ️ *Select single DID + Density + Speed to view target curve history*")
-
-        st.divider()
-
-        # ELC Trend Chart
-        if "workweek" in elc_df.columns:
-            st.subheader("ELC Yield Trend")
-
-            # Chart options
-            col1, col2 = st.columns(2)
-            with col1:
-                # Option to pin data labels on chart
-                show_elc_labels = st.checkbox("Show data labels on chart", value=False, key="elc_trend_show_labels")
-            with col2:
-                # Y-axis scale adjustment
-                y_min = st.slider(
-                    "Y-axis minimum (%)",
-                    min_value=0,
-                    max_value=98,
-                    value=90,
-                    step=1,
-                    key="elc_yaxis_min",
-                    help="Adjust to zoom in on data points close together"
-                )
-
-            # Create series identifier
-            series_cols = [c for c in ["design_id", "form_factor", "density", "speed"] if c in elc_df.columns]
-            if series_cols:
-                elc_df["series"] = elc_df[series_cols].astype(str).agg("_".join, axis=1)
-            else:
-                elc_df["series"] = "All"
-
-            # Ensure workweek is in YYYYWW format (remove any WW prefix if present)
-            elc_df["workweek"] = elc_df["workweek"].astype(str).str.replace("WW", "")
-
-            # Sort by workweek numerically
-            elc_df["ww_sort"] = elc_df["workweek"].astype(int)
-            elc_df = elc_df.sort_values("ww_sort")
-
-            # Get sorted workweeks for x-axis ordering
-            sorted_workweeks = elc_df["workweek"].unique().tolist()
-
-            # Melt for plotting
-            plot_cols = [c for c in ["HMFN", "SLT", "ELC"] if c in elc_df.columns]
-            if plot_cols:
-                plot_df = elc_df.melt(
-                    id_vars=["workweek", "series"],
-                    value_vars=plot_cols,
-                    var_name="Yield Type",
-                    value_name="Yield %"
-                )
-
-                # Add text column for labels
-                plot_df["label_text"] = plot_df["Yield %"].apply(lambda x: f"{x:.1f}%")
-
-                # Build chart using graph objects for better control
-                fig = go.Figure()
-
-                # Color map for yield types
-                colors = {"HMFN": "#636EFA", "SLT": "#EF553B", "ELC": "#00CC96"}
-
-                # Group by series and yield type
-                for series_name in plot_df["series"].unique():
-                    for yield_type in plot_cols:
-                        mask = (plot_df["series"] == series_name) & (plot_df["Yield Type"] == yield_type)
-                        series_data = plot_df[mask].sort_values("workweek")
-
-                        if series_data.empty:
-                            continue
-
-                        # Determine trace mode based on show_labels
-                        trace_mode = "lines+markers+text" if show_elc_labels else "lines+markers"
-
-                        # Convert to lists for plotly
-                        x_vals = series_data["workweek"].tolist()
-                        y_vals = series_data["Yield %"].tolist()
-                        text_vals = series_data["label_text"].tolist() if show_elc_labels else None
-
-                        fig.add_trace(
-                            go.Scatter(
-                                x=x_vals,
-                                y=y_vals,
-                                mode=trace_mode,
-                                name=f"{yield_type} ({series_name})" if series_name != "All" else yield_type,
-                                text=text_vals,
-                                textposition="top center",
-                                textfont=dict(size=9),
-                                line=dict(color=colors.get(yield_type, "#636EFA")),
-                                marker=dict(size=8),
-                                hovertemplate="<b>Work Week:</b> %{x}<br>" +
-                                              f"<b>Yield Type:</b> {yield_type}<br>" +
-                                              "<b>Yield:</b> %{y:.2f}%<br>" +
-                                              f"<b>Series:</b> {series_name}<br>" +
-                                              "<extra></extra>",
-                            )
-                        )
-
-                fig.update_layout(
-                    title="HMFN, SLT & ELC Yield Trend",
-                    xaxis_title="Work Week (YYYYWW)",
-                    yaxis_title="Yield %",
-                    yaxis=dict(range=[y_min, 102]),  # Extended to 102 for label visibility
-                    legend_title="Yield Type",
-                    hovermode="x unified",
-                    xaxis=dict(
-                        type="category",
-                        categoryorder="array",
-                        categoryarray=sorted_workweeks
-                    )
-                )
-
-                # Add HMFN yield target marker (99% dotted line) - blue neon
-                fig.add_trace(
-                    go.Scatter(
-                        x=[sorted_workweeks[0], sorted_workweeks[-1]],
-                        y=[99, 99],
-                        mode="lines",
-                        name="HMFN Target [99%]",
-                        line=dict(color="#00BFFF", width=3, dash="dot"),
-                        showlegend=True,
-                        hovertemplate="<b>HMFN Target:</b> 99%<extra></extra>",
-                    )
-                )
-
-                # ============================================================
-                # DID + DENSITY + SPEED Specific Target Lines
-                # Source: config/curve_history.py (selected curve from dropdown)
-                # ============================================================
-
-                # Get selected curve from session state (set in curve selector above)
-                selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
-
-                # Get selected filters (handle None values)
-                # If filters are empty, try to infer from actual data
-                chart_selected_dids = [d.upper() for d in (filters.get("design_ids") or [])]
-                chart_selected_densities = [normalize_density(d) for d in (filters.get("densities") or [])]
-                chart_selected_speeds = [normalize_speed(s) for s in (filters.get("speeds") or [])]
-
-                # Fallback: infer from data if filters are empty but data has single unique value
-                if not chart_selected_densities and "density" in elc_df.columns:
-                    unique_densities = elc_df["density"].dropna().unique()
-                    if len(unique_densities) == 1:
-                        chart_selected_densities = [normalize_density(str(unique_densities[0]))]
-
-                if not chart_selected_speeds and "speed" in elc_df.columns:
-                    unique_speeds = elc_df["speed"].dropna().unique()
-                    if len(unique_speeds) == 1:
-                        chart_selected_speeds = [normalize_speed(str(unique_speeds[0]))]
-
-                if not chart_selected_dids and "design_id" in elc_df.columns:
-                    unique_dids = elc_df["design_id"].dropna().unique()
-                    if len(unique_dids) == 1:
-                        chart_selected_dids = [str(unique_dids[0]).upper()]
-
-                # Build target key from selections (requires single selection for each)
-                target_key = None
-                show_targets = False
-
-                if len(chart_selected_dids) == 1 and len(chart_selected_densities) == 1 and len(chart_selected_speeds) == 1:
-                    target_key = f"{chart_selected_dids[0]}_{chart_selected_densities[0]}_{chart_selected_speeds[0]}"
-                    # Check if target exists in selected curve OR in SLT_TARGETS
-                    available_in_curve = get_available_configs_for_curve(selected_curve)
-                    if target_key in available_in_curve or target_key in SLT_TARGETS:
-                        show_targets = True
-
-                if show_targets and target_key:
-                    # Build stepped SLT target line (SLT targets don't change by curve)
-                    slt_target_x = []
-                    slt_target_y = []
-                    for ww in sorted_workweeks:
-                        year, month = get_calendar_year_month(ww)
-                        target = get_target(SLT_TARGETS, chart_selected_dids[0], chart_selected_densities[0], chart_selected_speeds[0], year, month)
-                        if target is not None:
-                            slt_target_x.append(ww)
-                            slt_target_y.append(target)
-
-                    # Target label for legend (include curve name for ELC)
-                    target_label = f"{chart_selected_dids[0]} {chart_selected_densities[0]} {chart_selected_speeds[0]}"
-                    curve_indicator = f" [{selected_curve}]" if selected_curve != ACTIVE_CURVE else ""
-
-                    # Add SLT yield target marker (stepped line) - red neon
-                    if slt_target_y:
-                        fig.add_trace(
-                            go.Scatter(
-                                x=slt_target_x,
-                                y=slt_target_y,
-                                mode="lines",
-                                name=f"SLT Target [{selected_curve}] ({target_label})",
-                                line=dict(color="#FF1744", width=3, dash="dot", shape="hv"),
-                                showlegend=True,
-                                hovertemplate=f"<b>SLT Target [{selected_curve}] ({target_label}):</b> %{{y:.2f}}%<extra></extra>",
-                            )
-                        )
-
-                    # Build stepped ELC target line USING SELECTED CURVE
-                    elc_target_x = []
-                    elc_target_y = []
-                    for ww in sorted_workweeks:
-                        year, month = get_calendar_year_month(ww)
-                        # Use get_curve_target with selected curve instead of fixed ELC_TARGETS
-                        target = get_curve_target(selected_curve, target_key, year, month)
-                        if target is not None:
-                            elc_target_x.append(ww)
-                            elc_target_y.append(target)
-
-                    # Add ELC yield target marker (stepped line) - green neon dotted
-                    # Color varies if viewing historical curve: green for D1, orange for others
-                    elc_line_color = "#39FF14" if selected_curve == ACTIVE_CURVE else "#FFA726"
-                    elc_line_style = "dot" if selected_curve == ACTIVE_CURVE else "dash"
-
-                    if elc_target_y:
-                        fig.add_trace(
-                            go.Scatter(
-                                x=elc_target_x,
-                                y=elc_target_y,
-                                mode="lines",
-                                name=f"ELC Target [{selected_curve}] ({target_label})",
-                                line=dict(color=elc_line_color, width=3, dash=elc_line_style, shape="hv"),
-                                showlegend=True,
-                                hovertemplate=f"<b>ELC Target [{selected_curve}] ({target_label}):</b> %{{y:.2f}}%<extra></extra>",
-                            )
-                        )
-
-                    # Show note if viewing historical curve
-                    if selected_curve != ACTIVE_CURVE:
-                        st.caption(f"📊 *Showing ELC targets from curve **{selected_curve}** (historical). Active curve is **{ACTIVE_CURVE}**.*")
+                        st.caption(f"*History for {target_key}*")
                 else:
-                    # Show prominent warning about missing filters for target lines
-                    available_in_curve = get_available_configs_for_curve(selected_curve)
+                    st.caption("No history available for this config")
+            else:
+                st.caption("ℹ️ *Select single DID + Density + Speed to view target curve history*")
 
-                    if len(chart_selected_dids) != 1 or len(chart_selected_densities) != 1 or len(chart_selected_speeds) != 1:
-                        # Build message showing what's missing
-                        missing = []
-                        if len(chart_selected_dids) != 1:
-                            missing.append(f"DID ({len(chart_selected_dids)} selected)")
-                        if len(chart_selected_densities) != 1:
-                            missing.append(f"Density ({len(chart_selected_densities)} selected)")
-                        if len(chart_selected_speeds) != 1:
-                            missing.append(f"Speed ({len(chart_selected_speeds)} selected)")
+        # Right column: ELC Yield Data Table
+        with data_col:
+            st.markdown("**📋 ELC Yield Data**")
+            # Display order for columns
+            display_cols = ["design_id", "form_factor", "density", "speed", "workweek",
+                            "HMFN", "HMB1", "QMON", "SLT", "ELC"]
+            available_display = [c for c in display_cols if c in elc_df.columns]
 
-                        st.warning(
-                            f"⚠️ **Target lines not shown** — Select exactly ONE value for: {', '.join(missing)}\n\n"
-                            f"Use the sidebar filters to select single DID + Density + Speed to display SLT and ELC target lines."
-                        )
-                    elif target_key:
-                        st.info(f"ℹ️ No targets defined for **{target_key}** in curve {selected_curve}")
+            # Sort and display
+            sorted_df = elc_df[available_display].sort_values(
+                by=["workweek"] if "workweek" in elc_df.columns else available_display[:1],
+                ascending=True
+            )
 
-                # Add Micron fiscal month labels below workweek on x-axis
-                tick_labels = get_workweek_labels_with_months(sorted_workweeks)
+            st.dataframe(
+                sorted_df,
+                use_container_width=True,
+                hide_index=True,
+                height=300
+            )
 
-                fig.update_xaxes(
-                    ticktext=tick_labels,
-                    tickvals=sorted_workweeks,
-                )
+            # CSV Export button
+            csv_data = sorted_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download CSV",
+                data=csv_data,
+                file_name=f"elc_yield_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="elc_csv_download"
+            )
 
-                st.plotly_chart(fig, use_container_width=True)
-
-        # Heatmap by density/speed
+        # Heatmap by density/speed (full width below)
         if "density" in elc_df.columns and "speed" in elc_df.columns and "ELC" in elc_df.columns:
+            st.divider()
             st.subheader("ELC Yield by Density & Speed")
 
             pivot = elc_df.pivot_table(
@@ -3105,38 +3262,6 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     yaxis_title="Density"
                 )
                 st.plotly_chart(fig, use_container_width=True)
-
-        # ====================================================================
-        # COLLAPSIBLE DATA TABLE WITH CSV EXPORT
-        # ====================================================================
-        st.divider()
-        with st.expander("📋 View ELC Yield Data Table", expanded=False):
-            # Display order for columns
-            display_cols = ["design_id", "form_factor", "density", "speed", "workweek",
-                            "HMFN", "HMB1", "QMON", "SLT", "ELC"]
-            available_display = [c for c in display_cols if c in elc_df.columns]
-
-            # Sort and display
-            sorted_df = elc_df[available_display].sort_values(
-                by=["workweek"] if "workweek" in elc_df.columns else available_display[:1],
-                ascending=True
-            )
-
-            st.dataframe(
-                sorted_df,
-                use_container_width=True,
-                hide_index=True
-            )
-
-            # CSV Export button
-            csv_data = sorted_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Download CSV",
-                data=csv_data,
-                file_name=f"elc_yield_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                key="elc_csv_download"
-            )
 
     else:
         st.info("Click 'Fetch ELC Data' to load HMFN, HMB1, and QMON yield data for ELC calculation.")
