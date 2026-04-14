@@ -3086,16 +3086,23 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                 if st.session_state.get("elc_annotations"):
                     for ann in st.session_state.elc_annotations:
                         if ann["workweek"] in sorted_workweeks:
-                            # Add vertical line at annotation point
-                            fig.add_vline(
+                            # Add vertical line using shape (works with categorical x-axis)
+                            fig.add_shape(
+                                type="line",
+                                x0=ann["workweek"], x1=ann["workweek"],
+                                y0=0, y1=1,
+                                yref="paper",
+                                line=dict(color="#FF6B6B", width=2, dash="dash"),
+                            )
+                            # Add annotation text separately
+                            ann_text = f"📝 {ann['note'][:20]}..." if len(ann['note']) > 20 else f"📝 {ann['note']}"
+                            fig.add_annotation(
                                 x=ann["workweek"],
-                                line_width=2,
-                                line_dash="dash",
-                                line_color="#FF6B6B",
-                                annotation_text=f"📝 {ann['note'][:20]}..." if len(ann['note']) > 20 else f"📝 {ann['note']}",
-                                annotation_position="top",
-                                annotation_font_size=10,
-                                annotation_font_color="#FF6B6B",
+                                y=1.02,
+                                yref="paper",
+                                text=ann_text,
+                                showarrow=False,
+                                font=dict(size=10, color="#FF6B6B"),
                             )
 
                 # Extend x-axis with future weeks if showing future targets
