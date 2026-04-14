@@ -2592,7 +2592,7 @@ def calculate_elc_yields(df: pd.DataFrame) -> pd.DataFrame:
 def render_elc_yield_tab(filters: dict[str, Any]) -> None:
     """Render the Module ELC Yield tab content."""
     st.header("Module ELC Yield")
-    st.caption("**ELC** = HMFN × SLT | **SLT** = HMB1×QMON (or single step if only one selected) — *Required: WW range, Form Factor, DID, Facility, Step (HMFN/HMB1/QMON)* | *Optional: Density, Speed*")
+    st.info("📈 **ELC = HMFN × SLT** | SLT = HMB1×QMON (or single step if only one selected) — Required: WW range, Form Factor, DID, Facility, Step (HMFN/HMB1/QMON) | Optional: Density, Speed")
 
     # Cache controls
     use_cache = st.session_state.get("use_cache", True)
@@ -3457,7 +3457,7 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
 def render_pareto_tab(filters: dict[str, Any]) -> None:
     """Render the Pareto Analysis tab with sub-tabs for FAILCRAWLER and Register Fallout."""
     st.header("Pareto Analysis")
-    st.caption("**FAILCRAWLER DPM:** cDPM by fail mode with MSN_STATUS correlation | **Register Fallout:** Top failed registers by fallout % — *Required: WW range, Form Factor, DID, Facility, Step*")
+    st.info("📉 **FAILCRAWLER DPM:** cDPM by fail mode with MSN_STATUS | **Register Fallout:** Top failed registers — Required: WW range, Form Factor, DID, Facility, Step")
 
     # Create sub-tabs
     fc_tab, reg_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout"])
@@ -3922,7 +3922,7 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
 def render_machine_trend_tab(filters: dict[str, Any]) -> None:
     """Render the Machine Trend Analysis tab for SMT6 tester monitoring and GRACE Motherboard analysis."""
     st.subheader("Machine Trend Analysis")
-    st.caption("**SMT6 Tester Yield:** Socket & site yield trends — *Required: Step=HMFN* | **GRACE Motherboard:** Hang & SOP violation tracking (HMB1+QMON integrated) — *Required: WW range, Form Factor, Facility* | *Optional: DID, Density, Speed*")
+    st.info("🔧 **SMT6 Tester Yield:** Socket & site trends (Step=HMFN) | **GRACE Motherboard:** Hang & SOP violation tracking (HMB1+QMON integrated) — Required: WW range, Form Factor, Facility | Optional: DID, Density, Speed")
 
     # Sub-tabs within Machine Trend Analysis
     machine_subtab1, machine_subtab2 = st.tabs([
@@ -3945,7 +3945,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
     import numpy as np
 
     st.subheader("Fail Viewer")
-    st.caption("Visualize fail address patterns from ATE testing with die map, DQ/Bank distribution — *Required: Upload CSV or generate sample data* | *Options: Part Type, Color By*")
+    st.info("🔍 **Visualize fail address patterns** with die map, DQ/Bank distribution — Required: Upload CSV or generate sample data | Options: Part Type, Color By")
 
     # Part type selection
     col1, col2, col3 = st.columns(3)
@@ -4430,13 +4430,7 @@ def main() -> None:
 
     filters = render_sidebar()
 
-    # Validate filters
-    validation_error = validate_filters(filters)
-    if validation_error:
-        st.warning(validation_error)
-        return
-
-    # Cache controls
+    # Cache controls (in sidebar)
     st.sidebar.divider()
     st.sidebar.subheader("Cache Settings")
 
@@ -4458,11 +4452,138 @@ def main() -> None:
     # Store cache preference in session state
     st.session_state.use_cache = use_cache
 
-    # Create tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Yield Analysis", "Module ELC Yield", "Pareto Analysis", "Fail Viewer", "Machine Trend Analysis"])
+    # Create tabs with Home tab first
+    tab_home, tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 Home", "📊 Yield Analysis", "📈 Module ELC Yield", "📉 Pareto Analysis", "🔍 Fail Viewer", "🔧 Machine Trend Analysis"])
+
+    # ==================== HOME TAB ====================
+    with tab_home:
+        # Landing Page Header
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); border-radius: 12px; padding: 20px 30px; margin-bottom: 20px; border: 1px solid #10b981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
+            <h1 style="color: #6ee7b7; margin: 0; font-size: 28px;">🎯 SOCAMM 1-Stop</h1>
+            <p style="color: #d1fae5; margin: 5px 0 0 0; font-size: 14px;">Your One-Stop Dashboard for SOCAMM / SOCAMM2 Manufacturing Yield Analytics</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Feature Cards - Emerald Modern Theme
+        card_style = """
+            <div style="background: linear-gradient(145deg, #022c22 0%, #064e3b 100%); border-radius: 10px; padding: 15px; height: 140px; border: 1px solid #047857; box-shadow: 0 2px 8px rgba(4, 120, 87, 0.15);">
+                <div style="font-size: 24px; margin-bottom: 8px;">{icon}</div>
+                <div style="color: #6ee7b7; font-weight: bold; font-size: 14px; margin-bottom: 5px;">{title}</div>
+                <div style="color: #a7f3d0; font-size: 11px; line-height: 1.4;">{desc}</div>
+            </div>
+        """
+
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.markdown(card_style.format(
+                icon="📊",
+                title="Yield Analysis",
+                desc="Weekly trends, bin distribution, density/speed heatmaps"
+            ), unsafe_allow_html=True)
+        with col2:
+            st.markdown(card_style.format(
+                icon="📈",
+                title="Module ELC Yield",
+                desc="HMFN → SLT → ELC flow with target lines & DID breakdown"
+            ), unsafe_allow_html=True)
+        with col3:
+            st.markdown(card_style.format(
+                icon="📉",
+                title="Pareto Analysis",
+                desc="FAILCRAWLER DPM & Register fallout top failures"
+            ), unsafe_allow_html=True)
+        with col4:
+            st.markdown(card_style.format(
+                icon="🔍",
+                title="Fail Viewer",
+                desc="Die map visualization, DQ/Bank distribution from CSV"
+            ), unsafe_allow_html=True)
+        with col5:
+            st.markdown(card_style.format(
+                icon="🔧",
+                title="Machine Trends",
+                desc="SMT6 tester yield & GRACE motherboard health"
+            ), unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Help Assistant Section
+        st.markdown("""
+        <div style="background: #022c22; border-radius: 8px; padding: 15px; margin: 15px 0 10px 0; border: 1px solid #047857;">
+            <div style="color: #6ee7b7; font-weight: bold; font-size: 15px; margin-bottom: 8px;">🤖 How can I help you today?</div>
+            <span style="color: #a7f3d0; font-size: 13px;">👋 Welcome to <b>SOCAMM 1-Stop</b>! Tell me what you're looking for and I'll guide you to the right tab.</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        user_query = st.text_input(
+            "",
+            placeholder="e.g., 'check weekly yield', 'find top failures', 'motherboard hang issues'...",
+            key="help_query",
+            label_visibility="collapsed"
+        )
+
+        if user_query:
+            query_lower = user_query.lower()
+            response = None
+
+            # Feature matching logic
+            if any(kw in query_lower for kw in ['yield', 'trend', 'weekly', 'bin', 'heatmap', 'density', 'speed']):
+                response = {
+                    'tab': '📊 Yield Analysis',
+                    'desc': 'View weekly yield trends, bin distribution charts, and density/speed heatmaps.',
+                    'steps': '1. Select **WW range**, **Form Factor**, **DID**, **Facility**, **Step** in sidebar\n2. Go to **📊 Yield Analysis** tab\n3. Click **Fetch Module Yield Data**'
+                }
+            elif any(kw in query_lower for kw in ['elc', 'hmfn', 'slt', 'hbm1', 'qmon', 'end of line', 'target']):
+                response = {
+                    'tab': '📈 Module ELC Yield',
+                    'desc': 'Track HMFN → SLT → ELC yield flow with target lines and DID breakdown.',
+                    'steps': '1. Select **WW range**, **Form Factor**, **DID**, **Facility**, **Steps (HMFN/HMB1/QMON)** in sidebar\n2. Go to **📈 Module ELC Yield** tab\n3. Click **Fetch ELC Data**'
+                }
+            elif any(kw in query_lower for kw in ['pareto', 'failure', 'failcrawler', 'register', 'fallout', 'top fail', 'dpm']):
+                response = {
+                    'tab': '📉 Pareto Analysis',
+                    'desc': 'Identify top failures with FAILCRAWLER DPM and Register Fallout analysis.',
+                    'steps': '1. Select **WW range**, **Form Factor**, **DID**, **Facility**, **Step** in sidebar\n2. Go to **📉 Pareto Analysis** tab\n3. Choose **FAILCRAWLER DPM** or **Register Fallout** subtab'
+                }
+            elif any(kw in query_lower for kw in ['fail viewer', 'die map', 'dq', 'bank', 'address', 'pattern', 'csv', 'upload']):
+                response = {
+                    'tab': '🔍 Fail Viewer',
+                    'desc': 'Visualize fail address patterns with die maps and DQ/Bank distribution.',
+                    'steps': '1. Go to **🔍 Fail Viewer** tab\n2. Upload a **CSV file** with fail addresses OR generate sample data\n3. Select **Part Type** and **Color By** options'
+                }
+            elif any(kw in query_lower for kw in ['machine', 'smt6', 'tester', 'socket', 'site', 'grace', 'motherboard', 'hang', 'sop', 'mobo']):
+                response = {
+                    'tab': '🔧 Machine Trend Analysis',
+                    'desc': 'Monitor SMT6 tester performance and GRACE motherboard health.',
+                    'steps': '**For SMT6 Tester Yield:**\n1. Select **Step=HMFN** in sidebar\n2. Go to **🔧 Machine Trend Analysis** → **SMT6 Tester Yield**\n\n**For GRACE Motherboard:**\n1. Select **WW range**, **Form Factor**, **Facility** in sidebar\n2. Go to **🔧 Machine Trend Analysis** → **GRACE Motherboard**\n3. Click **Fetch GRACE Data** (uses HMB1+QMON integrated)'
+                }
+            else:
+                response = {
+                    'tab': '🔎 Not sure?',
+                    'desc': "I couldn't find an exact match, but here's a quick guide:",
+                    'steps': '• **Yield trends & bins** → 📊 Yield Analysis\n• **ELC/HMFN/SLT** → 📈 Module ELC Yield\n• **Top failures** → 📉 Pareto Analysis\n• **Fail patterns** → 🔍 Fail Viewer\n• **Machine/Motherboard** → 🔧 Machine Trends'
+                }
+
+            # Display response
+            st.markdown(f"""
+            <div style="background: #064e3b; border-radius: 8px; padding: 15px; margin-top: 10px; border-left: 4px solid #10b981;">
+                <div style="color: #6ee7b7; font-weight: bold; font-size: 16px; margin-bottom: 8px;">🎯 {response['tab']}</div>
+                <div style="color: #d1fae5; font-size: 13px; margin-bottom: 10px;">{response['desc']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.markdown(f"**How to get there:**\n\n{response['steps']}")
+
+        # Quick Start Guide - Emerald Theme
+        st.markdown("""
+        <div style="background: #022c22; border-radius: 8px; padding: 12px 20px; margin: 10px 0; border-left: 4px solid #10b981;">
+            <span style="color: #6ee7b7; font-weight: bold;">⚡ Quick Start:</span>
+            <span style="color: #d1fae5; font-size: 13px;"> Select <b>WW range</b>, <b>Form Factor</b>, <b>DID</b>, <b>Facility</b> in sidebar → Choose a tab above → Click <b>Fetch Data</b></span>
+        </div>
+        """, unsafe_allow_html=True)
 
     with tab1:
-        st.caption("Weekly yield trends, bin distribution, density/speed heatmaps — *Required: WW range, Form Factor, DID, Facility, Step* | *Optional: Density, Speed*")
+        st.info("📊 **Weekly yield trends, bin distribution, density/speed heatmaps** — Required: WW range, Form Factor, DID, Facility, Step | Optional: Density, Speed")
         # Fetch button for Module Yield data
         col1, col2 = st.columns([1, 4])
         with col1:
