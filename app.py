@@ -2,6 +2,7 @@
 
 import logging
 import importlib
+import os
 import re
 from datetime import datetime
 from typing import Any, Optional
@@ -40,6 +41,8 @@ importlib.reload(failcrawler)
 from src.failcrawler import (
     fetch_failcrawler_data,
     fetch_msn_status_correlation_data,
+    fetch_msn_status_fid_counts,
+    fetch_total_uin_by_step,
     process_failcrawler_data,
     create_failcrawler_chart,
     create_failcrawler_summary_table,
@@ -327,6 +330,10 @@ def init_session_state() -> None:
         st.session_state.failcrawler_data = pd.DataFrame()
     if "failcrawler_msn_corr_data" not in st.session_state:
         st.session_state.failcrawler_msn_corr_data = pd.DataFrame()
+    if "failcrawler_fid_counts" not in st.session_state:
+        st.session_state.failcrawler_fid_counts = pd.DataFrame()
+    if "failcrawler_total_uin" not in st.session_state:
+        st.session_state.failcrawler_total_uin = pd.DataFrame()
     if "failcrawler_last_fetch_time" not in st.session_state:
         st.session_state.failcrawler_last_fetch_time = None
     if "failcrawler_filters" not in st.session_state:
@@ -777,13 +784,21 @@ def inject_custom_css() -> None:
     """, unsafe_allow_html=True)
 
 
+def get_ai_robot_image_base64() -> str:
+    """Load the AI robot assistant image as base64 string."""
+    image_path = os.path.join(os.path.dirname(__file__), "Designer (1).png")
+    try:
+        with open(image_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except FileNotFoundError:
+        return ""
 
 
 def setup_page() -> None:
     """Configure Streamlit page settings."""
     st.set_page_config(
-        page_title="Module Yield Dashboard",
-        page_icon="📊",
+        page_title="SOCAMM 1-Stop",
+        page_icon="🎯",
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -791,19 +806,62 @@ def setup_page() -> None:
     # Inject custom CSS
     inject_custom_css()
 
-    # Header with timestamp
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.title("📊 Module Yield Dashboard")
-    with col2:
-        st.markdown(f"""
-        <div style="text-align: right; padding-top: 20px;">
-            <span style="color: #888; font-size: 12px;">Last refreshed</span><br>
-            <span style="color: #00d4ff; font-size: 14px; font-weight: 500;">{datetime.now().strftime('%H:%M:%S')}</span>
+    # Modern Header with gradient and glow
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%);
+        border-radius: 16px;
+        padding: 20px 30px;
+        margin-bottom: 20px;
+        border: 1px solid #10b981;
+        box-shadow: 0 8px 32px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    ">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="
+                font-size: 42px;
+                filter: drop-shadow(0 0 15px rgba(110, 231, 183, 0.6));
+                animation: pulse 2s ease-in-out infinite;
+            ">🎯</div>
+            <div>
+                <h1 style="
+                    color: #ecfdf5;
+                    margin: 0;
+                    font-size: 32px;
+                    font-weight: 700;
+                    letter-spacing: -0.5px;
+                    text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                ">SOCAMM 1-Stop</h1>
+                <p style="
+                    color: #a7f3d0;
+                    margin: 4px 0 0 0;
+                    font-size: 14px;
+                    font-weight: 400;
+                    letter-spacing: 0.3px;
+                ">Your One-Stop Dashboard for SOCAMM / SOCAMM2 Manufacturing Yield Analytics</p>
+            </div>
         </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("Weekly yield tracking for SOCAMM/SOCAMM2 modules")
+        <div style="text-align: right;">
+            <div style="
+                background: rgba(0,0,0,0.2);
+                border-radius: 10px;
+                padding: 10px 16px;
+                border: 1px solid rgba(110, 231, 183, 0.3);
+            ">
+                <span style="color: #a7f3d0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Last refreshed</span><br>
+                <span style="color: #6ee7b7; font-size: 18px; font-weight: 600;">{datetime.now().strftime('%H:%M:%S')}</span>
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes pulse {{
+            0%, 100% {{ transform: scale(1); }}
+            50% {{ transform: scale(1.05); }}
+        }}
+    </style>
+    """, unsafe_allow_html=True)
 
 
 def render_primary_filters() -> dict[str, Any]:
@@ -3110,18 +3168,27 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                 # ADD ANNOTATION MARKERS (callouts on data points)
                 # Places highlighted markers on actual yield values with note balloons
                 # ============================================================
+                # Initialize pending annotations list
+                pending_annotations = []
+
                 if st.session_state.get("elc_annotations") and selected_series:
                     ann_colors = ["#FF6B6B", "#FFB347", "#87CEEB", "#DDA0DD", "#90EE90"]
+                    ann_debug_info = []
 
                     for ann_idx, ann in enumerate(st.session_state.elc_annotations):
-                        if ann["workweek"] in sorted_workweeks:
+                        ann_ww_str = str(ann["workweek"])
+                        sorted_ww_str = [str(ww) for ww in sorted_workweeks]
+                        ww_match = ann_ww_str in sorted_ww_str
+                        ann_debug_info.append(f"Ann#{ann_idx}: WW={ann_ww_str}, in_data={ww_match}")
+
+                        if ww_match:
                             ann_color = ann_colors[ann_idx % len(ann_colors)]
                             ann_text = ann['note'][:25] + "..." if len(ann['note']) > 25 else ann['note']
 
-                            # Find yield values at this workweek for selected series
-                            ann_x = []
-                            ann_y = []
-                            ann_labels = []
+                            # Find ONE yield value at this workweek (use first matching series)
+                            # Only need one marker per annotation, not one per series
+                            ann_y_val = None
+                            ann_series_label = None
 
                             for series in selected_series:
                                 parts = series.split("_")
@@ -3130,63 +3197,32 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
 
                                     # Get the yield value at this workweek
                                     mask = (
-                                        (elc_df["design_id"].str.upper() == did.upper()) &
-                                        (elc_df["workweek"].astype(str) == str(ann["workweek"]))
+                                        (elc_df["design_id"].astype(str).str.upper() == did.upper()) &
+                                        (elc_df["workweek"].astype(str) == ann_ww_str)
                                     )
                                     if "density" in elc_df.columns:
-                                        mask &= (elc_df["density"].str.upper() == density.upper())
+                                        mask &= (elc_df["density"].astype(str).str.upper() == density.upper())
                                     if "speed" in elc_df.columns:
-                                        mask &= (elc_df["speed"].str.upper() == speed.upper())
+                                        mask &= (elc_df["speed"].astype(str).str.upper() == speed.upper())
 
                                     matched = elc_df[mask]
+                                    ann_debug_info.append(f"  Series={series}, mask_sum={mask.sum()}, matched={len(matched)}")
                                     if not matched.empty and yield_type in matched.columns:
                                         y_val = matched[yield_type].iloc[0]
-                                        if pd.notna(y_val):
-                                            ann_x.append(ann["workweek"])
-                                            ann_y.append(y_val)
-                                            ann_labels.append(f"{yield_type}: {y_val:.2f}%")
+                                        if pd.notna(y_val) and ann_y_val is None:
+                                            ann_y_val = y_val
+                                            ann_series_label = yield_type
+                                            ann_debug_info.append(f"    -> Using point: x={ann_ww_str}, y={y_val:.2f} ({yield_type})")
 
-                            # Add highlighted markers at annotation points
-                            if ann_x:
-                                fig.add_trace(
-                                    go.Scatter(
-                                        x=ann_x,
-                                        y=ann_y,
-                                        mode="markers",
-                                        marker=dict(
-                                            size=18,
-                                            color=ann_color,
-                                            symbol="circle",
-                                            line=dict(width=3, color="white")
-                                        ),
-                                        name=f"📝 {ann_text[:15]}",
-                                        hovertemplate=f"<b>📝 Note:</b> {ann_text}<br>" +
-                                                      "<b>WW:</b> %{x}<br>" +
-                                                      "<b>Yield:</b> %{y:.2f}%<br>" +
-                                                      "<extra></extra>",
-                                        showlegend=True,
-                                    )
-                                )
-
-                                # Add callout annotation for first point (avoid clutter)
-                                fig.add_annotation(
-                                    x=ann_x[0],
-                                    y=ann_y[0],
-                                    text=f"📝 {ann_text}",
-                                    showarrow=True,
-                                    arrowhead=2,
-                                    arrowsize=1,
-                                    arrowwidth=2,
-                                    arrowcolor=ann_color,
-                                    ax=40,
-                                    ay=-40,
-                                    bordercolor=ann_color,
-                                    borderwidth=2,
-                                    borderpad=4,
-                                    bgcolor="white",
-                                    opacity=0.9,
-                                    font=dict(size=10, color=ann_color),
-                                )
+                            # Store annotation info for adding AFTER layout is set
+                            if ann_y_val is not None:
+                                pending_annotations.append({
+                                    "x": ann_ww_str,
+                                    "y": ann_y_val,
+                                    "text": ann_text,
+                                    "color": ann_color,
+                                    "series_label": ann_series_label
+                                })
 
                 # Extend x-axis with future weeks if showing future targets
                 all_workweeks = sorted_workweeks + future_wws
@@ -3213,7 +3249,44 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     tickvals=all_workweeks,
                 )
 
+                # Add annotation callouts AFTER layout is set (no scatter trace to avoid axis issues)
+                if 'pending_annotations' in dir() and pending_annotations:
+                    for pann in pending_annotations:
+                        # Only add callout annotation (no marker trace)
+                        fig.add_annotation(
+                            x=pann["x"],
+                            y=pann["y"],
+                            xref="x",
+                            yref="y",
+                            text=f"📝 {pann['text']}",
+                            showarrow=True,
+                            arrowhead=2,
+                            arrowsize=1,
+                            arrowwidth=2,
+                            arrowcolor=pann["color"],
+                            ax=50,
+                            ay=-50,
+                            bordercolor=pann["color"],
+                            borderwidth=2,
+                            borderpad=4,
+                            bgcolor="white",
+                            opacity=0.9,
+                            font=dict(size=10, color=pann["color"]),
+                        )
+
                 st.plotly_chart(fig, use_container_width=True)
+
+                # Debug info for annotations (temporary)
+                if st.session_state.get("elc_annotations"):
+                    with st.expander("🔍 Annotation Debug Info", expanded=False):
+                        st.write(f"**sorted_workweeks:** {sorted_workweeks[:5]}... (total: {len(sorted_workweeks)})")
+                        st.write(f"**selected_series:** {selected_series}")
+                        st.write(f"**Annotations stored:** {len(st.session_state.elc_annotations)}")
+                        for i, ann in enumerate(st.session_state.elc_annotations):
+                            st.write(f"  Ann #{i}: WW={ann['workweek']}, Note={ann['note'][:30]}...")
+                        if 'ann_debug_info' in dir():
+                            for line in ann_debug_info:
+                                st.caption(line)
 
         st.divider()
 
@@ -3240,31 +3313,43 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
         # LEFT: Annotations
         with left_col:
             st.markdown("**📝 Annotations**")
-            ann_input_cols = st.columns([1, 2, 0.5])
-            with ann_input_cols[0]:
-                ann_ww = st.selectbox("WW", options=sorted_workweeks if 'sorted_workweeks' in dir() and sorted_workweeks else [], key="elc_ann_ww", label_visibility="collapsed")
-            with ann_input_cols[1]:
-                ann_note = st.text_input("Note", placeholder="Add note...", key="elc_ann_note", label_visibility="collapsed")
-            with ann_input_cols[2]:
-                if st.button("➕", key="elc_add_ann", help="Add annotation"):
-                    if ann_ww and ann_note:
-                        st.session_state.elc_annotations.append({
-                            "workweek": ann_ww, "note": ann_note,
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
-                        })
-                        st.rerun()
+
+            # User restriction: only asegaran can add/delete annotations
+            current_user = os.environ.get("USER", "")
+            is_annotation_admin = current_user == "asegaran"
+
+            if is_annotation_admin:
+                ann_input_cols = st.columns([1, 2, 0.5])
+                with ann_input_cols[0]:
+                    ann_ww = st.selectbox("WW", options=sorted_workweeks if 'sorted_workweeks' in dir() and sorted_workweeks else [], key="elc_ann_ww", label_visibility="collapsed")
+                with ann_input_cols[1]:
+                    ann_note = st.text_input("Note", placeholder="Add note...", key="elc_ann_note", label_visibility="collapsed")
+                with ann_input_cols[2]:
+                    if st.button("➕", key="elc_add_ann", help="Add annotation"):
+                        if ann_ww and ann_note:
+                            st.session_state.elc_annotations.append({
+                                "workweek": ann_ww, "note": ann_note,
+                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            })
+                            st.rerun()
 
             if st.session_state.elc_annotations:
                 for idx, ann in enumerate(st.session_state.elc_annotations):
-                    ann_row = st.columns([0.15, 0.85])
-                    with ann_row[0]:
-                        if st.button("🗑️", key=f"del_ann_{idx}"):
-                            st.session_state.elc_annotations.pop(idx)
-                            st.rerun()
-                    with ann_row[1]:
+                    if is_annotation_admin:
+                        ann_row = st.columns([0.15, 0.85])
+                        with ann_row[0]:
+                            if st.button("🗑️", key=f"del_ann_{idx}"):
+                                st.session_state.elc_annotations.pop(idx)
+                                st.rerun()
+                        with ann_row[1]:
+                            st.caption(f"**WW{ann['workweek']}**: {ann['note']}")
+                    else:
                         st.caption(f"**WW{ann['workweek']}**: {ann['note']}")
             else:
                 st.caption("_No annotations_")
+
+            if not is_annotation_admin:
+                st.caption("_View only - contact asegaran to add annotations_")
 
             # Target History (compact)
             st.markdown("**📜 Target History**")
@@ -3578,8 +3663,24 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     workweeks=workweeks
                 )
 
+                # Fetch FID-level data for unique module counts per MSN_STATUS
+                fid_counts_df = fetch_msn_status_fid_counts(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks
+                )
+
+                # Fetch total UIN (all modules tested including Pass) for accurate cDPM calculation
+                total_uin_df = fetch_total_uin_by_step(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks
+                )
+
                 st.session_state.failcrawler_data = fc_df
                 st.session_state.failcrawler_msn_corr_data = msn_corr_df
+                st.session_state.failcrawler_fid_counts = fid_counts_df
+                st.session_state.failcrawler_total_uin = total_uin_df
                 st.session_state.failcrawler_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 st.session_state.failcrawler_filters = filters.copy()
                 st.success(f"Loaded {len(fc_df):,} FAILCRAWLER records + {len(msn_corr_df):,} MSN_STATUS correlation records!")
@@ -3672,14 +3773,90 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
 
             # MSN_STATUS Correlation (FAILCRAWLER × MSN_STATUS contribution analysis)
             st.subheader(f"🔗 {step} MSN_STATUS Correlation")
-            st.caption("CDPM contribution by MSN_STATUS - ranked by contribution %, not count")
 
             # Use separate MSN_STATUS correlation data from session state
             msn_corr_df = st.session_state.get('failcrawler_msn_corr_data', pd.DataFrame())
+            fid_counts_df = st.session_state.get('failcrawler_fid_counts', pd.DataFrame())
+            total_uin_df = st.session_state.get('failcrawler_total_uin', pd.DataFrame())
             if msn_corr_df.empty:
                 st.info("MSN_STATUS correlation data not loaded. Click 'Fetch Live Data' to load.")
             else:
-                correlation_data = process_msn_status_correlation(msn_corr_df, step, design_id=filter_design_id)
+                # Toggle between Latest WW and Cumulative
+                corr_toggle_col1, corr_toggle_col2 = st.columns([1, 3])
+                with corr_toggle_col1:
+                    corr_time_range = st.radio(
+                        "Time Range",
+                        options=["Latest WW", "Cumulative"],
+                        horizontal=True,
+                        key=f"msn_corr_time_range_{step}",
+                        label_visibility="collapsed"
+                    )
+
+                # Filter data based on toggle selection
+                filtered_msn_corr_df = msn_corr_df.copy()
+                step_total_muin = None  # Total MUIN for MDPM denominator
+                step_total_uin = None   # Total component UIN for cDPM denominator
+
+                if corr_time_range == "Latest WW" and 'MFG_WORKWEEK' in msn_corr_df.columns:
+                    # Get the latest workweek from the data
+                    latest_ww = int(msn_corr_df['MFG_WORKWEEK'].max())
+                    filtered_msn_corr_df = msn_corr_df[msn_corr_df['MFG_WORKWEEK'] == latest_ww].copy()
+                    # Filter raw data by workweek and count unique MSNs and FIDs
+                    if not fid_counts_df.empty and 'MFG_WORKWEEK' in fid_counts_df.columns:
+                        filtered_raw = fid_counts_df[fid_counts_df['MFG_WORKWEEK'] == latest_ww].copy()
+                        # Normalize STEP to uppercase for matching
+                        filtered_raw['STEP'] = filtered_raw['STEP'].str.upper()
+                        # Count unique MSNs (modules) and FIDs (components)
+                        filtered_fid_counts_df = filtered_raw.groupby(
+                            ['STEP', 'MSN_STATUS'], as_index=False
+                        ).agg(UNIQUE_MODULES=('MSN', 'nunique'), UNIQUE_FIDS=('FID', 'nunique'))
+                    else:
+                        filtered_fid_counts_df = pd.DataFrame()
+                    # Get total MUIN and UIN for this step and workweek
+                    if not total_uin_df.empty and 'STEP' in total_uin_df.columns:
+                        step_uin_mask = (total_uin_df['STEP'].str.upper() == step.upper()) & (total_uin_df['MFG_WORKWEEK'] == latest_ww)
+                        step_uin_row = total_uin_df[step_uin_mask]
+                        if not step_uin_row.empty:
+                            if 'TOTAL_MUIN' in step_uin_row.columns:
+                                step_total_muin = int(step_uin_row['TOTAL_MUIN'].sum())
+                            if 'TOTAL_UIN' in step_uin_row.columns:
+                                step_total_uin = int(step_uin_row['TOTAL_UIN'].sum())
+                    with corr_toggle_col2:
+                        uin_info = f"MUIN: {step_total_muin:,}" if step_total_muin else ""
+                        if step_total_uin:
+                            uin_info += f" | cUIN: {step_total_uin:,}" if uin_info else f"cUIN: {step_total_uin:,}"
+                        st.caption(f"📅 WW{latest_ww} ({uin_info})" if uin_info else f"📅 WW{latest_ww} only")
+                else:
+                    # Count unique MSNs and FIDs across ALL workweeks (true cumulative)
+                    if not fid_counts_df.empty and 'MSN' in fid_counts_df.columns:
+                        fid_counts_copy = fid_counts_df.copy()
+                        # Normalize STEP to uppercase for matching
+                        fid_counts_copy['STEP'] = fid_counts_copy['STEP'].str.upper()
+                        # Count unique MSNs (modules) and FIDs (components)
+                        filtered_fid_counts_df = fid_counts_copy.groupby(
+                            ['STEP', 'MSN_STATUS'], as_index=False
+                        ).agg(UNIQUE_MODULES=('MSN', 'nunique'), UNIQUE_FIDS=('FID', 'nunique'))
+                    else:
+                        filtered_fid_counts_df = pd.DataFrame()
+                    # Get total MUIN and UIN for this step across all workweeks
+                    if not total_uin_df.empty and 'STEP' in total_uin_df.columns:
+                        step_uin_mask = total_uin_df['STEP'].str.upper() == step.upper()
+                        step_uin_rows = total_uin_df[step_uin_mask]
+                        if not step_uin_rows.empty:
+                            if 'TOTAL_MUIN' in step_uin_rows.columns:
+                                step_total_muin = int(step_uin_rows['TOTAL_MUIN'].sum())
+                            if 'TOTAL_UIN' in step_uin_rows.columns:
+                                step_total_uin = int(step_uin_rows['TOTAL_UIN'].sum())
+                    with corr_toggle_col2:
+                        uin_info = f"MUIN: {step_total_muin:,}" if step_total_muin else ""
+                        if step_total_uin:
+                            uin_info += f" | cUIN: {step_total_uin:,}" if uin_info else f"cUIN: {step_total_uin:,}"
+                        st.caption(f"📅 Cumulative ({uin_info})" if uin_info else "📅 Cumulative (all weeks)")
+
+                correlation_data = process_msn_status_correlation(
+                    filtered_msn_corr_df, step, design_id=filter_design_id, fid_counts=filtered_fid_counts_df,
+                    total_muin=step_total_muin, total_uin=step_total_uin
+                )
                 if correlation_data:
                     # Display heatmap and ranked table side by side
                     corr_col1, corr_col2 = st.columns([1, 1])
@@ -4997,18 +5174,10 @@ def main() -> None:
     st.session_state.use_cache = use_cache
 
     # Create tabs with Home tab first
-    tab_home, tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 Home", "📊 Yield Analysis", "📈 Module ELC Yield", "📉 Pareto Analysis", "🔍 Fail Viewer", "🔧 Machine Trend Analysis"])
+    tab_home, tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 Home", "📊 Yield Analysis", "📈 Module ELC Yield", "📉 Pareto Analysis", "🔍 Fail Viewer", "🔧 Machine Trends"])
 
     # ==================== HOME TAB ====================
     with tab_home:
-        # Landing Page Header
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); border-radius: 12px; padding: 20px 30px; margin-bottom: 20px; border: 1px solid #10b981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
-            <h1 style="color: #6ee7b7; margin: 0; font-size: 28px;">🎯 SOCAMM 1-Stop</h1>
-            <p style="color: #d1fae5; margin: 5px 0 0 0; font-size: 14px;">Your One-Stop Dashboard for SOCAMM / SOCAMM2 Manufacturing Yield Analytics</p>
-        </div>
-        """, unsafe_allow_html=True)
-
         # Feature Cards - Emerald Modern Theme
         card_style = """
             <div style="background: linear-gradient(145deg, #022c22 0%, #064e3b 100%); border-radius: 10px; padding: 15px; height: 140px; border: 1px solid #047857; box-shadow: 0 2px 8px rgba(4, 120, 87, 0.15);">
@@ -5052,11 +5221,23 @@ def main() -> None:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # Help Assistant Section
-        st.markdown("""
-        <div style="background: #022c22; border-radius: 8px; padding: 15px; margin: 15px 0 10px 0; border: 1px solid #047857;">
-            <div style="color: #6ee7b7; font-weight: bold; font-size: 15px; margin-bottom: 8px;">🤖 How can I help you today?</div>
-            <span style="color: #a7f3d0; font-size: 13px;">👋 Welcome to <b>SOCAMM 1-Stop</b>! Tell me what you're looking for and I'll guide you to the right tab.</span>
+        # Help Assistant Section - Load AI robot image
+        ai_robot_base64 = get_ai_robot_image_base64()
+        if ai_robot_base64:
+            ai_icon_html = f'<img src="data:image/png;base64,{ai_robot_base64}" alt="AI Assistant" style="height: 80px; width: auto; border-radius: 8px; filter: drop-shadow(0 0 15px rgba(110, 231, 183, 0.6));"/>'
+        else:
+            ai_icon_html = '<div style="font-size: 48px; line-height: 1; filter: drop-shadow(0 0 10px rgba(110, 231, 183, 0.5));">🤖</div>'
+
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #022c22 0%, #064e3b 100%); border-radius: 12px; padding: 20px; margin: 20px 0 15px 0; border: 1px solid #10b981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px;">
+                {ai_icon_html}
+                <div>
+                    <div style="color: #6ee7b7; font-weight: bold; font-size: 18px;">AI Assistant</div>
+                    <div style="color: #a7f3d0; font-size: 13px;">How can I help you today?</div>
+                </div>
+            </div>
+            <span style="color: #d1fae5; font-size: 14px;">👋 Welcome to <b>SOCAMM 1-Stop</b>! Tell me what you're looking for and I'll guide you to the right tab.</span>
         </div>
         """, unsafe_allow_html=True)
 

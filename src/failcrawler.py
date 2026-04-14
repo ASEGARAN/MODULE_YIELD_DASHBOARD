@@ -248,6 +248,167 @@ def fetch_msn_status_correlation_data(
         return pd.DataFrame()
 
 
+def fetch_total_uin_by_step(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch total UIN (units tested) per step and workweek.
+
+    Returns both:
+    - TOTAL_MUIN: Module-level UIN (for MDPM calculation)
+    - TOTAL_UIN: Component-level UIN (for cDPM calculation)
+
+    Uses +fidag which returns both UIN (component) and MUIN (module) per FID_STATUS,
+    including Pass status for total population.
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with STEP, MFG_WORKWEEK, TOTAL_MUIN, TOTAL_UIN columns
+    """
+    design_id_str = ','.join(design_ids)
+    step_str = ','.join([s.lower() for s in steps])
+    workweek_str = ','.join([str(ww) for ww in workweeks])
+
+    logger.info(f"Fetching total UIN (module + component) per step/workweek...")
+
+    # Use +fidag to get both UIN (component) and MUIN (module) including Pass
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        '-FORCEAPI', '+quiet', '+csv', '+stdf',
+        f'-DESIGN_ID={design_id_str}',
+        f'-mfg_workweek={workweek_str}',
+        f'-step={step_str}',
+        '-format=STEP,MFG_WORKWEEK',
+        '+fidag'
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=600
+        )
+
+        if result.returncode != 0:
+            logger.error(f"mtsums error: {result.stderr.decode() if result.stderr else 'Unknown'}")
+            return pd.DataFrame()
+
+        output = result.stdout.decode()
+        if not output.strip():
+            return pd.DataFrame()
+
+        df = pd.read_csv(StringIO(output))
+        df.columns = [col.upper() for col in df.columns]
+
+        # Aggregate across all FID_STATUS (including Pass) to get totals
+        agg_dict = {}
+        if 'MUIN' in df.columns:
+            agg_dict['MUIN'] = 'sum'
+        if 'UIN' in df.columns:
+            agg_dict['UIN'] = 'sum'
+
+        if not agg_dict:
+            logger.warning("No UIN or MUIN columns found in mtsums output")
+            return pd.DataFrame()
+
+        result_df = df.groupby(['STEP', 'MFG_WORKWEEK'], as_index=False).agg(agg_dict)
+
+        # Rename columns
+        rename_map = {}
+        if 'MUIN' in result_df.columns:
+            rename_map['MUIN'] = 'TOTAL_MUIN'
+        if 'UIN' in result_df.columns:
+            rename_map['UIN'] = 'TOTAL_UIN'
+        result_df = result_df.rename(columns=rename_map)
+
+        # Convert to integers
+        if 'TOTAL_MUIN' in result_df.columns:
+            result_df['TOTAL_MUIN'] = result_df['TOTAL_MUIN'].round().astype(int)
+        if 'TOTAL_UIN' in result_df.columns:
+            result_df['TOTAL_UIN'] = result_df['TOTAL_UIN'].round().astype(int)
+
+        logger.info(f"Fetched UIN for {len(result_df)} step/workweek combinations")
+        return result_df
+
+    except Exception as e:
+        logger.exception(f"Error fetching total UIN: {e}")
+        return pd.DataFrame()
+
+
+def fetch_msn_status_fid_counts(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch FID-level data to count unique failing modules per MSN_STATUS.
+
+    This query fetches individual FID records and counts distinct FIDs
+    per MSN_STATUS for accurate unique failing module counts.
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with unique FID counts per STEP and MSN_STATUS
+    """
+    design_id_str = ','.join(design_ids)
+    step_str = ','.join([s.lower() for s in steps])
+    workweek_str = ','.join([str(ww) for ww in workweeks])
+
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        '-FORCEAPI', '+quiet', '+csv', '+stdf',
+        f'-DESIGN_ID={design_id_str}',
+        f'-mfg_workweek={workweek_str}',
+        f'-step={step_str}',
+        '-format=STEP,MFG_WORKWEEK,MSN_STATUS,MSN,FID',
+        '-msn_status!=Pass',
+        '+fid'
+    ]
+
+    logger.info(f"Fetching FID-level data for unique module counts...")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=600
+        )
+
+        if result.returncode != 0:
+            logger.error(f"mtsums error: {result.stderr.decode() if result.stderr else 'Unknown'}")
+            return pd.DataFrame()
+
+        output = result.stdout.decode()
+        if not output.strip():
+            return pd.DataFrame()
+
+        df = pd.read_csv(StringIO(output))
+        df.columns = [col.upper() for col in df.columns]
+
+        # Return raw MSN and FID data for flexible aggregation
+        # MSN = Module Serial Number (module-level identifier)
+        # FID = Component identifier (die-level)
+        # Aggregation will be done in app.py based on time range selection
+        logger.info(f"Fetched {len(df)} records for unique module/FID counting")
+        return df[['STEP', 'MFG_WORKWEEK', 'MSN_STATUS', 'MSN', 'FID']]
+
+    except Exception as e:
+        logger.exception(f"Error fetching FID counts: {e}")
+        return pd.DataFrame()
+
+
 def process_failcrawler_data(df: pd.DataFrame, step: str, design_id: str = None) -> dict:
     """
     Process raw FAILCRAWLER data into chart-ready format for a specific step.
@@ -772,13 +933,23 @@ def create_weekly_cdpm_table_html(data: dict, dark_mode: bool = True) -> str:
     return html
 
 
-def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str = None) -> dict:
+def process_msn_status_correlation(
+    df: pd.DataFrame,
+    step: str,
+    design_id: str = None,
+    fid_counts: pd.DataFrame = None,
+    total_muin: int = None,
+    total_uin: int = None
+) -> dict:
     """
     Process FAILCRAWLER data to compute MSN_STATUS correlation.
 
-    Calculates CDPM contribution by MSN_STATUS for each FAILCRAWLER category.
+    Calculates both MDPM and cDPM by MSN_STATUS:
+    - MDPM = (Unique Failed Modules / Total MUIN) × 1,000,000
+    - cDPM = (Unique Failed FIDs / Total Component UIN) × 1,000,000
+
     Following mtsums best practices:
-    - Rank by CDPM contribution %, not raw count
+    - Rank by contribution %, not raw count
     - Flag low-volume populations
     - Exclude Mod-Sys, ModOnly, NoFA, Multi-Mod
 
@@ -786,6 +957,9 @@ def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str =
         df: Raw DataFrame from mtsums (wide format with FAILCRAWLER columns, grouped by MSN_STATUS)
         step: Test step (HMFN, HMB1, QMON)
         design_id: Optional Design ID to filter
+        fid_counts: Optional DataFrame with unique module and FID counts per MSN_STATUS
+        total_muin: Total modules tested (for MDPM denominator)
+        total_uin: Total components tested (for cDPM denominator)
 
     Returns:
         Dictionary with correlation data for visualization
@@ -837,14 +1011,11 @@ def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str =
         agg_dict['ALL'] = 'sum'
     msn_status_agg = step_df.groupby('MSN_STATUS').agg(agg_dict).reset_index()
 
-    # Calculate proper DPM from aggregated counts: (fails / UIN) * 1,000,000
+    # Store component fail count from ALL column (for contribution % calculation)
     if 'ALL' in msn_status_agg.columns:
         msn_status_agg['TOTAL_FAILS'] = msn_status_agg['ALL']
-        msn_status_agg['CALCULATED_DPM'] = (msn_status_agg['ALL'] / msn_status_agg['UIN'] * 1_000_000).round(1)
     else:
-        # Fallback: use UIN as proxy for contribution
-        msn_status_agg['TOTAL_FAILS'] = msn_status_agg['UIN']
-        msn_status_agg['CALCULATED_DPM'] = 0
+        msn_status_agg['TOTAL_FAILS'] = 0
 
     # Calculate grand total fails
     grand_total_fails = msn_status_agg['TOTAL_FAILS'].sum()
@@ -863,6 +1034,49 @@ def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str =
 
     # Flag low-volume populations (UIN < 100)
     msn_status_agg['LOW_VOLUME'] = msn_status_agg['UIN'] < 100
+
+    # Merge unique module and FID counts if provided
+    if fid_counts is not None and not fid_counts.empty:
+        step_fid_counts = fid_counts[fid_counts['STEP'].str.upper() == step.upper()].copy()
+        if not step_fid_counts.empty:
+            # Determine which columns are available
+            merge_cols = ['MSN_STATUS']
+            if 'UNIQUE_MODULES' in step_fid_counts.columns:
+                merge_cols.append('UNIQUE_MODULES')
+            if 'UNIQUE_FIDS' in step_fid_counts.columns:
+                merge_cols.append('UNIQUE_FIDS')
+
+            msn_status_agg = msn_status_agg.merge(
+                step_fid_counts[merge_cols],
+                on='MSN_STATUS',
+                how='left'
+            )
+            if 'UNIQUE_MODULES' in msn_status_agg.columns:
+                msn_status_agg['UNIQUE_MODULES'] = msn_status_agg['UNIQUE_MODULES'].fillna(0).astype(int)
+            else:
+                msn_status_agg['UNIQUE_MODULES'] = 0
+            if 'UNIQUE_FIDS' in msn_status_agg.columns:
+                msn_status_agg['UNIQUE_FIDS'] = msn_status_agg['UNIQUE_FIDS'].fillna(0).astype(int)
+            else:
+                msn_status_agg['UNIQUE_FIDS'] = 0
+        else:
+            msn_status_agg['UNIQUE_MODULES'] = 0
+            msn_status_agg['UNIQUE_FIDS'] = 0
+    else:
+        msn_status_agg['UNIQUE_MODULES'] = 0
+        msn_status_agg['UNIQUE_FIDS'] = 0
+
+    # Calculate MDPM: (Unique Failed Modules / Total MUIN) × 1,000,000
+    if total_muin is not None and total_muin > 0:
+        msn_status_agg['MDPM'] = (msn_status_agg['UNIQUE_MODULES'] / total_muin * 1_000_000).round(2)
+    else:
+        msn_status_agg['MDPM'] = 0.0
+
+    # Calculate cDPM: (Unique Failed FIDs / Total Component UIN) × 1,000,000
+    if total_uin is not None and total_uin > 0:
+        msn_status_agg['CDPM'] = (msn_status_agg['UNIQUE_FIDS'] / total_uin * 1_000_000).round(2)
+    else:
+        msn_status_agg['CDPM'] = 0.0
 
     # Build correlation matrix (FAILCRAWLER × MSN_STATUS) from original step_df
     # Use DPM values for relative distribution within each FAILCRAWLER category
@@ -894,7 +1108,9 @@ def process_msn_status_correlation(df: pd.DataFrame, step: str, design_id: str =
         'fc_columns': fc_columns,
         'top_fcs': top_fcs,
         'msn_statuses': msn_statuses,
-        'grand_total_fails': grand_total_fails
+        'grand_total_fails': grand_total_fails,
+        'total_muin': total_muin,
+        'total_uin': total_uin
     }
 
 
@@ -926,32 +1142,70 @@ def create_msn_status_correlation_chart(data: dict, dark_mode: bool = False) -> 
             row.append(val)
         z_values.append(row)
 
-    # Theme colors
+    # Theme colors - using red shades for failure/error data
     if dark_mode:
         font_color = '#E0E0E0'
         paper_bg = 'rgba(0,0,0,0)'
-        colorscale = 'Viridis'
+        # Custom colorscale: dark red to bright coral (readable in dark mode)
+        colorscale = [
+            [0, '#450a0a'],      # Very dark red for low values
+            [0.5, '#dc2626'],    # Medium red
+            [1, '#f87171']       # Bright coral for high values
+        ]
     else:
         font_color = '#1a1a1a'
         paper_bg = '#FFFFFF'
-        colorscale = 'Blues'
+        # Custom colorscale: light pink to medium red (keeps text readable)
+        colorscale = [
+            [0, '#fef2f2'],      # Very light pink for low values
+            [0.3, '#fecaca'],    # Light red/pink
+            [0.6, '#f87171'],    # Coral red
+            [1, '#dc2626']       # Medium red for high values
+        ]
+
+    # Calculate max value to determine text color threshold
+    max_val = max(max(row) for row in z_values) if z_values and z_values[0] else 1
+
+    # Create text colors: white for high values (>60% of max), dark for low values
+    text_colors = []
+    for row in z_values:
+        row_colors = []
+        for val in row:
+            if val > max_val * 0.6:
+                row_colors.append('#ffffff' if not dark_mode else '#1a1a1a')
+            else:
+                row_colors.append('#1a1a1a' if not dark_mode else '#ffffff')
+        text_colors.append(row_colors)
 
     fig = go.Figure(data=go.Heatmap(
         z=z_values,
         x=msn_statuses,
         y=top_fcs,
         colorscale=colorscale,
-        text=[[f'{v:.1f}%' for v in row] for row in z_values],
-        texttemplate='%{text}',
-        textfont=dict(size=10, color=font_color),
         hovertemplate='FAILCRAWLER: %{y}<br>MSN_STATUS: %{x}<br>Contribution: %{z:.1f}%<extra></extra>',
         colorbar=dict(
             title=dict(text='Contribution %', font=dict(color=font_color)),
             tickfont=dict(color=font_color)
-        )
+        ),
+        showscale=True
     ))
 
+    # Add annotations with adaptive text colors for each cell
+    annotations = []
+    for i, fc in enumerate(top_fcs):
+        for j, msn in enumerate(msn_statuses):
+            val = z_values[i][j]
+            text_color = text_colors[i][j]
+            annotations.append(dict(
+                x=msn,
+                y=fc,
+                text=f'{val:.1f}%',
+                showarrow=False,
+                font=dict(size=10, color=text_color)
+            ))
+
     fig.update_layout(
+        annotations=annotations,
         title=dict(
             text=f'<b>{step} FAILCRAWLER × MSN_STATUS Contribution</b>',
             font=dict(color=font_color, size=14)
@@ -979,11 +1233,9 @@ def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> 
     """
     Create HTML table showing MSN_STATUS ranked by fail count contribution.
 
-    Following mtsums best practices:
-    - Rank by fail count contribution %, not summed DPM (DPM is a rate, not additive)
-    - Show calculated DPM = (fails / UIN) * 1,000,000
-    - Flag low-volume populations
-    - Show cumulative % for Pareto analysis
+    Shows both MDPM and cDPM:
+    - MDPM = (Unique Modules / Total MUIN) × 1,000,000
+    - cDPM = (Unique FIDs / Total Component UIN) × 1,000,000
 
     Args:
         data: Processed correlation data
@@ -998,6 +1250,8 @@ def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> 
     summary = data['msn_status_summary']
     step = data['step']
     grand_total = data['grand_total_fails']
+    total_muin = data.get('total_muin')
+    total_uin = data.get('total_uin')
 
     # Style colors
     bg_color = '#2d2d2d' if dark_mode else '#ffffff'
@@ -1005,25 +1259,33 @@ def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> 
     header_bg = '#3d3d3d' if dark_mode else '#e8e8e8'
     border_color = '#555555' if dark_mode else '#cccccc'
     highlight_80 = '#4a1a1a' if dark_mode else '#ffe0e0'
-    low_vol_color = '#5c4a00' if dark_mode else '#FFF3CD'
+    subtext_color = '#aaaaaa' if dark_mode else '#666666'
+
+    # Volume info text
+    volume_info = []
+    if total_muin:
+        volume_info.append(f"Module UIN: {total_muin:,}")
+    if total_uin:
+        volume_info.append(f"Component UIN: {total_uin:,}")
+    volume_text = " | ".join(volume_info) if volume_info else ""
 
     html = f'''
     <div style="margin-bottom: 20px;">
-        <h4 style="color: {text_color}; margin-bottom: 10px;">{step} MSN_STATUS Ranked by Fail Count</h4>
-        <p style="font-size: 11px; color: {'#aaaaaa' if dark_mode else '#666666'}; margin-bottom: 10px;">
-            Total Fails: {grand_total:,.0f} | DPM = (Fails / UIN) × 1M
+        <h4 style="color: {text_color}; margin-bottom: 5px;">{step} MSN_STATUS Ranked by Fail Count</h4>
+        <p style="font-size: 11px; color: {subtext_color}; margin-bottom: 10px;">
+            {volume_text}
         </p>
-        <table style="border-collapse: collapse; width: 100%; font-size: 12px; font-family: Arial, sans-serif; background-color: {bg_color};">
+        <table style="border-collapse: collapse; width: 100%; font-size: 11px; font-family: Arial, sans-serif; background-color: {bg_color};">
             <thead>
                 <tr style="background-color: {header_bg};">
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: left; color: {text_color};">Rank</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: left; color: {text_color};">MSN_STATUS</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Fails</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">DPM</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Contribution %</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Cumulative %</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Volume (UIN)</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: center; color: {text_color};">Flag</th>
+                    <th style="border: 1px solid {border_color}; padding: 6px; text-align: left; color: {text_color};">Rank</th>
+                    <th style="border: 1px solid {border_color}; padding: 6px; text-align: left; color: {text_color};">MSN_STATUS</th>
+                    <th style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};" title="Unique Module Serial Numbers that failed">Modules</th>
+                    <th style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};" title="MDPM = (Modules / MUIN) × 1M">MDPM</th>
+                    <th style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};" title="Unique Component (Die) IDs that failed">FIDs</th>
+                    <th style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};" title="cDPM = (FIDs / Component UIN) × 1M">cDPM</th>
+                    <th style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};">Contrib %</th>
+                    <th style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};">Cumul %</th>
                 </tr>
             </thead>
             <tbody>
@@ -1034,31 +1296,30 @@ def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> 
         row_style = ''
         if row['CUMULATIVE_PCT'] <= 80 or i == 1:
             row_style = f'background-color: {highlight_80};'
-        elif row['LOW_VOLUME']:
-            row_style = f'background-color: {low_vol_color};'
 
-        flag = '⚠️ Low Vol' if row['LOW_VOLUME'] else ''
-        fails = int(row['TOTAL_FAILS']) if 'TOTAL_FAILS' in row else 0
-        dpm = row['CALCULATED_DPM'] if 'CALCULATED_DPM' in row else 0
+        unique_modules = int(row['UNIQUE_MODULES']) if 'UNIQUE_MODULES' in row else 0
+        unique_fids = int(row['UNIQUE_FIDS']) if 'UNIQUE_FIDS' in row else 0
+        mdpm = row['MDPM'] if 'MDPM' in row else 0
+        cdpm = row['CDPM'] if 'CDPM' in row else 0
 
         html += f'''
             <tr style="{row_style}">
-                <td style="border: 1px solid {border_color}; padding: 8px; color: {text_color};">{i}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; font-weight: bold; color: {text_color};">{row['MSN_STATUS']}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{fails:,}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{dpm:,.1f}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{row['CONTRIBUTION_PCT']:.1f}%</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{row['CUMULATIVE_PCT']:.1f}%</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{int(row['UIN']):,}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: center; color: {text_color};">{flag}</td>
+                <td style="border: 1px solid {border_color}; padding: 6px; color: {text_color};">{i}</td>
+                <td style="border: 1px solid {border_color}; padding: 6px; font-weight: bold; color: {text_color};">{row['MSN_STATUS']}</td>
+                <td style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};">{unique_modules:,}</td>
+                <td style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};">{mdpm:,.2f}</td>
+                <td style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};">{unique_fids:,}</td>
+                <td style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};">{cdpm:,.2f}</td>
+                <td style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};">{row['CONTRIBUTION_PCT']:.1f}%</td>
+                <td style="border: 1px solid {border_color}; padding: 6px; text-align: right; color: {text_color};">{row['CUMULATIVE_PCT']:.1f}%</td>
             </tr>
         '''
 
     html += f'''
             </tbody>
         </table>
-        <p style="font-size: 11px; color: {'#aaaaaa' if dark_mode else '#666666'}; margin-top: 5px;">
-            🔴 Red rows = Top 80% contributors (focus areas) | 🟡 Yellow = Low volume (&lt;100 UIN, interpret with caution)
+        <p style="font-size: 10px; color: {subtext_color}; margin-top: 5px;">
+            🔴 Red rows = Top 80% contributors | MDPM = Module DPM | cDPM = Component DPM
         </p>
     </div>
     '''
