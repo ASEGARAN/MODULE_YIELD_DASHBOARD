@@ -2790,8 +2790,6 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
         opt_col1, opt_col2, opt_col3 = st.columns(3)
         with opt_col1:
             show_elc_labels = st.checkbox("Show data labels", value=False, key="elc_trend_show_labels")
-            show_forecast = st.checkbox("Show 4-week forecast", value=False, key="elc_show_forecast",
-                                        help="Add linear trend projection for next 4 weeks")
         with opt_col2:
             y_min = st.slider(
                 "Y-axis minimum (%)",
@@ -2932,55 +2930,52 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     )
 
                     # ============================================================
-                    # ADD FORECAST LINE (if enabled)
-                    # Linear regression to project next 4 weeks
+                    # ADD FUTURE TARGET LINE (if enabled)
+                    # Shows upcoming target values from selected curve
                     # ============================================================
-                    if show_forecast and len(y_vals) >= 3:
-                        # Convert workweeks to numeric for regression
-                        x_numeric = np.arange(len(y_vals))
-                        y_numeric = np.array(y_vals)
+                    show_future_targets = st.session_state.get("elc_show_future_targets", False)
+                    if show_future_targets and yield_type == "ELC" and can_show_targets and target_key:
+                        selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
 
-                        # Linear regression
-                        coeffs = np.polyfit(x_numeric, y_numeric, 1)
-                        slope, intercept = coeffs
-
-                        # Generate forecast for next 4 weeks
+                        # Generate next 8 weeks' workweeks
                         last_ww = int(sorted_workweeks[-1])
                         forecast_wws = []
-                        for i in range(1, 5):
-                            # Calculate next workweek (handle year rollover)
+                        forecast_y = []
+
+                        for i in range(1, 9):  # Next 8 weeks
                             next_ww = last_ww + i
                             year = next_ww // 100
                             week = next_ww % 100
                             if week > 52:
                                 year += 1
                                 week = week - 52
-                            forecast_wws.append(f"{year}{week:02d}")
+                            ww_str = f"{year}{week:02d}"
+                            forecast_wws.append(ww_str)
 
-                        # Predict values
-                        forecast_x = np.arange(len(y_vals), len(y_vals) + 4)
-                        forecast_y = slope * forecast_x + intercept
+                            # Get target from curve for this future week
+                            cal_year, cal_month = get_calendar_year_month(ww_str)
+                            target = get_curve_target(selected_curve, target_key, cal_year, cal_month)
+                            forecast_y.append(target if target else None)
 
-                        # Clip forecast to reasonable range (0-100%)
-                        forecast_y = np.clip(forecast_y, 0, 100)
+                        # Filter out None values
+                        valid_forecast = [(w, y) for w, y in zip(forecast_wws, forecast_y) if y is not None]
 
-                        # Add forecast line (dashed, lighter color)
-                        base_color = colors.get(yield_type, "#636EFA")
-                        fig.add_trace(
-                            go.Scatter(
-                                x=forecast_wws,
-                                y=forecast_y.tolist(),
-                                mode="lines+markers",
-                                name=f"{combined_series} (Forecast)",
-                                line=dict(color=base_color, width=2, dash="dash"),
-                                marker=dict(size=6, symbol="diamond"),
-                                hovertemplate="<b>Forecast Week:</b> %{x}<br>" +
-                                              f"<b>Series:</b> {combined_series}<br>" +
-                                              "<b>Projected Yield:</b> %{y:.2f}%<br>" +
-                                              f"<b>Trend:</b> {'+' if slope > 0 else ''}{slope:.3f}%/week<br>" +
-                                              "<extra></extra>",
+                        if valid_forecast:
+                            forecast_wws, forecast_y = zip(*valid_forecast)
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=list(forecast_wws),
+                                    y=list(forecast_y),
+                                    mode="lines+markers",
+                                    name=f"Future Target [{selected_curve}]",
+                                    line=dict(color="#9C27B0", width=2, dash="dash"),
+                                    marker=dict(size=6, symbol="diamond"),
+                                    hovertemplate="<b>Future Week:</b> %{x}<br>" +
+                                                  f"<b>Target Curve:</b> {selected_curve}<br>" +
+                                                  "<b>Target Yield:</b> %{y:.2f}%<br>" +
+                                                  "<extra></extra>",
+                                )
                             )
-                        )
 
                 # ============================================================
                 # ADD TARGET LINES (based on checkbox states in Section 4)
@@ -3115,360 +3110,151 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
         st.divider()
 
         # ========================================================================
-        # SECTION 4: ADD TARGET LINES (Below chart, not collapsed)
+        # SECTION 4: TARGETS, ANNOTATIONS & DATA (Combined)
         # ========================================================================
-        st.subheader("4️⃣ Add Target Lines")
+        st.subheader("4️⃣ Targets, Annotations & Data")
 
-        if can_show_targets and target_key:
-            # Curve selection with badge
-            curve_col1, curve_col2, curve_col3 = st.columns([1.5, 0.8, 3])
-            with curve_col1:
-                selected_curve = st.selectbox(
-                    "Target Curve",
-                    options=CURVE_ORDER[::-1],  # Newest first (D1, D0, C2, ...)
-                    index=0,  # Default to D1 (newest)
-                    key="elc_target_curve",
-                    help="Select which curve's targets to display on the chart. D1 is the current active curve."
-                )
-            with curve_col2:
-                # Active Curve Badge - show next to dropdown
-                if selected_curve == ACTIVE_CURVE:
-                    st.markdown(
-                        f"""
-                        <div style="display: flex; align-items: center; height: 100%; padding-top: 1.7rem;">
-                            <span style="
-                                background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
-                                color: white;
-                                padding: 0.3rem 0.8rem;
-                                border-radius: 15px;
-                                font-weight: 600;
-                                font-size: 0.75rem;
-                                box-shadow: 0 2px 6px rgba(0,200,83,0.3);
-                            ">✓ ACTIVE</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                else:
-                    st.markdown(
-                        f"""
-                        <div style="display: flex; align-items: center; height: 100%; padding-top: 1.7rem;">
-                            <span style="
-                                background: linear-gradient(135deg, #FF9800 0%, #FFC107 100%);
-                                color: white;
-                                padding: 0.3rem 0.8rem;
-                                border-radius: 15px;
-                                font-weight: 600;
-                                font-size: 0.75rem;
-                                box-shadow: 0 2px 6px rgba(255,152,0,0.3);
-                            ">HISTORICAL</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-            with curve_col3:
-                # Show curve description
-                if selected_curve in CURVE_INFO:
-                    curve_info = CURVE_INFO[selected_curve]
-                    st.caption(f"{curve_info['description']}")
-
-            # Target line selection (based on selected yields from chart)
-            # Checkboxes directly control target visibility - targets appear immediately when checked
-            st.markdown("**Select Target Lines to Overlay on Chart:**")
-            target_col1, target_col2, target_col3 = st.columns([1, 1, 1])
-
-            with target_col1:
-                if "HMFN" in selected_yields:
-                    st.checkbox("HMFN Target", value=False, key="elc_show_hmfn_target")
-                else:
-                    st.caption("*Add HMFN series first*")
-            with target_col2:
-                if "SLT" in selected_yields:
-                    st.checkbox("SLT Target", value=False, key="elc_show_slt_target")
-                else:
-                    st.caption("*Add SLT series first*")
-            with target_col3:
-                if "ELC" in selected_yields:
-                    st.checkbox("ELC Target", value=False, key="elc_show_elc_target")
-                else:
-                    st.caption("*Add ELC series first*")
-
-            # Show note if viewing historical curve
-            if selected_curve != ACTIVE_CURVE:
-                st.caption(f"📊 *Showing targets from curve **{selected_curve}** (historical). Active curve is **{ACTIVE_CURVE}**.*")
-
-        else:
-            # Show info about why targets aren't available
-            if not selected_series:
-                st.info("📊 Select series in the chart above first, then configure target lines here.")
-            else:
-                missing = []
-                if len(chart_selected_dids) != 1:
-                    missing.append(f"DID ({len(chart_selected_dids)} selected)")
-                if len(chart_selected_densities) != 1:
-                    missing.append(f"Density ({len(chart_selected_densities)} selected)")
-                if len(chart_selected_speeds) != 1:
-                    missing.append(f"Speed ({len(chart_selected_speeds)} selected)")
-
-                st.warning(
-                    f"⚠️ **Target lines unavailable** — Select exactly ONE value for: {', '.join(missing)}\n\n"
-                    f"Use the sidebar filters to select single DID + Density + Speed to enable target lines."
-                )
-
-        st.divider()
-
-        # ========================================================================
-        # SECTION 5: ANNOTATIONS (Add notes to data points)
-        # ========================================================================
-        st.subheader("5️⃣ Chart Annotations")
-
-        # Initialize annotations in session state if not exists
+        # Initialize annotations
         if "elc_annotations" not in st.session_state:
             st.session_state.elc_annotations = []
 
-        ann_col1, ann_col2, ann_col3 = st.columns([1, 2, 1])
+        # ---- ROW 1: Curve Selection + Target Checkboxes ----
+        if can_show_targets and target_key:
+            curve_row = st.columns([1.2, 0.6, 1.5, 0.8, 0.8, 0.8, 1])
+            with curve_row[0]:
+                selected_curve = st.selectbox(
+                    "Target Curve",
+                    options=CURVE_ORDER[::-1],
+                    index=0,
+                    key="elc_target_curve",
+                    help="D1 is the current active curve"
+                )
+            with curve_row[1]:
+                badge_color = "#00C853" if selected_curve == ACTIVE_CURVE else "#FF9800"
+                badge_text = "✓ ACTIVE" if selected_curve == ACTIVE_CURVE else "HISTORICAL"
+                st.markdown(f'<div style="padding-top:1.7rem;"><span style="background:{badge_color};color:white;padding:0.3rem 0.6rem;border-radius:12px;font-size:0.7rem;font-weight:600;">{badge_text}</span></div>', unsafe_allow_html=True)
+            with curve_row[2]:
+                if selected_curve in CURVE_INFO:
+                    st.caption(f"_{CURVE_INFO[selected_curve]['description']}_")
+            with curve_row[3]:
+                if "HMFN" in selected_yields:
+                    st.checkbox("HMFN", value=False, key="elc_show_hmfn_target")
+            with curve_row[4]:
+                if "SLT" in selected_yields:
+                    st.checkbox("SLT", value=False, key="elc_show_slt_target")
+            with curve_row[5]:
+                if "ELC" in selected_yields:
+                    st.checkbox("ELC", value=False, key="elc_show_elc_target")
+            with curve_row[6]:
+                st.checkbox("Future Targets", value=False, key="elc_show_future_targets",
+                            help="Show next 8 weeks' target values from selected curve")
 
-        with ann_col1:
-            # Workweek selector for annotation
-            ann_ww = st.selectbox(
-                "Work Week",
-                options=sorted_workweeks if 'sorted_workweeks' in dir() and sorted_workweeks else [],
-                key="elc_ann_ww",
-                help="Select the work week to annotate"
-            )
-        with ann_col2:
-            # Note text input
-            ann_note = st.text_input(
-                "Note",
-                placeholder="e.g., Process change implemented, Equipment issue...",
-                key="elc_ann_note"
-            )
-        with ann_col3:
-            # Add annotation button
-            st.markdown("<br>", unsafe_allow_html=True)  # Spacing
-            if st.button("📝 Add Note", key="elc_add_ann"):
-                if ann_ww and ann_note:
-                    new_ann = {
-                        "workweek": ann_ww,
-                        "note": ann_note,
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    }
-                    st.session_state.elc_annotations.append(new_ann)
-                    st.success(f"Added note for WW{ann_ww}")
-                    st.rerun()
-
-        # Display existing annotations
-        if st.session_state.elc_annotations:
-            st.markdown("**Current Annotations:**")
-            for idx, ann in enumerate(st.session_state.elc_annotations):
-                col1, col2 = st.columns([5, 1])
-                with col1:
-                    st.markdown(f"📌 **WW{ann['workweek']}**: {ann['note']} *({ann['timestamp']})*")
-                with col2:
-                    if st.button("🗑️", key=f"del_ann_{idx}", help="Delete this annotation"):
-                        st.session_state.elc_annotations.pop(idx)
-                        st.rerun()
+            if selected_curve != ACTIVE_CURVE:
+                st.caption(f"📊 *Viewing curve **{selected_curve}** (historical). Active: **{ACTIVE_CURVE}***")
         else:
-            st.caption("No annotations yet. Add notes above to mark important events on the chart.")
+            if not selected_series:
+                st.info("📊 Select series in the chart above, then configure targets here.")
+            else:
+                missing = []
+                if len(chart_selected_dids) != 1:
+                    missing.append(f"DID ({len(chart_selected_dids)})")
+                if len(chart_selected_densities) != 1:
+                    missing.append(f"Density ({len(chart_selected_densities)})")
+                if len(chart_selected_speeds) != 1:
+                    missing.append(f"Speed ({len(chart_selected_speeds)})")
+                st.warning(f"⚠️ Select exactly ONE: {', '.join(missing)}")
 
-        st.divider()
+        # ---- ROW 2: Two-column layout (Annotations | Data & Export) ----
+        left_col, right_col = st.columns([1, 1.2])
 
-        # ========================================================================
-        # SECTION 6: REFERENCE DATA & EXPORT
-        # ========================================================================
-        st.subheader("6️⃣ Reference Data & Export")
+        # LEFT: Annotations
+        with left_col:
+            st.markdown("**📝 Annotations**")
+            ann_input_cols = st.columns([1, 2, 0.5])
+            with ann_input_cols[0]:
+                ann_ww = st.selectbox("WW", options=sorted_workweeks if 'sorted_workweeks' in dir() and sorted_workweeks else [], key="elc_ann_ww", label_visibility="collapsed")
+            with ann_input_cols[1]:
+                ann_note = st.text_input("Note", placeholder="Add note...", key="elc_ann_note", label_visibility="collapsed")
+            with ann_input_cols[2]:
+                if st.button("➕", key="elc_add_ann", help="Add annotation"):
+                    if ann_ww and ann_note:
+                        st.session_state.elc_annotations.append({
+                            "workweek": ann_ww, "note": ann_note,
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        })
+                        st.rerun()
 
-        hist_col, data_col = st.columns(2)
+            if st.session_state.elc_annotations:
+                for idx, ann in enumerate(st.session_state.elc_annotations):
+                    ann_row = st.columns([0.15, 0.85])
+                    with ann_row[0]:
+                        if st.button("🗑️", key=f"del_ann_{idx}"):
+                            st.session_state.elc_annotations.pop(idx)
+                            st.rerun()
+                    with ann_row[1]:
+                        st.caption(f"**WW{ann['workweek']}**: {ann['note']}")
+            else:
+                st.caption("_No annotations_")
 
-        # Left column: Target History
-        with hist_col:
+            # Target History (compact)
             st.markdown("**📜 Target History**")
             if can_show_targets and target_key:
                 history = get_curve_history_for_config(target_key)
                 if history:
-                    # Build 1 row per curve TRANSITION with step details in remark
                     changes_data = []
-
                     for i, h in enumerate(history):
-                        curve_name = h['curve']
-                        is_active = h['is_active']
+                        curve_name, is_active = h['curve'], h['is_active']
                         detailed_changes = h.get('detailed_changes', [])
-
-                        # Build transition label (e.g., "D0→D1")
-                        if i == 0:
-                            transition = "Baseline"
-                        else:
-                            prev_curve = history[i-1]['curve']
-                            transition = f"{prev_curve} → {curve_name}"
-
-                        # Build remark with step details (include period for clarity)
+                        transition = "Base" if i == 0 else f"{history[i-1]['curve']}→{curve_name}"
                         if detailed_changes:
-                            remark_parts = []
-                            for change in detailed_changes:
-                                delta_val = change['delta']
-                                delta_str = f"+{delta_val:.2f}%" if delta_val > 0 else f"{delta_val:.2f}%"
-                                period = change.get('period', '')
-                                period_str = f" @{period}" if period else ""
-                                remark_parts.append(
-                                    f"{change['step']}{period_str}: {change['from']:.2f}% → {change['to']:.2f}% ({delta_str})"
-                                )
-                            remark = " | ".join(remark_parts)
+                            remark = " | ".join([f"{c['step']}: {c['from']:.1f}→{c['to']:.1f}%" for c in detailed_changes[:2]])
                         else:
-                            if i == 0:
-                                remark = "Initial baseline curve"
-                            else:
-                                remark = "No change for this config"
-
-                        # Only add row if there are changes or it's baseline
+                            remark = "Initial" if i == 0 else "No change"
                         if detailed_changes or i == 0:
-                            changes_data.append({
-                                "Curve": transition,
-                                "": "🟢" if is_active else "",
-                                "Remark": remark,
-                            })
-
-                    # Reverse to show latest first (D1 at top, Baseline at bottom)
-                    changes_data = changes_data[::-1]
-
+                            changes_data.append({"Curve": transition, "": "🟢" if is_active else "", "Change": remark})
                     if changes_data:
-                        changes_df = pd.DataFrame(changes_data)
-                        st.dataframe(
-                            changes_df,
-                            use_container_width=True,
-                            hide_index=True,
-                            column_config={
-                                "Curve": st.column_config.TextColumn("Curve", width="small"),
-                                "": st.column_config.TextColumn("", width=50),
-                                "Remark": st.column_config.TextColumn("Remark (Step: From → To)", width="large"),
-                            }
-                        )
-                        st.caption(f"*History for {target_key}*")
+                        st.dataframe(pd.DataFrame(changes_data[::-1]), use_container_width=True, hide_index=True, height=150)
+                        st.caption(f"_Config: {target_key}_")
                 else:
-                    st.caption("No history available for this config")
+                    st.caption("_No history_")
             else:
-                st.caption("ℹ️ *Select single DID + Density + Speed to view target curve history*")
+                st.caption("_Select single DID+Density+Speed_")
 
-        # Right column: ELC Yield Data Table
-        with data_col:
+        # RIGHT: Data Table & Export
+        with right_col:
             st.markdown("**📋 ELC Yield Data**")
-            # Display order for columns
-            display_cols = ["design_id", "form_factor", "density", "speed", "workweek",
-                            "HMFN", "HMB1", "QMON", "SLT", "ELC"]
+            display_cols = ["design_id", "form_factor", "density", "speed", "workweek", "HMFN", "HMB1", "QMON", "SLT", "ELC"]
             available_display = [c for c in display_cols if c in elc_df.columns]
+            sorted_df = elc_df[available_display].sort_values(by=["workweek"] if "workweek" in elc_df.columns else available_display[:1], ascending=True)
+            st.dataframe(sorted_df, use_container_width=True, hide_index=True, height=280)
 
-            # Sort and display
-            sorted_df = elc_df[available_display].sort_values(
-                by=["workweek"] if "workweek" in elc_df.columns else available_display[:1],
-                ascending=True
-            )
-
-            st.dataframe(
-                sorted_df,
-                use_container_width=True,
-                hide_index=True,
-                height=300
-            )
-
-            # CSV Export button
-            csv_data = sorted_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Download CSV",
-                data=csv_data,
-                file_name=f"elc_yield_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                key="elc_csv_download"
-            )
-
-        # PDF Report Export (full width below)
-        st.divider()
-        st.markdown("**📄 Export Report**")
-
-        pdf_col1, pdf_col2 = st.columns([2, 1])
-        with pdf_col1:
-            st.caption("Generate a PDF report with current chart, data, filters, and annotations.")
-        with pdf_col2:
-            if st.button("📄 Generate PDF Report", key="elc_pdf_export", type="primary"):
-                # Build HTML report content
-                report_html = f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>ELC Yield Report - {datetime.now().strftime('%Y-%m-%d')}</title>
-                    <style>
-                        body {{ font-family: Arial, sans-serif; margin: 40px; }}
-                        h1 {{ color: #1f77b4; border-bottom: 2px solid #1f77b4; padding-bottom: 10px; }}
-                        h2 {{ color: #333; margin-top: 30px; }}
-                        .filter-box {{ background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; }}
-                        .metric {{ display: inline-block; margin: 10px 20px; text-align: center; }}
-                        .metric-value {{ font-size: 24px; font-weight: bold; color: #1f77b4; }}
-                        .metric-label {{ font-size: 12px; color: #666; }}
-                        table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                        th {{ background-color: #1f77b4; color: white; }}
-                        tr:nth-child(even) {{ background-color: #f9f9f9; }}
-                        .annotation {{ background: #fff3cd; padding: 10px; margin: 5px 0; border-left: 4px solid #ffc107; }}
-                        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #666; }}
-                    </style>
-                </head>
-                <body>
-                    <h1>📊 ELC Yield Report</h1>
-                    <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-
-                    <div class="filter-box">
-                        <h3>📋 Report Filters</h3>
-                        <p><strong>DID:</strong> {', '.join(filters.get('design_ids', ['All']))}</p>
-                        <p><strong>Form Factor:</strong> {', '.join(filters.get('form_factors', ['All']))}</p>
-                        <p><strong>Density:</strong> {', '.join(filters.get('densities', [])) or 'All'}</p>
-                        <p><strong>Speed:</strong> {', '.join(filters.get('speeds', [])) or 'All'}</p>
-                        <p><strong>Work Week Range:</strong> {filters.get('start_ww', 'N/A')} - {filters.get('end_ww', 'N/A')}</p>
-                    </div>
-
-                    <h2>📈 Summary Metrics</h2>
-                    <div>
-                        <div class="metric">
-                            <div class="metric-value">{elc_df['HMFN'].mean():.2f}%</div>
-                            <div class="metric-label">Avg HMFN Yield</div>
-                        </div>
-                        <div class="metric">
-                            <div class="metric-value">{elc_df['SLT'].mean() if 'SLT' in elc_df.columns else 0:.2f}%</div>
-                            <div class="metric-label">Avg SLT Yield</div>
-                        </div>
-                        <div class="metric">
-                            <div class="metric-value">{elc_df['ELC'].mean() if 'ELC' in elc_df.columns else 0:.2f}%</div>
-                            <div class="metric-label">Avg ELC Yield</div>
-                        </div>
-                    </div>
-                """
-
-                # Add annotations if any
-                if st.session_state.get("elc_annotations"):
-                    report_html += "<h2>📝 Annotations</h2>"
-                    for ann in st.session_state.elc_annotations:
-                        report_html += f'<div class="annotation"><strong>WW{ann["workweek"]}:</strong> {ann["note"]} <em>({ann["timestamp"]})</em></div>'
-
-                # Add data table
-                report_html += "<h2>📋 Yield Data</h2>"
-                report_html += sorted_df.to_html(index=False, classes="data-table")
-
-                # Footer
-                report_html += f"""
-                    <div class="footer">
-                        <p>Report generated by Module Yield Dashboard | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-                        <p>Data based on frpt query results</p>
-                    </div>
-                </body>
-                </html>
-                """
-
-                # Provide HTML download (user can print to PDF from browser)
-                st.download_button(
-                    label="📥 Download HTML Report",
-                    data=report_html,
-                    file_name=f"elc_yield_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
-                    mime="text/html",
-                    key="elc_html_download"
-                )
-                st.info("💡 Open the HTML file in a browser and use Print → Save as PDF for a PDF version.")
+            # Export buttons (side by side)
+            export_cols = st.columns(3)
+            with export_cols[0]:
+                csv_data = sorted_df.to_csv(index=False)
+                st.download_button("📥 CSV", data=csv_data, file_name=f"elc_data_{datetime.now().strftime('%Y%m%d')}.csv", mime="text/csv", key="elc_csv_download")
+            with export_cols[1]:
+                st.download_button("🔗 Link", data=f"?{urlencode({k: v for k, v in {'tab': 'elc', 'did': ','.join(filters.get('design_ids', [])), 'ff': ','.join(filters.get('form_factors', [])), 'density': ','.join(filters.get('densities', []) or []), 'speed': ','.join(filters.get('speeds', []) or []), 'start_ww': filters.get('start_ww', ''), 'end_ww': filters.get('end_ww', '')}.items() if v})}", file_name="share_link.txt", key="elc_link_export")
+            with export_cols[2]:
+                if st.button("📄 Report", key="elc_pdf_export"):
+                    report_html = f"""<!DOCTYPE html><html><head><title>ELC Report {datetime.now().strftime('%Y-%m-%d')}</title>
+                    <style>body{{font-family:Arial;margin:40px}}h1{{color:#1f77b4;border-bottom:2px solid #1f77b4}}
+                    .filter-box{{background:#f5f5f5;padding:15px;border-radius:8px;margin:20px 0}}
+                    table{{border-collapse:collapse;width:100%}}th,td{{border:1px solid #ddd;padding:8px}}
+                    th{{background:#1f77b4;color:white}}.annotation{{background:#fff3cd;padding:10px;margin:5px 0;border-left:4px solid #ffc107}}</style></head>
+                    <body><h1>📊 ELC Yield Report</h1><p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
+                    <div class="filter-box"><p><b>DID:</b> {', '.join(filters.get('design_ids', ['All']))}</p>
+                    <p><b>Form Factor:</b> {', '.join(filters.get('form_factors', ['All']))}</p>
+                    <p><b>Density:</b> {', '.join(filters.get('densities', [])) or 'All'}</p>
+                    <p><b>Speed:</b> {', '.join(filters.get('speeds', [])) or 'All'}</p>
+                    <p><b>WW Range:</b> {filters.get('start_ww', 'N/A')} - {filters.get('end_ww', 'N/A')}</p></div>
+                    <h2>📈 Metrics</h2><p>HMFN: {elc_df['HMFN'].mean():.2f}% | SLT: {elc_df['SLT'].mean() if 'SLT' in elc_df.columns else 0:.2f}% | ELC: {elc_df['ELC'].mean() if 'ELC' in elc_df.columns else 0:.2f}%</p>"""
+                    if st.session_state.get("elc_annotations"):
+                        report_html += "<h2>📝 Annotations</h2>"
+                        for ann in st.session_state.elc_annotations:
+                            report_html += f'<div class="annotation"><b>WW{ann["workweek"]}:</b> {ann["note"]}</div>'
+                    report_html += f"<h2>📋 Data</h2>{sorted_df.to_html(index=False)}</body></html>"
+                    st.download_button("📥 Download", data=report_html, file_name=f"elc_report_{datetime.now().strftime('%Y%m%d')}.html", mime="text/html", key="elc_html_download")
 
         # Heatmap by density/speed (full width below)
         if "density" in elc_df.columns and "speed" in elc_df.columns and "ELC" in elc_df.columns:
