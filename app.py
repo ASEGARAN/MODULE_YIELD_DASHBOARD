@@ -2846,12 +2846,34 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
             if len(unique_dids) == 1:
                 chart_selected_dids = [str(unique_dids[0]).upper()]
 
-        # Check if we can show targets (need single DID + Density + Speed)
+        # NEW: Extract unique configs from selected series (format: DID_STEP_DENSITY_SPEED)
+        # This allows targets when user selects specific series even without sidebar filter restriction
+        series_configs = set()
+        for s in selected_series:
+            parts = s.split("_")
+            if len(parts) >= 4:
+                # Format: DID_STEP_DENSITY_SPEED -> extract DID, DENSITY, SPEED
+                did = parts[0].upper()
+                density = normalize_density(parts[2])
+                speed = normalize_speed(parts[3])
+                series_configs.add((did, density, speed))
+
+        # Check if we can show targets:
+        # 1. From sidebar filters (single DID + Density + Speed), OR
+        # 2. From selected series (all series share same DID + Density + Speed)
         can_show_targets = (
             len(chart_selected_dids) == 1 and
             len(chart_selected_densities) == 1 and
             len(chart_selected_speeds) == 1
         )
+
+        # If sidebar doesn't give single config, check if selected series do
+        if not can_show_targets and len(series_configs) == 1:
+            config = list(series_configs)[0]
+            chart_selected_dids = [config[0]]
+            chart_selected_densities = [config[1]]
+            chart_selected_speeds = [config[2]]
+            can_show_targets = True
 
         # Set defaults for target configuration (will be updated in Section 4 if available)
         selected_curve = st.session_state.get("elc_target_curve", ACTIVE_CURVE)
