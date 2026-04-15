@@ -2455,40 +2455,47 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
 
                     # LEFT COLUMN: Socket Health
                     with col_socket:
-                        st.markdown("##### 🔌 Physical Socket Health")
+                        st.markdown(f"##### 🔌 Physical Socket Health (WW{latest_ww})")
                         if selected_machine == "All Machines":
-                            # Show socket health grids for all machines
+                            # Build ONE combined HTML with all machines in a grid (side-by-side, wrap)
                             machine_list = sorted(latest_data['machine_id'].unique())
+
+                            combined_html = '''
+                            <div style="display:flex; gap:15px; justify-content:flex-start; align-items:flex-start; flex-wrap:wrap;">
+                            '''
+                            max_sockets = 0
                             for machine in machine_list:
                                 machine_data = latest_data[latest_data['machine_id'] == machine]
-                                with st.expander(f"🔧 {machine.upper()}", expanded=True):
-                                    grid_html = create_site_grid_html(
-                                        machine_data,
-                                        machine_id=machine,
-                                        title=f"🔧 {machine.upper()} - Socket Health (WW{latest_ww})",
-                                        view_mode="socket"
-                                    )
-                                    if grid_html:
-                                        num_sockets = machine_data['site'].apply(
-                                            lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
-                                        ).nunique()
-                                        grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
-                                        components.html(grid_html, height=grid_height, scrolling=False)
-                        else:
-                            # Show socket health for selected machine
-                            with st.expander(f"🔧 {selected_machine.upper()}", expanded=True):
                                 grid_html = create_site_grid_html(
-                                    latest_data,
-                                    machine_id=selected_machine,
-                                    title=f"🔧 {selected_machine.upper()} - Socket Health (WW{latest_ww})",
+                                    machine_data,
+                                    machine_id=machine,
+                                    title=machine.upper(),
                                     view_mode="socket"
                                 )
                                 if grid_html:
-                                    num_sockets = latest_data['site'].apply(
+                                    combined_html += f'<div style="flex:1; min-width:250px; max-width:350px;">{grid_html}</div>'
+                                    num_sockets = machine_data['site'].apply(
                                         lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
                                     ).nunique()
-                                    grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
-                                    components.html(grid_html, height=grid_height, scrolling=False)
+                                    max_sockets = max(max_sockets, num_sockets)
+
+                            combined_html += '</div>'
+                            grid_height = 380 if max_sockets <= 4 else 220 + ((max_sockets + 3) // 4) * 150
+                            components.html(combined_html, height=grid_height, scrolling=False)
+                        else:
+                            # Show socket health for selected machine
+                            grid_html = create_site_grid_html(
+                                latest_data,
+                                machine_id=selected_machine,
+                                title=selected_machine.upper(),
+                                view_mode="socket"
+                            )
+                            if grid_html:
+                                num_sockets = latest_data['site'].apply(
+                                    lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
+                                ).nunique()
+                                grid_height = 380 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 150
+                                components.html(grid_html, height=grid_height, scrolling=False)
 
                     # RIGHT COLUMN: Site Yield Heatmap
                     with col_heatmap:
@@ -2675,7 +2682,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 column_config={'Yield %': st.column_config.NumberColumn(format="%.2f%%"), 'Std Dev': st.column_config.NumberColumn(format="%.2f")})
 
                 # =====================================================================
-                # SOCKET HEALTH VIEW (Full Range mode, ALL MACHINES - compact single panel)
+                # SOCKET HEALTH VIEW (Full Range mode, ALL MACHINES - single combined panel)
                 # =====================================================================
                 if site_mode == "Full Range" and selected_machine == "All Machines":
                     st.markdown("---")
@@ -2685,26 +2692,36 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     ww_label = f"WW{ww_options[0]}" if len(ww_options) == 1 else f"WW{ww_options[-1]}-{ww_options[0]}"
                     num_machines = len(machine_list)
 
-                    # Socket Health: All machines side-by-side in columns
+                    # Socket Health: Build ONE combined HTML with all machines side-by-side
                     st.markdown(f"##### 🔧 Socket Health ({ww_label})")
-                    socket_cols = st.columns(num_machines)
 
-                    for col, machine in zip(socket_cols, machine_list):
-                        with col:
-                            machine_data = analysis_df[analysis_df['machine_id'] == machine]
-                            st.markdown(f"<div style='text-align:center; font-weight:600; color:#fff; margin-bottom:5px;'>{machine.upper()}</div>", unsafe_allow_html=True)
-                            grid_html = create_site_grid_html(
-                                machine_data,
-                                machine_id=machine,
-                                title="",  # No title since we have header above
-                                view_mode="socket"
-                            )
-                            if grid_html:
-                                num_sockets = machine_data['site'].apply(
-                                    lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
-                                ).nunique()
-                                grid_height = 320 if num_sockets <= 4 else 180 + ((num_sockets + 3) // 4) * 120
-                                components.html(grid_html, height=grid_height, scrolling=False)
+                    # Start combined HTML container with flexbox
+                    combined_html = '''
+                    <div style="display:flex; gap:20px; justify-content:center; align-items:flex-start; flex-wrap:wrap;">
+                    '''
+
+                    max_sockets = 0
+                    for machine in machine_list:
+                        machine_data = analysis_df[analysis_df['machine_id'] == machine]
+                        grid_html = create_site_grid_html(
+                            machine_data,
+                            machine_id=machine,
+                            title=machine.upper(),
+                            view_mode="socket"
+                        )
+                        if grid_html:
+                            # Wrap each machine's grid in a flex item
+                            combined_html += f'<div style="flex:1; min-width:280px; max-width:400px;">{grid_html}</div>'
+                            num_sockets = machine_data['site'].apply(
+                                lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
+                            ).nunique()
+                            max_sockets = max(max_sockets, num_sockets)
+
+                    combined_html += '</div>'
+
+                    # Calculate height based on max sockets across all machines
+                    grid_height = 350 if max_sockets <= 4 else 200 + ((max_sockets + 3) // 4) * 140
+                    components.html(combined_html, height=grid_height, scrolling=False)
 
                     # Site Heatmap: All machines combined with machine column
                     st.markdown("##### 🗺️ Site Yield Heatmap (All Machines)")
