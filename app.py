@@ -2370,8 +2370,14 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 }).reset_index()
                 fleet_summary['yield_pct'] = (fleet_summary['upass_adj'] / fleet_summary['uin_adj'] * 100).round(2)
 
-                # Calculate site-level metrics to find worst machine+site combo
-                site_summary = analysis_df.groupby(['machine_id', 'site']).agg({
+                # Get latest and previous workweek for WoW comparison
+                all_wws = sorted(analysis_df['workweek'].unique())
+                latest_ww = all_wws[-1] if all_wws else None
+                prev_ww = all_wws[-2] if len(all_wws) >= 2 else None
+
+                # Calculate site-level metrics for latest week to find worst machine+site combo
+                latest_site_data = analysis_df[analysis_df['workweek'] == latest_ww] if latest_ww else analysis_df
+                site_summary = latest_site_data.groupby(['machine_id', 'site']).agg({
                     'uin_adj': 'sum',
                     'upass_adj': 'sum'
                 }).reset_index()
@@ -2384,13 +2390,29 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 avg_yield = fleet_summary['yield_pct'].mean()
                 min_yield = fleet_summary['yield_pct'].min()
 
-                # Find worst machine+site combination
+                # Find worst machine+site combination and calculate WoW delta
+                worst_delta = None
                 if not site_summary_filtered.empty:
                     worst_idx = site_summary_filtered['yield_pct'].idxmin()
                     worst_machine = site_summary_filtered.loc[worst_idx, 'machine_id']
                     worst_site = site_summary_filtered.loc[worst_idx, 'site']
                     worst_site_yield = site_summary_filtered.loc[worst_idx, 'yield_pct']
-                    worst_label = f"{worst_machine.upper()} / {worst_site}"
+                    # Format: MACHINE-SOCKET (e.g., SMT61-0001-S1C0P01)
+                    worst_label = f"{worst_machine.upper()}-{worst_site}"
+
+                    # Calculate WoW delta if previous week data exists
+                    if prev_ww:
+                        prev_site_data = analysis_df[
+                            (analysis_df['workweek'] == prev_ww) &
+                            (analysis_df['machine_id'] == worst_machine) &
+                            (analysis_df['site'] == worst_site)
+                        ]
+                        if not prev_site_data.empty:
+                            prev_uin = prev_site_data['uin_adj'].sum()
+                            prev_upass = prev_site_data['upass_adj'].sum()
+                            if prev_uin > 0:
+                                prev_yield = (prev_upass / prev_uin * 100)
+                                worst_delta = worst_site_yield - prev_yield
                 else:
                     worst_label = "N/A"
                     worst_site_yield = None
@@ -2405,7 +2427,17 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     st.metric("Min Yield", f"{min_yield:.2f}%")
                 with metric_cols[3]:
                     if worst_site_yield is not None:
-                        st.metric("Worst Site", worst_label, delta=f"{worst_site_yield:.1f}%", delta_color="off")
+                        if worst_delta is not None:
+                            # Show WoW change (positive = improved, negative = declined)
+                            st.metric(
+                                "Worst Site",
+                                f"{worst_label}",
+                                delta=f"{worst_delta:+.1f}% WoW",
+                                delta_color="normal",
+                                help=f"Current: {worst_site_yield:.1f}% | WoW change from WW{prev_ww}"
+                            )
+                        else:
+                            st.metric("Worst Site", worst_label, delta=f"{worst_site_yield:.1f}%", delta_color="off")
                     else:
                         st.metric("Worst Site", worst_label)
 
@@ -2641,6 +2673,96 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                             cols = ['Site', 'Machine', 'UIN', 'Yield %', 'Trend', 'Std Dev'] if selected_machine == "All Machines" else ['Site', 'UIN', 'Yield %', 'Trend', 'Std Dev']
                             st.dataframe(site_summary[cols].sort_values('Yield %'), use_container_width=True, hide_index=True,
                                 column_config={'Yield %': st.column_config.NumberColumn(format="%.2f%%"), 'Std Dev': st.column_config.NumberColumn(format="%.2f")})
+
+                # =====================================================================
+                # SOCKET HEALTH VIEW (Full Range mode, ALL MACHINES - show per-machine)
+                # =====================================================================
+                if site_mode == "Full Range" and selected_machine == "All Machines":
+                    st.markdown("---")
+                    st.markdown("##### 🔧 Socket Health by Machine")
+                    st.caption("Each machine's socket health shown separately (data cannot be meaningfully collapsed across machines)")
+
+                    machine_list = sorted(analysis_df['machine_id'].unique())
+                    ww_options = sorted(analysis_df['workweek'].unique(), reverse=True)
+                    ww_label = f"WW{ww_options[0]}" if len(ww_options) == 1 else f"WW{ww_options[-1]}-{ww_options[0]}"
+
+                    # Create tabs for each machine
+                    if len(machine_list) > 1:
+                        machine_tabs = st.tabs([f"🔧 {m.upper()}" for m in machine_list])
+                        for tab, machine in zip(machine_tabs, machine_list):
+                            with tab:
+                                machine_data = analysis_df[analysis_df['machine_id'] == machine]
+
+                                # Side by side: Socket Health | Site Heatmap
+                                col_socket, col_heatmap = st.columns(2)
+
+                                with col_socket:
+                                    st.markdown(f"**Socket Health** ({ww_label})")
+                                    grid_html = create_site_grid_html(
+                                        machine_data,
+                                        machine_id=machine,
+                                        title=f"{machine.upper()} - Socket Health",
+                                        view_mode="socket"
+                                    )
+                                    if grid_html:
+                                        num_sockets = machine_data['site'].apply(
+                                            lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
+                                        ).nunique()
+                                        grid_height = 380 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 150
+                                        components.html(grid_html, height=grid_height, scrolling=False)
+
+                                with col_heatmap:
+                                    st.markdown(f"**Site Yield Heatmap** (Sites × Weeks)")
+                                    pivot = machine_data.pivot_table(index='site', columns='workweek', values='yield_pct', aggfunc='mean')
+                                    if not pivot.empty:
+                                        pivot = pivot.reindex(sorted(pivot.columns), axis=1).sort_index()
+                                        chart_height = max(300, len(pivot.index) * 18 + 80)
+
+                                        fig = go.Figure(data=go.Heatmap(
+                                            z=pivot.values,
+                                            x=[str(ww) for ww in pivot.columns],
+                                            y=pivot.index.tolist(),
+                                            colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
+                                            zmin=94, zmax=100,
+                                            text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
+                                            texttemplate="%{text}", textfont={"size": 9},
+                                            hovertemplate="<b>Site:</b> %{y}<br><b>Week:</b> WW%{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>",
+                                            colorbar=dict(title="Yield %", ticksuffix="%", len=0.8)
+                                        ))
+                                        fig.update_layout(
+                                            xaxis_title="Work Week", yaxis_title="Site",
+                                            xaxis=dict(type='category', tickprefix="WW"),
+                                            yaxis=dict(autorange='reversed'),
+                                            height=chart_height, margin=dict(l=70, r=30, t=20, b=40)
+                                        )
+                                        st.plotly_chart(fig, use_container_width=True, key=f"heatmap_{machine}")
+                    else:
+                        # Single machine - show directly without tabs
+                        machine = machine_list[0]
+                        machine_data = analysis_df[analysis_df['machine_id'] == machine]
+                        col_socket, col_heatmap = st.columns(2)
+
+                        with col_socket:
+                            st.markdown(f"**{machine.upper()} Socket Health** ({ww_label})")
+                            grid_html = create_site_grid_html(machine_data, machine_id=machine, view_mode="socket")
+                            if grid_html:
+                                components.html(grid_html, height=400, scrolling=False)
+
+                        with col_heatmap:
+                            st.markdown(f"**Site Yield Heatmap** (Sites × Weeks)")
+                            pivot = machine_data.pivot_table(index='site', columns='workweek', values='yield_pct', aggfunc='mean')
+                            if not pivot.empty:
+                                pivot = pivot.reindex(sorted(pivot.columns), axis=1).sort_index()
+                                fig = go.Figure(data=go.Heatmap(
+                                    z=pivot.values, x=[str(ww) for ww in pivot.columns], y=pivot.index.tolist(),
+                                    colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
+                                    zmin=94, zmax=100,
+                                    text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
+                                    texttemplate="%{text}", textfont={"size": 9},
+                                    hovertemplate="<b>Site:</b> %{y}<br><b>WW:</b> %{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>"
+                                ))
+                                fig.update_layout(height=max(300, len(pivot.index) * 18 + 80), margin=dict(l=70, r=30, t=20, b=40))
+                                st.plotly_chart(fig, use_container_width=True)
 
                 # =====================================================================
                 # SOCKET HEALTH VIEW (Full Range mode, specific machine selected)
