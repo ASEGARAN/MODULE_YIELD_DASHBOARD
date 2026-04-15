@@ -2675,94 +2675,67 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 column_config={'Yield %': st.column_config.NumberColumn(format="%.2f%%"), 'Std Dev': st.column_config.NumberColumn(format="%.2f")})
 
                 # =====================================================================
-                # SOCKET HEALTH VIEW (Full Range mode, ALL MACHINES - show per-machine)
+                # SOCKET HEALTH VIEW (Full Range mode, ALL MACHINES - compact single panel)
                 # =====================================================================
                 if site_mode == "Full Range" and selected_machine == "All Machines":
                     st.markdown("---")
-                    st.markdown("##### 🔧 Socket Health by Machine")
-                    st.caption("Each machine's socket health shown separately (data cannot be meaningfully collapsed across machines)")
 
                     machine_list = sorted(analysis_df['machine_id'].unique())
                     ww_options = sorted(analysis_df['workweek'].unique(), reverse=True)
                     ww_label = f"WW{ww_options[0]}" if len(ww_options) == 1 else f"WW{ww_options[-1]}-{ww_options[0]}"
+                    num_machines = len(machine_list)
 
-                    # Create tabs for each machine
-                    if len(machine_list) > 1:
-                        machine_tabs = st.tabs([f"🔧 {m.upper()}" for m in machine_list])
-                        for tab, machine in zip(machine_tabs, machine_list):
-                            with tab:
-                                machine_data = analysis_df[analysis_df['machine_id'] == machine]
+                    # Socket Health: All machines side-by-side in columns
+                    st.markdown(f"##### 🔧 Socket Health ({ww_label})")
+                    socket_cols = st.columns(num_machines)
 
-                                # Side by side: Socket Health | Site Heatmap
-                                col_socket, col_heatmap = st.columns(2)
-
-                                with col_socket:
-                                    st.markdown(f"**Socket Health** ({ww_label})")
-                                    grid_html = create_site_grid_html(
-                                        machine_data,
-                                        machine_id=machine,
-                                        title=f"{machine.upper()} - Socket Health",
-                                        view_mode="socket"
-                                    )
-                                    if grid_html:
-                                        num_sockets = machine_data['site'].apply(
-                                            lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
-                                        ).nunique()
-                                        grid_height = 380 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 150
-                                        components.html(grid_html, height=grid_height, scrolling=False)
-
-                                with col_heatmap:
-                                    st.markdown(f"**Site Yield Heatmap** (Sites × Weeks)")
-                                    pivot = machine_data.pivot_table(index='site', columns='workweek', values='yield_pct', aggfunc='mean')
-                                    if not pivot.empty:
-                                        pivot = pivot.reindex(sorted(pivot.columns), axis=1).sort_index()
-                                        chart_height = max(300, len(pivot.index) * 18 + 80)
-
-                                        fig = go.Figure(data=go.Heatmap(
-                                            z=pivot.values,
-                                            x=[str(ww) for ww in pivot.columns],
-                                            y=pivot.index.tolist(),
-                                            colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
-                                            zmin=94, zmax=100,
-                                            text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
-                                            texttemplate="%{text}", textfont={"size": 9},
-                                            hovertemplate="<b>Site:</b> %{y}<br><b>Week:</b> WW%{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>",
-                                            colorbar=dict(title="Yield %", ticksuffix="%", len=0.8)
-                                        ))
-                                        fig.update_layout(
-                                            xaxis_title="Work Week", yaxis_title="Site",
-                                            xaxis=dict(type='category', tickprefix="WW"),
-                                            yaxis=dict(autorange='reversed'),
-                                            height=chart_height, margin=dict(l=70, r=30, t=20, b=40)
-                                        )
-                                        st.plotly_chart(fig, use_container_width=True, key=f"heatmap_{machine}")
-                    else:
-                        # Single machine - show directly without tabs
-                        machine = machine_list[0]
-                        machine_data = analysis_df[analysis_df['machine_id'] == machine]
-                        col_socket, col_heatmap = st.columns(2)
-
-                        with col_socket:
-                            st.markdown(f"**{machine.upper()} Socket Health** ({ww_label})")
-                            grid_html = create_site_grid_html(machine_data, machine_id=machine, view_mode="socket")
+                    for col, machine in zip(socket_cols, machine_list):
+                        with col:
+                            machine_data = analysis_df[analysis_df['machine_id'] == machine]
+                            st.markdown(f"<div style='text-align:center; font-weight:600; color:#fff; margin-bottom:5px;'>{machine.upper()}</div>", unsafe_allow_html=True)
+                            grid_html = create_site_grid_html(
+                                machine_data,
+                                machine_id=machine,
+                                title="",  # No title since we have header above
+                                view_mode="socket"
+                            )
                             if grid_html:
-                                components.html(grid_html, height=400, scrolling=False)
+                                num_sockets = machine_data['site'].apply(
+                                    lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
+                                ).nunique()
+                                grid_height = 320 if num_sockets <= 4 else 180 + ((num_sockets + 3) // 4) * 120
+                                components.html(grid_html, height=grid_height, scrolling=False)
 
-                        with col_heatmap:
-                            st.markdown(f"**Site Yield Heatmap** (Sites × Weeks)")
-                            pivot = machine_data.pivot_table(index='site', columns='workweek', values='yield_pct', aggfunc='mean')
-                            if not pivot.empty:
-                                pivot = pivot.reindex(sorted(pivot.columns), axis=1).sort_index()
-                                fig = go.Figure(data=go.Heatmap(
-                                    z=pivot.values, x=[str(ww) for ww in pivot.columns], y=pivot.index.tolist(),
-                                    colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
-                                    zmin=94, zmax=100,
-                                    text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
-                                    texttemplate="%{text}", textfont={"size": 9},
-                                    hovertemplate="<b>Site:</b> %{y}<br><b>WW:</b> %{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>"
-                                ))
-                                fig.update_layout(height=max(300, len(pivot.index) * 18 + 80), margin=dict(l=70, r=30, t=20, b=40))
-                                st.plotly_chart(fig, use_container_width=True)
+                    # Site Heatmap: All machines combined with machine column
+                    st.markdown("##### 🗺️ Site Yield Heatmap (All Machines)")
+
+                    # Create combined pivot with machine prefix on site names
+                    analysis_df['machine_site'] = analysis_df['machine_id'].str.upper() + ' | ' + analysis_df['site']
+                    pivot = analysis_df.pivot_table(index='machine_site', columns='workweek', values='yield_pct', aggfunc='mean')
+
+                    if not pivot.empty:
+                        pivot = pivot.reindex(sorted(pivot.columns), axis=1).sort_index()
+                        chart_height = max(350, len(pivot.index) * 16 + 100)
+
+                        fig = go.Figure(data=go.Heatmap(
+                            z=pivot.values,
+                            x=[str(ww) for ww in pivot.columns],
+                            y=pivot.index.tolist(),
+                            colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
+                            zmin=94, zmax=100,
+                            text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
+                            texttemplate="%{text}", textfont={"size": 8},
+                            hovertemplate="<b>%{y}</b><br><b>Week:</b> WW%{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>",
+                            colorbar=dict(title="Yield %", ticksuffix="%")
+                        ))
+                        fig.update_layout(
+                            xaxis_title="Work Week", yaxis_title="Machine | Site",
+                            xaxis=dict(type='category', tickprefix="WW"),
+                            yaxis=dict(autorange='reversed'),
+                            height=chart_height, margin=dict(l=120, r=50, t=30, b=50)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                        st.caption(f"Showing {num_machines} machines × {len(pivot.index)} sites × {len(pivot.columns)} weeks")
 
                 # =====================================================================
                 # SOCKET HEALTH VIEW (Full Range mode, specific machine selected)
