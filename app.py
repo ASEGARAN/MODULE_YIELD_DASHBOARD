@@ -2402,6 +2402,51 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
                                 components.html(grid_html, height=grid_height, scrolling=False)
 
+                    # =====================================================================
+                    # SITE YIELD HEATMAP FOR LATEST WEEK
+                    # =====================================================================
+                    with st.expander("🗺️ Site Yield Heatmap", expanded=True):
+                        # Group by machine and site for the latest week
+                        site_summary = latest_data.groupby(['machine_id', 'site']).agg({
+                            'uin_adj': 'sum',
+                            'upass_adj': 'sum'
+                        }).reset_index()
+                        site_summary['yield_pct'] = (site_summary['upass_adj'] / site_summary['uin_adj'] * 100).round(2)
+
+                        # Create pivot table: sites as rows, machines as columns
+                        pivot = site_summary.pivot_table(
+                            index='site',
+                            columns='machine_id',
+                            values='yield_pct',
+                            aggfunc='mean'
+                        )
+
+                        if not pivot.empty:
+                            pivot = pivot.sort_index()
+                            chart_height = max(400, len(pivot.index) * 14 + 100)
+
+                            fig = go.Figure(data=go.Heatmap(
+                                z=pivot.values,
+                                x=[m.upper() for m in pivot.columns],
+                                y=pivot.index.tolist(),
+                                colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
+                                zmin=90, zmax=100,
+                                text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
+                                texttemplate="%{text}",
+                                textfont={"size": 9},
+                                hovertemplate="<b>Site:</b> %{y}<br><b>Machine:</b> %{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>",
+                                colorbar=dict(title="Yield %", ticksuffix="%")
+                            ))
+                            fig.update_layout(
+                                xaxis_title="Machine",
+                                yaxis_title="Site",
+                                yaxis=dict(autorange='reversed'),
+                                height=chart_height,
+                                margin=dict(l=80, r=50, t=30, b=50)
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                            st.caption(f"Showing {len(pivot.index)} sites × {len(pivot.columns)} machines for WW{latest_ww}")
+
                 # =====================================================================
                 # SITE TREND ANALYSIS (Only with Full Range data)
                 # =====================================================================
