@@ -2861,3 +2861,131 @@ def create_site_trend_summary_html(trend_df: pd.DataFrame) -> str:
 
     html += '</div>'
     return html
+
+
+def create_multi_machine_socket_grid(
+    df: pd.DataFrame,
+    machine_ids: list[str],
+    title: str = "Socket Health"
+) -> str:
+    """
+    Create a single combined HTML panel showing socket health for multiple machines side-by-side.
+
+    Args:
+        df: DataFrame with site-level yield data for all machines
+        machine_ids: List of machine IDs to display
+        title: Section title
+
+    Returns:
+        HTML string with all machines' socket grids in a single panel
+    """
+    if df.empty or not machine_ids:
+        return ""
+
+    def get_yield_color(yield_val):
+        if yield_val >= 99:
+            return '#00C853'
+        elif yield_val >= 97:
+            return '#8BC34A'
+        elif yield_val >= 95:
+            return '#FFEB3B'
+        elif yield_val >= 90:
+            return '#FF9800'
+        else:
+            return '#FF1744'
+
+    def get_text_color(yield_val):
+        return '#000' if yield_val >= 95 else '#fff'
+
+    num_machines = len(machine_ids)
+    # Calculate flex basis for equal distribution
+    flex_basis = f"{100 // num_machines}%"
+
+    html = f'''
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 10px;">
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+    '''
+
+    for machine_id in machine_ids:
+        machine_df = df[df['machine_id'] == machine_id.lower()].copy()
+        if machine_df.empty:
+            continue
+
+        # Parse site components
+        parsed = machine_df['site'].apply(parse_site_components)
+        machine_df['position_id'] = parsed.apply(lambda x: x['position_id'])
+
+        # Aggregate by socket position
+        socket_data = machine_df.groupby('position_id').agg({
+            'uin_adj': 'sum',
+            'upass_adj': 'sum'
+        }).reset_index()
+        socket_data['yield_pct'] = (socket_data['upass_adj'] / socket_data['uin_adj'] * 100).round(2)
+        socket_data['volume'] = socket_data['uin_adj']
+
+        # Calculate summary
+        total_volume = socket_data['volume'].sum()
+        avg_yield = (socket_data['upass_adj'].sum() / socket_data['uin_adj'].sum() * 100) if socket_data['uin_adj'].sum() > 0 else 0
+
+        socket_lookup = {row['position_id']: row for _, row in socket_data.iterrows()}
+        positions = sorted(socket_data['position_id'].unique(), key=lambda x: int(x[1:]) if x[1:].isdigit() else 0)
+        num_sockets = len(positions)
+
+        # Determine grid columns
+        grid_cols = 2 if num_sockets <= 4 else 4
+
+        # Machine card
+        html += f'''
+        <div style="flex: 1 1 {flex_basis}; min-width: 280px; max-width: 450px;
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    border-radius: 12px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <!-- Machine Header -->
+            <div style="text-align: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-size: 15px; font-weight: 700; color: #fff;">🔧 {machine_id.upper()}</div>
+                <div style="font-size: 11px; color: #8892b0; margin-top: 3px;">
+                    Avg: <span style="color: {get_yield_color(avg_yield)}; font-weight: 600;">{avg_yield:.1f}%</span> |
+                    {num_sockets} sockets | {total_volume:,} units
+                </div>
+            </div>
+            <!-- Socket Grid -->
+            <div style="display: grid; grid-template-columns: repeat({grid_cols}, 1fr); gap: 8px;">
+        '''
+
+        # Add socket cells
+        physical_order = ['P00', 'P01', 'P02', 'P03', 'P04', 'P05', 'P06', 'P07', 'P08', 'P09', 'P10', 'P11']
+        for pos in physical_order:
+            if pos in socket_lookup:
+                data = socket_lookup[pos]
+                yield_val = data['yield_pct']
+                volume = data['volume']
+                bg_color = get_yield_color(yield_val)
+                text_color = get_text_color(yield_val)
+
+                html += f'''
+                <div style="background: {bg_color}; border-radius: 8px; padding: 10px; text-align: center;
+                            box-shadow: 0 2px 6px rgba(0,0,0,0.15);"
+                     title="{pos}: {yield_val:.2f}% ({volume:,} units)">
+                    <div style="font-size: 12px; font-weight: 700; color: {text_color};">{pos}</div>
+                    <div style="font-size: 18px; font-weight: 800; color: {text_color};">{yield_val:.1f}%</div>
+                    <div style="font-size: 9px; color: {text_color}; opacity: 0.8;">n={volume:,}</div>
+                </div>
+                '''
+
+        html += '''
+            </div>
+        </div>
+        '''
+
+    # Add shared legend
+    html += '''
+        </div>
+        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 12px; font-size: 10px; color: #888;">
+            <span><span style="display: inline-block; width: 10px; height: 10px; background: #00C853; border-radius: 2px; margin-right: 3px;"></span>≥99%</span>
+            <span><span style="display: inline-block; width: 10px; height: 10px; background: #8BC34A; border-radius: 2px; margin-right: 3px;"></span>97-99%</span>
+            <span><span style="display: inline-block; width: 10px; height: 10px; background: #FFEB3B; border-radius: 2px; margin-right: 3px;"></span>95-97%</span>
+            <span><span style="display: inline-block; width: 10px; height: 10px; background: #FF1744; border-radius: 2px; margin-right: 3px;"></span>&lt;95%</span>
+        </div>
+    </div>
+    '''
+
+    return html
