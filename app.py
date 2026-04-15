@@ -2161,21 +2161,21 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
         # MACHINE YIELD CARDS + TREND CHART (Side by Side)
         # =====================================================================
         if not filtered_machine_df.empty or not filtered_site_df.empty:
-            # Create 2-column layout: Cards on left, Trend chart on right
-            col_cards, col_chart = st.columns([1, 2])
+            # Create 2-column layout: Cards on left, Trend chart on right (equal width)
+            col_cards, col_chart = st.columns([1, 1])
 
             with col_cards:
                 st.markdown("##### 🖥️ Tester Fleet")
                 cards_df = filtered_machine_df if not filtered_machine_df.empty else filtered_site_df
                 cards_html = create_machine_yield_cards(cards_df, dark_mode=True)
                 if cards_html:
-                    # Compact fit - reduced padding/margins in HTML
+                    # Cards use auto-fill grid, so they adapt to container width
                     num_machines = cards_df['machine_id'].nunique() if 'machine_id' in cards_df.columns else 1
-                    cards_per_row = 2  # Fewer cards per row in narrower column
+                    cards_per_row = 3  # More cards per row with wider column
                     rows = (num_machines + cards_per_row - 1) // cards_per_row
-                    # Header=35px + each row of cards=215px (compact)
-                    card_height = 35 + (rows * 215)
-                    components.html(cards_html, height=min(card_height, 500), scrolling=True)
+                    # Header=50px + each row of cards=200px
+                    card_height = 50 + (rows * 200)
+                    components.html(cards_html, height=min(card_height, 550), scrolling=True)
 
             with col_chart:
                 if not filtered_machine_df.empty:
