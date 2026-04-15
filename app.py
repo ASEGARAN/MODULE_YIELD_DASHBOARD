@@ -2433,8 +2433,8 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                             'delta': delta
                         })
 
-                # Fleet metrics in cards
-                metric_cols = st.columns(4)
+                # Fleet metrics in cards (3 columns) + Alarm card (1 column, wider)
+                metric_cols = st.columns([1, 1, 1, 1.5])
                 with metric_cols[0]:
                     st.metric("Machines", total_machines)
                 with metric_cols[1]:
@@ -2442,23 +2442,77 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 with metric_cols[2]:
                     st.metric("Min Yield", f"{min_yield:.2f}%")
                 with metric_cols[3]:
-                    # Custom card for top 3 worst sites
+                    # Creative alarm card for top 3 worst sites
                     if worst_sites:
-                        worst_html = '<div style="font-size:11px; line-height:1.5;">'
-                        worst_html += '<div style="color:#888; font-size:10px; margin-bottom:4px;">Top 3 Worst Sites</div>'
+                        # Determine severity based on worst yield
+                        worst_yield = worst_sites[0]['yield']
+                        if worst_yield < 90:
+                            severity_color = "#FF1744"  # Critical red
+                            severity_bg = "linear-gradient(135deg, #4a0000 0%, #8b0000 50%, #4a0000 100%)"
+                            severity_icon = "🚨"
+                            severity_label = "CRITICAL"
+                        elif worst_yield < 95:
+                            severity_color = "#FF9800"  # Warning orange
+                            severity_bg = "linear-gradient(135deg, #4a2800 0%, #8b4500 50%, #4a2800 100%)"
+                            severity_icon = "⚠️"
+                            severity_label = "WARNING"
+                        else:
+                            severity_color = "#FFD600"  # Caution yellow
+                            severity_bg = "linear-gradient(135deg, #3d3d00 0%, #6b6b00 50%, #3d3d00 100%)"
+                            severity_icon = "👁️"
+                            severity_label = "MONITOR"
+
+                        alarm_html = f'''
+                        <style>
+                            @keyframes pulse {{
+                                0%, 100% {{ opacity: 1; }}
+                                50% {{ opacity: 0.6; }}
+                            }}
+                        </style>
+                        <div style="
+                            background: {severity_bg};
+                            border-radius: 10px;
+                            padding: 10px 12px;
+                            border-left: 4px solid {severity_color};
+                            box-shadow: 0 0 15px rgba({int(severity_color[1:3], 16)}, {int(severity_color[3:5], 16)}, {int(severity_color[5:7], 16)}, 0.3);
+                        ">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                                <span style="font-size: 16px; animation: pulse 1.5s ease-in-out infinite;">{severity_icon}</span>
+                                <span style="color: {severity_color}; font-size: 10px; font-weight: 700; letter-spacing: 1px;">{severity_label}</span>
+                                <span style="color: #888; font-size: 9px; margin-left: auto;">Top 3 Worst</span>
+                            </div>
+                        '''
+
                         for i, ws in enumerate(worst_sites):
+                            # Calculate bar width (0-100% based on yield from 85-100)
+                            bar_pct = max(0, min(100, (ws['yield'] - 85) / 15 * 100))
+                            bar_color = "#FF1744" if ws['yield'] < 90 else "#FF9800" if ws['yield'] < 95 else "#FFD600"
+
                             delta_str = ""
-                            delta_color = "#888"
                             if ws['delta'] is not None:
-                                delta_color = "#00C853" if ws['delta'] >= 0 else "#FF1744"
-                                delta_str = f' <span style="color:{delta_color};">({ws["delta"]:+.1f}%)</span>'
-                            # Truncate label if too long
+                                delta_icon = "↑" if ws['delta'] >= 0 else "↓"
+                                delta_color = "#00E676" if ws['delta'] >= 0 else "#FF5252"
+                                delta_str = f'<span style="color:{delta_color}; font-size:9px; margin-left:4px;">{delta_icon}{abs(ws["delta"]):.1f}%</span>'
+
+                            # Truncate label
                             label = ws['label']
-                            if len(label) > 20:
-                                label = label[:18] + ".."
-                            worst_html += f'<div><b>{i+1}.</b> {label} <span style="color:#FF9800;">{ws["yield"]:.1f}%</span>{delta_str}</div>'
-                        worst_html += '</div>'
-                        st.markdown(worst_html, unsafe_allow_html=True)
+                            if len(label) > 18:
+                                label = label[:16] + ".."
+
+                            alarm_html += f'''
+                            <div style="margin-bottom: 6px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                                    <span style="color: #ddd; font-size: 10px; font-weight: 500;">{label}</span>
+                                    <span style="color: {bar_color}; font-size: 11px; font-weight: 700;">{ws['yield']:.1f}%{delta_str}</span>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.1); border-radius: 3px; height: 4px; overflow: hidden;">
+                                    <div style="background: {bar_color}; width: {bar_pct}%; height: 100%; border-radius: 3px;"></div>
+                                </div>
+                            </div>
+                            '''
+
+                        alarm_html += '</div>'
+                        st.markdown(alarm_html, unsafe_allow_html=True)
                     else:
                         st.metric("Worst Site", "N/A")
 
