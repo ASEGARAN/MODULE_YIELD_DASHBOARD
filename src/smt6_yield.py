@@ -180,7 +180,9 @@ def build_smt6_command(
     workweek: str,
     form_factor: str = "socamm2",
     facility: str = "PENANG",
-    step: str = "hmfn"
+    step: str = "hmfn",
+    density: Optional[str] = None,
+    speed: Optional[str] = None
 ) -> str:
     """
     Build the frpt command for SMT6 yield data.
@@ -191,12 +193,14 @@ def build_smt6_command(
         form_factor: Module form factor (default: socamm2)
         facility: Test facility (default: PENANG)
         step: Test step (default: hmfn)
+        density: Module density filter (e.g., 192GB) - optional
+        speed: Module speed filter (e.g., 7500MTPS) - optional
 
     Returns:
         frpt command string
     """
     cmd = (
-        f"/u/pe_burn_dft/bin/frptx -xf -bin=sof "
+        f"/u/pe_burn_dft/bin/frptx -xf -bin=soft "
         f"-myquick=/MFG_WORKWEEK/ "
         f"-quick=/myquick,machine_id/ "
         f"-sort=// "
@@ -211,8 +215,16 @@ def build_smt6_command(
         f"-module_form_factor={form_factor} "
         f"-mfg_workweek={workweek} "
         f"-test_facility={facility} "
-        f"+%"
     )
+    # Add optional density filter
+    if density:
+        cmd += f"-module_density={density} "
+    # Add optional speed filter (convert MTPS to MT format for frpt)
+    if speed:
+        # frpt uses "7500MT" format, not "7500MTPS"
+        speed_frpt = speed.replace("MTPS", "MT") if speed.endswith("MTPS") else speed
+        cmd += f"-module_speed={speed_frpt} "
+    cmd += "+%"
     return cmd
 
 
@@ -263,7 +275,9 @@ def fetch_smt6_yield_single(
     design_id: str,
     workweek: str,
     form_factor: str = "socamm2",
-    timeout: int = 120
+    timeout: int = 120,
+    density: Optional[str] = None,
+    speed: Optional[str] = None
 ) -> list[dict]:
     """
     Fetch SMT6 yield data for a single workweek and design ID.
@@ -273,11 +287,13 @@ def fetch_smt6_yield_single(
         workweek: Manufacturing workweek
         form_factor: Module form factor
         timeout: Command timeout in seconds
+        density: Module density filter (optional)
+        speed: Module speed filter (optional)
 
     Returns:
         List of machine yield data dictionaries
     """
-    cmd = build_smt6_command(design_id, workweek, form_factor)
+    cmd = build_smt6_command(design_id, workweek, form_factor, density=density, speed=speed)
 
     # Check cache first
     cached_output = _get_cached_result(cmd)
@@ -314,7 +330,9 @@ def fetch_smt6_yield_data(
     workweeks: list[str],
     form_factor: str = "socamm2",
     max_workers: int = 8,
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[callable] = None,
+    density: Optional[str] = None,
+    speed: Optional[str] = None
 ) -> pd.DataFrame:
     """
     Fetch SMT6 yield data for multiple workweeks and design IDs in parallel.
@@ -325,6 +343,8 @@ def fetch_smt6_yield_data(
         form_factor: Module form factor
         max_workers: Maximum parallel workers
         progress_callback: Optional callback(completed, total, msg) for progress updates
+        density: Module density filter (optional)
+        speed: Module speed filter (optional)
 
     Returns:
         DataFrame with SMT6 yield data
@@ -335,18 +355,18 @@ def fetch_smt6_yield_data(
 
     # Create list of tasks
     tasks = [
-        (did, ww, form_factor)
+        (did, ww, form_factor, density, speed)
         for did in design_ids
         for ww in workweeks
     ]
 
     total_tasks = len(tasks)
-    logger.info(f"Fetching SMT6 data for {total_tasks} combinations...")
+    logger.info(f"Fetching SMT6 data for {total_tasks} combinations (density={density}, speed={speed})...")
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(fetch_smt6_yield_single, did, ww, ff): (did, ww)
-            for did, ww, ff in tasks
+            executor.submit(fetch_smt6_yield_single, did, ww, ff, density=dens, speed=spd): (did, ww)
+            for did, ww, ff, dens, spd in tasks
         }
 
         completed = 0
@@ -629,13 +649,15 @@ def build_smt6_site_command(
     workweek: str,
     form_factor: str = "socamm2",
     facility: str = "PENANG",
-    step: str = "hmfn"
+    step: str = "hmfn",
+    density: Optional[str] = None,
+    speed: Optional[str] = None
 ) -> str:
     """
     Build the frpt command for SMT6 site-level yield data.
     """
     cmd = (
-        f"/u/pe_burn_dft/bin/frptx -xf -bin=sof "
+        f"/u/pe_burn_dft/bin/frptx -xf -bin=soft "
         f"-myquick=/MFG_WORKWEEK/ "
         f"-quick=/myquick,machine_id,site/ "
         f"-sort=// "
@@ -650,8 +672,16 @@ def build_smt6_site_command(
         f"-module_form_factor={form_factor} "
         f"-mfg_workweek={workweek} "
         f"-test_facility={facility} "
-        f"+%"
     )
+    # Add optional density filter
+    if density:
+        cmd += f"-module_density={density} "
+    # Add optional speed filter (convert MTPS to MT format for frpt)
+    if speed:
+        # frpt uses "7500MT" format, not "7500MTPS"
+        speed_frpt = speed.replace("MTPS", "MT") if speed.endswith("MTPS") else speed
+        cmd += f"-module_speed={speed_frpt} "
+    cmd += "+%"
     return cmd
 
 
@@ -697,10 +727,12 @@ def fetch_smt6_site_single(
     design_id: str,
     workweek: str,
     form_factor: str = "socamm2",
-    timeout: int = 120
+    timeout: int = 120,
+    density: Optional[str] = None,
+    speed: Optional[str] = None
 ) -> list[dict]:
     """Fetch SMT6 site-level yield data for a single workweek and design ID."""
-    cmd = build_smt6_site_command(design_id, workweek, form_factor)
+    cmd = build_smt6_site_command(design_id, workweek, form_factor, density=density, speed=speed)
 
     # Check cache first
     cached_output = _get_cached_result(cmd)
@@ -737,24 +769,26 @@ def fetch_smt6_site_data(
     workweeks: list[str],
     form_factor: str = "socamm2",
     max_workers: int = 8,
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[callable] = None,
+    density: Optional[str] = None,
+    speed: Optional[str] = None
 ) -> pd.DataFrame:
     """Fetch SMT6 site-level yield data for multiple workweeks and design IDs."""
     all_results = []
 
     tasks = [
-        (did, ww, form_factor)
+        (did, ww, form_factor, density, speed)
         for did in design_ids
         for ww in workweeks
     ]
 
     total_tasks = len(tasks)
-    logger.info(f"Fetching SMT6 site data for {total_tasks} combinations...")
+    logger.info(f"Fetching SMT6 site data for {total_tasks} combinations (density={density}, speed={speed})...")
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(fetch_smt6_site_single, did, ww, ff): (did, ww)
-            for did, ww, ff in tasks
+            executor.submit(fetch_smt6_site_single, did, ww, ff, density=dens, speed=spd): (did, ww)
+            for did, ww, ff, dens, spd in tasks
         }
 
         completed = 0

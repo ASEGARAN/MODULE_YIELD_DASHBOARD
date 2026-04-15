@@ -2092,12 +2092,26 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
             workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
             design_ids = filters.get("design_ids", ["Y63N", "Y6CP", "Y62P"])
 
-            with st.spinner(f"Fetching SMT6 machine data for {len(workweeks)} weeks..."):
+            # Get density/speed filters (use first value if list provided)
+            densities = filters.get("densities")
+            speeds = filters.get("speeds")
+            density_filter = densities[0] if densities else None
+            speed_filter = speeds[0] if speeds else None
+
+            filter_info = ""
+            if density_filter:
+                filter_info += f" density={density_filter}"
+            if speed_filter:
+                filter_info += f" speed={speed_filter}"
+
+            with st.spinner(f"Fetching SMT6 machine data for {len(workweeks)} weeks{filter_info}..."):
                 smt6_df = fetch_smt6_yield_data(
                     design_ids=design_ids,
                     workweeks=[str(ww) for ww in workweeks],
                     form_factor="socamm2",
-                    max_workers=8
+                    max_workers=8,
+                    density=density_filter,
+                    speed=speed_filter
                 )
 
             if not smt6_df.empty:
@@ -2253,6 +2267,20 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 wws = [str(ww) for ww in Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])]
                 spinner_text = f"Fetching site data for {len(wws)} weeks..."
 
+            # Get density/speed filters (use first value if list provided)
+            densities = filters.get("densities")
+            speeds = filters.get("speeds")
+            density_filter = densities[0] if densities else None
+            speed_filter = speeds[0] if speeds else None
+
+            if density_filter or speed_filter:
+                filter_parts = []
+                if density_filter:
+                    filter_parts.append(density_filter)
+                if speed_filter:
+                    filter_parts.append(speed_filter)
+                spinner_text = spinner_text.replace("...", f" ({', '.join(filter_parts)})...")
+
             with st.spinner(spinner_text):
                 design_ids_for_fetch = filters.get("design_ids", ["Y6CP"])
                 form_factor_val = filters.get("form_factor", "socamm2").lower()
@@ -2261,7 +2289,9 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     design_ids=design_ids_for_fetch,
                     workweeks=wws,
                     form_factor=form_factor_val,
-                    progress_callback=None
+                    progress_callback=None,
+                    density=density_filter,
+                    speed=speed_filter
                 )
                 if not site_df.empty:
                     st.session_state.smt6_site_data = site_df
@@ -2327,6 +2357,50 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     st.metric("Min Yield", f"{min_yield:.2f}%")
                 with metric_cols[3]:
                     st.metric("Worst Machine", worst_machine.upper())
+
+                # =====================================================================
+                # SOCKET HEALTH VIEW FOR LATEST WEEK (All machines or specific)
+                # =====================================================================
+                if site_mode == "Latest Week":
+                    st.markdown("---")
+                    st.markdown("##### 🔌 Physical Socket Health")
+
+                    latest_ww = analysis_df['workweek'].max()
+                    latest_data = analysis_df[analysis_df['workweek'] == latest_ww]
+
+                    if selected_machine == "All Machines":
+                        # Show socket health grids for all machines
+                        machine_list = sorted(latest_data['machine_id'].unique())
+                        for machine in machine_list:
+                            machine_data = latest_data[latest_data['machine_id'] == machine]
+                            with st.expander(f"🔧 {machine.upper()} Socket Health", expanded=True):
+                                grid_html = create_site_grid_html(
+                                    machine_data,
+                                    machine_id=machine,
+                                    title=f"🔧 {machine.upper()} - Socket Health (WW{latest_ww})",
+                                    view_mode="socket"
+                                )
+                                if grid_html:
+                                    num_sockets = machine_data['site'].apply(
+                                        lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
+                                    ).nunique()
+                                    grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
+                                    components.html(grid_html, height=grid_height, scrolling=False)
+                    else:
+                        # Show socket health for selected machine
+                        with st.expander(f"🔧 {selected_machine.upper()} Socket Health", expanded=True):
+                            grid_html = create_site_grid_html(
+                                latest_data,
+                                machine_id=selected_machine,
+                                title=f"🔧 {selected_machine.upper()} - Socket Health (WW{latest_ww})",
+                                view_mode="socket"
+                            )
+                            if grid_html:
+                                num_sockets = latest_data['site'].apply(
+                                    lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
+                                ).nunique()
+                                grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
+                                components.html(grid_html, height=grid_height, scrolling=False)
 
                 # =====================================================================
                 # SITE TREND ANALYSIS (Only with Full Range data)
@@ -2459,9 +2533,9 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 column_config={'Yield %': st.column_config.NumberColumn(format="%.2f%%"), 'Std Dev': st.column_config.NumberColumn(format="%.2f")})
 
                 # =====================================================================
-                # SOCKET HEALTH VIEW (Only when specific machine selected)
+                # SOCKET HEALTH VIEW (Full Range mode, specific machine selected)
                 # =====================================================================
-                if selected_machine != "All Machines":
+                if site_mode == "Full Range" and selected_machine != "All Machines":
                     st.markdown("---")
                     with st.expander(f"🔧 Socket Health: {selected_machine.upper()}", expanded=True):
                         ww_options = sorted(analysis_df['workweek'].unique(), reverse=True)
