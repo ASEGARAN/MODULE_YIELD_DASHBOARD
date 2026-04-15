@@ -2359,53 +2359,57 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     st.metric("Worst Machine", worst_machine.upper())
 
                 # =====================================================================
-                # SOCKET HEALTH VIEW FOR LATEST WEEK (All machines or specific)
+                # SOCKET HEALTH + SITE HEATMAP FOR LATEST WEEK (Side by Side)
                 # =====================================================================
                 if site_mode == "Latest Week":
                     st.markdown("---")
-                    st.markdown("##### 🔌 Physical Socket Health")
 
                     latest_ww = analysis_df['workweek'].max()
                     latest_data = analysis_df[analysis_df['workweek'] == latest_ww]
 
-                    if selected_machine == "All Machines":
-                        # Show socket health grids for all machines
-                        machine_list = sorted(latest_data['machine_id'].unique())
-                        for machine in machine_list:
-                            machine_data = latest_data[latest_data['machine_id'] == machine]
-                            with st.expander(f"🔧 {machine.upper()} Socket Health", expanded=True):
+                    # Create two columns: Socket Health (left) and Site Heatmap (right)
+                    col_socket, col_heatmap = st.columns(2)
+
+                    # LEFT COLUMN: Socket Health
+                    with col_socket:
+                        st.markdown("##### 🔌 Physical Socket Health")
+                        if selected_machine == "All Machines":
+                            # Show socket health grids for all machines
+                            machine_list = sorted(latest_data['machine_id'].unique())
+                            for machine in machine_list:
+                                machine_data = latest_data[latest_data['machine_id'] == machine]
+                                with st.expander(f"🔧 {machine.upper()}", expanded=True):
+                                    grid_html = create_site_grid_html(
+                                        machine_data,
+                                        machine_id=machine,
+                                        title=f"🔧 {machine.upper()} - Socket Health (WW{latest_ww})",
+                                        view_mode="socket"
+                                    )
+                                    if grid_html:
+                                        num_sockets = machine_data['site'].apply(
+                                            lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
+                                        ).nunique()
+                                        grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
+                                        components.html(grid_html, height=grid_height, scrolling=False)
+                        else:
+                            # Show socket health for selected machine
+                            with st.expander(f"🔧 {selected_machine.upper()}", expanded=True):
                                 grid_html = create_site_grid_html(
-                                    machine_data,
-                                    machine_id=machine,
-                                    title=f"🔧 {machine.upper()} - Socket Health (WW{latest_ww})",
+                                    latest_data,
+                                    machine_id=selected_machine,
+                                    title=f"🔧 {selected_machine.upper()} - Socket Health (WW{latest_ww})",
                                     view_mode="socket"
                                 )
                                 if grid_html:
-                                    num_sockets = machine_data['site'].apply(
+                                    num_sockets = latest_data['site'].apply(
                                         lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
                                     ).nunique()
                                     grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
                                     components.html(grid_html, height=grid_height, scrolling=False)
-                    else:
-                        # Show socket health for selected machine
-                        with st.expander(f"🔧 {selected_machine.upper()} Socket Health", expanded=True):
-                            grid_html = create_site_grid_html(
-                                latest_data,
-                                machine_id=selected_machine,
-                                title=f"🔧 {selected_machine.upper()} - Socket Health (WW{latest_ww})",
-                                view_mode="socket"
-                            )
-                            if grid_html:
-                                num_sockets = latest_data['site'].apply(
-                                    lambda x: re.match(r'S\d+C\d+P(\d+)', x).group(1) if re.match(r'S\d+C\d+P(\d+)', x) else '0'
-                                ).nunique()
-                                grid_height = 420 if num_sockets <= 4 else 200 + ((num_sockets + 3) // 4) * 180
-                                components.html(grid_html, height=grid_height, scrolling=False)
 
-                    # =====================================================================
-                    # SITE YIELD HEATMAP FOR LATEST WEEK
-                    # =====================================================================
-                    with st.expander("🗺️ Site Yield Heatmap", expanded=True):
+                    # RIGHT COLUMN: Site Yield Heatmap
+                    with col_heatmap:
+                        st.markdown("##### 🗺️ Site Yield Heatmap")
                         # Group by machine and site for the latest week
                         site_summary = latest_data.groupby(['machine_id', 'site']).agg({
                             'uin_adj': 'sum',
@@ -2423,7 +2427,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
 
                         if not pivot.empty:
                             pivot = pivot.sort_index()
-                            chart_height = max(400, len(pivot.index) * 14 + 100)
+                            chart_height = max(500, len(pivot.index) * 14 + 100)
 
                             fig = go.Figure(data=go.Heatmap(
                                 z=pivot.values,
@@ -2433,7 +2437,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 zmin=90, zmax=100,
                                 text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
                                 texttemplate="%{text}",
-                                textfont={"size": 9},
+                                textfont={"size": 8},
                                 hovertemplate="<b>Site:</b> %{y}<br><b>Machine:</b> %{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>",
                                 colorbar=dict(title="Yield %", ticksuffix="%")
                             ))
@@ -2442,10 +2446,10 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 yaxis_title="Site",
                                 yaxis=dict(autorange='reversed'),
                                 height=chart_height,
-                                margin=dict(l=80, r=50, t=30, b=50)
+                                margin=dict(l=80, r=20, t=10, b=50)
                             )
                             st.plotly_chart(fig, use_container_width=True)
-                            st.caption(f"Showing {len(pivot.index)} sites × {len(pivot.columns)} machines for WW{latest_ww}")
+                            st.caption(f"{len(pivot.index)} sites × {len(pivot.columns)} machines (WW{latest_ww})")
 
                 # =====================================================================
                 # SITE TREND ANALYSIS (Only with Full Range data)
