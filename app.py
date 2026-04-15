@@ -2699,33 +2699,34 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                         st.markdown(insights_html, unsafe_allow_html=True)
 
                     # =====================================================================
-                    # SITE TREND HEATMAP
+                    # SITE TREND HEATMAP (only for single machine - All Machines has its own below)
                     # =====================================================================
-                    with st.expander("🗺️ Site Yield Heatmap (Sites × Weeks)", expanded=True):
-                        pivot = analysis_df.pivot_table(index='site', columns='workweek', values='yield_pct', aggfunc='mean')
-                        if not pivot.empty:
-                            pivot = pivot.reindex(sorted(pivot.columns), axis=1).sort_index()
-                            chart_height = max(350, len(pivot.index) * 16 + 100)
+                    if selected_machine != "All Machines":
+                        with st.expander("🗺️ Site Yield Heatmap (Sites × Weeks)", expanded=True):
+                            pivot = analysis_df.pivot_table(index='site', columns='workweek', values='yield_pct', aggfunc='mean')
+                            if not pivot.empty:
+                                pivot = pivot.reindex(sorted(pivot.columns), axis=1).sort_index()
+                                chart_height = max(350, len(pivot.index) * 16 + 100)
 
-                            fig = go.Figure(data=go.Heatmap(
-                                z=pivot.values,
-                                x=[str(ww) for ww in pivot.columns],
-                                y=pivot.index.tolist(),
-                                colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
-                                zmin=94, zmax=100,
-                                text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
-                                texttemplate="%{text}", textfont={"size": 8},
-                                hovertemplate="<b>Site:</b> %{y}<br><b>Week:</b> WW%{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>",
-                                colorbar=dict(title="Yield %", ticksuffix="%")
-                            ))
-                            fig.update_layout(
-                                xaxis_title="Work Week", yaxis_title="Site",
-                                xaxis=dict(type='category', tickprefix="WW"),
-                                yaxis=dict(autorange='reversed'),
-                                height=chart_height, margin=dict(l=80, r=50, t=30, b=50)
-                            )
-                            st.plotly_chart(fig, use_container_width=True)
-                            st.caption(f"Showing {len(pivot.index)} sites × {len(pivot.columns)} weeks")
+                                fig = go.Figure(data=go.Heatmap(
+                                    z=pivot.values,
+                                    x=[str(ww) for ww in pivot.columns],
+                                    y=pivot.index.tolist(),
+                                    colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
+                                    zmin=94, zmax=100,
+                                    text=[[f"{v:.1f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
+                                    texttemplate="%{text}", textfont={"size": 8},
+                                    hovertemplate="<b>Site:</b> %{y}<br><b>Week:</b> WW%{x}<br><b>Yield:</b> %{z:.2f}%<extra></extra>",
+                                    colorbar=dict(title="Yield %", ticksuffix="%")
+                                ))
+                                fig.update_layout(
+                                    xaxis_title="Work Week", yaxis_title="Site",
+                                    xaxis=dict(type='category', tickprefix="WW"),
+                                    yaxis=dict(autorange='reversed'),
+                                    height=chart_height, margin=dict(l=80, r=50, t=30, b=50)
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
+                                st.caption(f"Showing {len(pivot.index)} sites × {len(pivot.columns)} weeks")
 
                     # =====================================================================
                     # SITE PERFORMANCE TABLE
