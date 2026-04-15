@@ -2161,6 +2161,9 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
         # MACHINE YIELD CARDS + TREND CHART (Side by Side)
         # =====================================================================
         if not filtered_machine_df.empty or not filtered_site_df.empty:
+            # Consistent height for both columns
+            SECTION_HEIGHT = 480
+
             # Create 2-column layout: Cards on left, Trend chart on right (equal width)
             col_cards, col_chart = st.columns([1, 1])
 
@@ -2169,39 +2172,32 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 cards_df = filtered_machine_df if not filtered_machine_df.empty else filtered_site_df
                 cards_html = create_machine_yield_cards(cards_df, dark_mode=True)
                 if cards_html:
-                    # Cards use auto-fill grid, so they adapt to container width
-                    num_machines = cards_df['machine_id'].nunique() if 'machine_id' in cards_df.columns else 1
-                    cards_per_row = 3  # More cards per row with wider column
-                    rows = (num_machines + cards_per_row - 1) // cards_per_row
-                    # Header=50px + each row of cards=200px
-                    card_height = 50 + (rows * 200)
-                    components.html(cards_html, height=min(card_height, 550), scrolling=True)
+                    components.html(cards_html, height=SECTION_HEIGHT, scrolling=True)
 
             with col_chart:
                 if not filtered_machine_df.empty:
-                    st.markdown("##### 📈 Machine Yield Trend")
-
-                    # Chart options in a compact row
-                    opt_col1, opt_col2 = st.columns([1, 2])
+                    # Header with inline options
+                    header_col, opt_col1, opt_col2 = st.columns([2, 1, 2])
+                    with header_col:
+                        st.markdown("##### 📈 Machine Yield Trend")
                     with opt_col1:
                         show_data_labels = st.checkbox(
-                            "Data Labels",
+                            "Labels",
                             value=False,
                             key="smt6_show_labels",
-                            help="Display yield values on data points"
+                            help="Show yield values"
                         )
                     with opt_col2:
-                        # Calculate data range for slider
                         data_min = filtered_machine_df['yield_pct'].min()
                         default_min = max(0, int(data_min - 5))
                         y_axis_min = st.slider(
-                            "Y-Axis Start",
+                            "Y-Min",
                             min_value=0,
                             max_value=95,
                             value=default_min,
                             step=5,
                             key="smt6_y_min",
-                            help="Adjust the starting point of Y-axis"
+                            label_visibility="collapsed"
                         )
 
                     # Use the main dashboard's design_ids filter
@@ -2222,7 +2218,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                             include_plotlyjs=plotly_cdn,
                             config={'displayModeBar': True, 'responsive': True}
                         )
-                        components.html(chart_html, height=450, scrolling=False)
+                        components.html(chart_html, height=SECTION_HEIGHT - 35, scrolling=False)
 
             # Machine summary table (full width below)
             if not filtered_machine_df.empty:
