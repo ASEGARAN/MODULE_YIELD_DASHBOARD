@@ -597,16 +597,15 @@ def create_smt6_summary_table(df: pd.DataFrame, dark_mode: bool = True) -> str:
     bad_color = '#4a1a1a' if dark_mode else '#ffcccc'
 
     html = f'''
-    <div style="margin-bottom: 20px;">
-        <h3 style="color: {text_color}; margin-bottom: 10px;">SMT6 Machine Summary</h3>
-        <table style="border-collapse: collapse; width: 80%; font-size: 12px; font-family: Arial, sans-serif; background-color: {bg_color};">
+    <div style="margin: 0; padding: 0;">
+        <table style="border-collapse: collapse; width: 100%; font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: {bg_color};">
             <thead>
                 <tr style="background-color: {header_bg};">
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: left; color: {text_color};">Machine</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Total UIN</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Total UPASS</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Overall Yield</th>
-                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">Weeks</th>
+                    <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: left; color: {text_color};">Machine</th>
+                    <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: right; color: {text_color};">UIN</th>
+                    <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: right; color: {text_color};">UPASS</th>
+                    <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: right; color: {text_color};">Yield</th>
+                    <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: center; color: {text_color};">Wks</th>
                 </tr>
             </thead>
             <tbody>
@@ -622,18 +621,18 @@ def create_smt6_summary_table(df: pd.DataFrame, dark_mode: bool = True) -> str:
 
         html += f'''
             <tr style="{row_style}">
-                <td style="border: 1px solid {border_color}; padding: 8px; color: {text_color};"><span style="color:{color};">●</span> {machine}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{int(row['uin_adj']):,}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{int(row['upass_adj']):,}</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{yield_val:.2f}%</td>
-                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{int(row['workweek'])}</td>
+                <td style="border: 1px solid {border_color}; padding: 4px 8px; color: {text_color};"><span style="color:{color};">●</span> {machine}</td>
+                <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: right; color: {text_color};">{int(row['uin_adj']):,}</td>
+                <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: right; color: {text_color};">{int(row['upass_adj']):,}</td>
+                <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: right; color: {text_color}; font-weight: 600;">{yield_val:.2f}%</td>
+                <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: center; color: {text_color};">{int(row['workweek'])}</td>
             </tr>
         '''
 
     html += f'''
             </tbody>
         </table>
-        <p style="font-size: 11px; color: {'#aaaaaa' if dark_mode else '#666666'}; margin-top: 5px;">Green = Yield >= {TARGET_YIELD}% target | Red = Below target</p>
+        <div style="font-size: 10px; color: {'#888' if dark_mode else '#666'}; margin-top: 4px;">🟢 ≥{TARGET_YIELD}% &nbsp; 🔴 Below target</div>
     </div>
     '''
 

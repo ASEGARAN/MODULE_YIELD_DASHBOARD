@@ -2220,12 +2220,15 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                         )
                         components.html(chart_html, height=SECTION_HEIGHT - 35, scrolling=False)
 
-            # Machine summary table (full width below)
+            # Machine summary table (compact, full width below)
             if not filtered_machine_df.empty:
-                with st.expander("Machine Summary Table", expanded=False):
+                with st.expander("📋 Machine Summary", expanded=False):
                     summary_html = create_smt6_summary_table(filtered_machine_df, dark_mode=True)
                     if summary_html:
-                        components.html(summary_html, height=350, scrolling=True)
+                        # Dynamic height: header(28) + rows(26 each) + footer(20)
+                        num_machines = filtered_machine_df['machine_id'].nunique()
+                        table_height = 28 + (num_machines * 26) + 20
+                        components.html(summary_html, height=min(table_height, 180), scrolling=False)
 
         # =====================================================================
         # SOCKET/SITE ANALYSIS - STREAMLINED VERSION
