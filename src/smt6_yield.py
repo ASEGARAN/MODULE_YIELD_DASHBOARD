@@ -2863,6 +2863,240 @@ def create_site_trend_summary_html(trend_df: pd.DataFrame) -> str:
     return html
 
 
+# ============================================================================
+# SITE HEALTH SUMMARY - Lowest 5 sockets per machine
+# ============================================================================
+
+def create_site_channel_summary_html(
+    df: pd.DataFrame,
+    max_issues: int = 5
+) -> str:
+    """
+    Create a compact summary showing the lowest 5 yielding sockets per machine.
+
+    Shows:
+    - Lowest 5 sockets per machine (sorted by yield)
+    - Color coded by yield severity
+    - Deterioration trend and WW details for multi-week data
+
+    Args:
+        df: DataFrame with site-level yield data (may include multiple weeks)
+        max_issues: Maximum sockets to show per machine (default 5)
+
+    Returns:
+        HTML string with compact summary
+    """
+    if df.empty or 'site' not in df.columns:
+        return ""
+
+    df = df.copy()
+    has_multi_weeks = 'workweek' in df.columns and df['workweek'].nunique() > 1
+
+    # Parse site components
+    parsed = df['site'].apply(parse_site_components)
+    df['channel_id'] = parsed.apply(lambda x: x['channel_id'])
+    df['position_id'] = parsed.apply(lambda x: x['position_id'])
+
+    # Calculate weekly yields for trend analysis (if multi-week data)
+    weekly_socket_yields = None
+    if has_multi_weeks:
+        weekly_socket_yields = df.groupby(['machine_id', 'site', 'workweek']).agg({
+            'uin_adj': 'sum',
+            'upass_adj': 'sum'
+        }).reset_index()
+        weekly_socket_yields['yield_pct'] = (weekly_socket_yields['upass_adj'] / weekly_socket_yields['uin_adj'] * 100).round(2)
+
+    # Aggregate by machine and socket (cumulative)
+    socket_data = df.groupby(['machine_id', 'channel_id', 'position_id', 'site']).agg({
+        'uin_adj': 'sum',
+        'upass_adj': 'sum'
+    }).reset_index()
+    socket_data['yield_pct'] = (socket_data['upass_adj'] / socket_data['uin_adj'] * 100).round(2)
+
+    # Calculate statistics
+    yields = socket_data['yield_pct']
+    median_yield = yields.median()
+    min_yield = yields.min()
+    max_yield = yields.max()
+    total_sockets = len(socket_data)
+
+    # Get unique machines
+    machines = sorted(socket_data['machine_id'].unique())
+
+    # Check if all sockets are healthy (above 95%)
+    if min_yield >= 95:
+        ww_range = ""
+        if has_multi_weeks:
+            wws = sorted(df['workweek'].unique())
+            ww_range = f" (WW{wws[0]}-{wws[-1]})"
+        return f'''
+        <div style="background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+                    border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 18px;">✅</span>
+            <span style="font-size: 12px; font-weight: 600; color: #fff;">All {total_sockets} Sites Healthy{ww_range}</span>
+            <span style="font-size: 10px; color: #c8e6c9;">Median: {median_yield:.1f}% | Range: {min_yield:.0f}-{max_yield:.0f}%</span>
+        </div>
+        '''
+
+    # Helper: Find detailed trend info for a socket
+    def get_deterioration_info(machine_id: str, site: str) -> dict:
+        """Find when socket started failing, trend direction, and yield trajectory."""
+        if weekly_socket_yields is None:
+            return {'start_ww': None, 'trend': None, 'weeks_bad': 0, 'total_weeks': 0,
+                    'first_yield': None, 'last_yield': None, 'min_yield': None}
+
+        site_weekly = weekly_socket_yields[
+            (weekly_socket_yields['machine_id'] == machine_id) &
+            (weekly_socket_yields['site'] == site)
+        ].sort_values('workweek')
+
+        if site_weekly.empty:
+            return {'start_ww': None, 'trend': None, 'weeks_bad': 0, 'total_weeks': 0,
+                    'first_yield': None, 'last_yield': None, 'min_yield': None}
+
+        total_weeks = len(site_weekly)
+        first_yield = site_weekly.iloc[0]['yield_pct']
+        last_yield = site_weekly.iloc[-1]['yield_pct']
+        min_yield_val = site_weekly['yield_pct'].min()
+
+        # Find first week below 95%
+        bad_weeks = site_weekly[site_weekly['yield_pct'] < 95]
+        if bad_weeks.empty:
+            return {'start_ww': None, 'trend': None, 'weeks_bad': 0, 'total_weeks': total_weeks,
+                    'first_yield': first_yield, 'last_yield': last_yield, 'min_yield': min_yield_val}
+
+        first_bad = bad_weeks['workweek'].min()
+        weeks_bad = len(bad_weeks)
+
+        # Calculate trend (compare first half vs second half)
+        if total_weeks >= 2:
+            first_half = site_weekly.head(total_weeks // 2)['yield_pct'].mean()
+            second_half = site_weekly.tail(total_weeks // 2)['yield_pct'].mean()
+            diff = second_half - first_half
+            if diff < -2:
+                trend = '📉'  # Declining
+            elif diff > 2:
+                trend = '📈'  # Improving
+            else:
+                trend = '➡️'  # Stable
+        else:
+            trend = '➡️'
+
+        return {
+            'start_ww': str(first_bad)[-2:],
+            'trend': trend,
+            'weeks_bad': weeks_bad,
+            'total_weeks': total_weeks,
+            'first_yield': first_yield,
+            'last_yield': last_yield,
+            'min_yield': min_yield_val
+        }
+
+    # Helper: Get background color based on yield (no green for healthy)
+    def get_yield_color(y: float) -> tuple:
+        """Return (background_color, text_color) based on yield."""
+        if y < 50:
+            return '#b71c1c', '#fff'  # Dark red - Critical
+        elif y < 70:
+            return '#c62828', '#fff'  # Red - Severe
+        elif y < 85:
+            return '#ef6c00', '#fff'  # Orange - Poor
+        elif y < 95:
+            return '#f9a825', '#000'  # Yellow - Warning
+        else:
+            return '#37474f', '#fff'  # Dark gray - OK (no green)
+
+    # Machine header color - follows dashboard theme
+    header_bg = '#1a237e'  # Dark indigo - matches dashboard theme
+
+    # Get WW range for header
+    ww_info = ""
+    if has_multi_weeks:
+        wws = sorted(df['workweek'].unique())
+        ww_info = f" | WW{str(wws[0])[-2:]}-{str(wws[-1])[-2:]}"
+
+    # Count sockets below 95%
+    poor_count = len(socket_data[socket_data['yield_pct'] < 95])
+
+    # Build HTML
+    html = f'''<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:6px;padding:8px;">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.1);">
+<span style="font-size:11px;font-weight:600;color:#fff;">📊 Lowest 5 Yield Sockets by Machine{ww_info}</span>
+<div style="display:flex;gap:4px;margin-left:auto;font-size:8px;">
+<span style="background:#ef6c00;color:#fff;padding:1px 5px;border-radius:6px;">⚠️ {poor_count} below 95%</span>
+</div></div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;">'''
+
+    # Create a column for each machine (only show machines with critical sockets)
+    machines_with_issues = []
+    for idx, machine_id in enumerate(machines):
+        machine_sockets = socket_data[socket_data['machine_id'] == machine_id]
+        # Only show sockets below 95% (critical)
+        critical_sockets = machine_sockets[machine_sockets['yield_pct'] < 95].sort_values('yield_pct').head(max_issues)
+
+        if critical_sockets.empty:
+            continue  # Skip machines with no critical sockets
+
+        machines_with_issues.append(machine_id)
+        machine_name = machine_id.upper()
+        machine_min = machine_sockets['yield_pct'].min()
+
+        html += f'''<div style="flex:1;min-width:180px;max-width:250px;">
+<div style="background:{header_bg};padding:4px 8px;border-radius:4px 4px 0 0;">
+<span style="font-size:10px;font-weight:600;color:#fff;">{machine_name}</span>
+<span style="font-size:9px;color:rgba(255,255,255,0.8);float:right;">Min: {machine_min:.0f}%</span>
+</div>
+<div style="background:rgba(0,0,0,0.2);border-radius:0 0 4px 4px;padding:4px;">'''
+
+        for _, row in critical_sockets.iterrows():
+            site = row['site']
+            y = row['yield_pct']
+            bg, text = get_yield_color(y)
+
+            # Get trend info
+            trend_detail = ""
+            if has_multi_weeks:
+                info = get_deterioration_info(machine_id, site)
+                if info['start_ww']:
+                    trajectory = f"{info['first_yield']:.0f}→{info['last_yield']:.0f}%" if info['first_yield'] is not None else ""
+                    trend_detail = f"{info['trend']} {trajectory} (WW{info['start_ww']})"
+
+            html += f'''<div style="background:{bg};border-radius:3px;padding:3px 6px;margin-bottom:2px;">
+<div style="display:flex;justify-content:space-between;align-items:center;">
+<span style="font-size:8px;color:{text};font-weight:500;">{site}</span>
+<span style="font-size:9px;font-weight:700;color:{text};">{y:.0f}%</span>
+</div>'''
+            if trend_detail:
+                detail_color = 'rgba(255,255,255,0.8)' if text == '#fff' else 'rgba(0,0,0,0.7)'
+                html += f'<div style="font-size:7px;color:{detail_color};">{trend_detail}</div>'
+            html += '</div>'
+
+        html += '</div></div>'
+
+    # If no machines have issues, show all healthy message
+    if not machines_with_issues:
+        return f'''
+        <div style="background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+                    border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 18px;">✅</span>
+            <span style="font-size: 12px; font-weight: 600; color: #fff;">All {total_sockets} Sites Healthy{ww_info}</span>
+            <span style="font-size: 10px; color: #c8e6c9;">All sockets ≥95%</span>
+        </div>
+        '''
+
+    html += '</div>'
+
+    # Add legend (only critical categories, no OK)
+    html += '''<div style="margin-top:6px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.1);display:flex;gap:8px;flex-wrap:wrap;font-size:7px;color:#888;">
+<span><span style="background:#b71c1c;color:#fff;padding:1px 4px;border-radius:2px;">&lt;50%</span> Critical</span>
+<span><span style="background:#c62828;color:#fff;padding:1px 4px;border-radius:2px;">50-70%</span> Severe</span>
+<span><span style="background:#ef6c00;color:#fff;padding:1px 4px;border-radius:2px;">70-85%</span> Poor</span>
+<span><span style="background:#f9a825;color:#000;padding:1px 4px;border-radius:2px;">85-95%</span> Warning</span>
+</div></div>'''
+
+    return html
+
+
 def create_multi_machine_socket_grid(
     df: pd.DataFrame,
     machine_ids: list[str],
