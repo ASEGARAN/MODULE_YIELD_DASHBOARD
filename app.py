@@ -2391,32 +2391,32 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 avg_yield = fleet_summary['yield_pct'].mean()
                 min_yield = fleet_summary['yield_pct'].min()
 
-                # Find worst machine+site combination and calculate WoW delta
-                worst_delta = None
+                # Find top 3 worst machine+site combinations
+                worst_sites = []
                 if not site_summary_filtered.empty:
-                    worst_idx = site_summary_filtered['yield_pct'].idxmin()
-                    worst_machine = site_summary_filtered.loc[worst_idx, 'machine_id']
-                    worst_site = site_summary_filtered.loc[worst_idx, 'site']
-                    worst_site_yield = site_summary_filtered.loc[worst_idx, 'yield_pct']
-                    # Format: MACHINE-SOCKET (e.g., SMT61-0001-S1C0P01)
-                    worst_label = f"{worst_machine.upper()}-{worst_site}"
-
-                    # Calculate WoW delta if previous week data exists
-                    if prev_ww:
-                        prev_site_data = analysis_df[
-                            (analysis_df['workweek'] == prev_ww) &
-                            (analysis_df['machine_id'] == worst_machine) &
-                            (analysis_df['site'] == worst_site)
-                        ]
-                        if not prev_site_data.empty:
-                            prev_uin = prev_site_data['uin_adj'].sum()
-                            prev_upass = prev_site_data['upass_adj'].sum()
-                            if prev_uin > 0:
-                                prev_yield = (prev_upass / prev_uin * 100)
-                                worst_delta = worst_site_yield - prev_yield
-                else:
-                    worst_label = "N/A"
-                    worst_site_yield = None
+                    top3_worst = site_summary_filtered.nsmallest(3, 'yield_pct')
+                    for _, row in top3_worst.iterrows():
+                        machine = row['machine_id']
+                        site = row['site']
+                        yield_val = row['yield_pct']
+                        # Calculate WoW delta
+                        delta = None
+                        if prev_ww:
+                            prev_data = analysis_df[
+                                (analysis_df['workweek'] == prev_ww) &
+                                (analysis_df['machine_id'] == machine) &
+                                (analysis_df['site'] == site)
+                            ]
+                            if not prev_data.empty:
+                                prev_uin = prev_data['uin_adj'].sum()
+                                prev_upass = prev_data['upass_adj'].sum()
+                                if prev_uin > 0:
+                                    delta = yield_val - (prev_upass / prev_uin * 100)
+                        worst_sites.append({
+                            'label': f"{machine.upper()}-{site}",
+                            'yield': yield_val,
+                            'delta': delta
+                        })
 
                 # Fleet metrics in cards
                 metric_cols = st.columns(4)
@@ -2427,20 +2427,25 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 with metric_cols[2]:
                     st.metric("Min Yield", f"{min_yield:.2f}%")
                 with metric_cols[3]:
-                    if worst_site_yield is not None:
-                        if worst_delta is not None:
-                            # Show WoW change (positive = improved, negative = declined)
-                            st.metric(
-                                "Worst Site",
-                                f"{worst_label}",
-                                delta=f"{worst_delta:+.1f}% WoW",
-                                delta_color="normal",
-                                help=f"Current: {worst_site_yield:.1f}% | WoW change from WW{prev_ww}"
-                            )
-                        else:
-                            st.metric("Worst Site", worst_label, delta=f"{worst_site_yield:.1f}%", delta_color="off")
+                    # Custom card for top 3 worst sites
+                    if worst_sites:
+                        worst_html = '<div style="font-size:11px; line-height:1.5;">'
+                        worst_html += '<div style="color:#888; font-size:10px; margin-bottom:4px;">Top 3 Worst Sites</div>'
+                        for i, ws in enumerate(worst_sites):
+                            delta_str = ""
+                            delta_color = "#888"
+                            if ws['delta'] is not None:
+                                delta_color = "#00C853" if ws['delta'] >= 0 else "#FF1744"
+                                delta_str = f' <span style="color:{delta_color};">({ws["delta"]:+.1f}%)</span>'
+                            # Truncate label if too long
+                            label = ws['label']
+                            if len(label) > 20:
+                                label = label[:18] + ".."
+                            worst_html += f'<div><b>{i+1}.</b> {label} <span style="color:#FF9800;">{ws["yield"]:.1f}%</span>{delta_str}</div>'
+                        worst_html += '</div>'
+                        st.markdown(worst_html, unsafe_allow_html=True)
                     else:
-                        st.metric("Worst Site", worst_label)
+                        st.metric("Worst Site", "N/A")
 
                 # =====================================================================
                 # SOCKET HEALTH + SITE HEATMAP FOR LATEST WEEK (Side by Side)
