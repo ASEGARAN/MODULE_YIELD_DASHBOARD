@@ -29,6 +29,7 @@ from src import data_processor
 importlib.reload(data_processor)
 from src.data_processor import DataProcessor
 from src.cache import FrptCache
+from src.pdf_report import create_dashboard_pdf, export_chart_to_png
 
 # Force reload fiscal_calendar to pick up latest changes
 from src import fiscal_calendar
@@ -2369,11 +2370,30 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 }).reset_index()
                 fleet_summary['yield_pct'] = (fleet_summary['upass_adj'] / fleet_summary['uin_adj'] * 100).round(2)
 
+                # Calculate site-level metrics to find worst machine+site combo
+                site_summary = analysis_df.groupby(['machine_id', 'site']).agg({
+                    'uin_adj': 'sum',
+                    'upass_adj': 'sum'
+                }).reset_index()
+                site_summary['yield_pct'] = (site_summary['upass_adj'] / site_summary['uin_adj'] * 100).round(2)
+                # Filter to sites with meaningful volume (at least 10 UIN)
+                site_summary_filtered = site_summary[site_summary['uin_adj'] >= 10]
+
                 # Quick fleet stats
                 total_machines = fleet_summary['machine_id'].nunique()
                 avg_yield = fleet_summary['yield_pct'].mean()
                 min_yield = fleet_summary['yield_pct'].min()
-                worst_machine = fleet_summary.loc[fleet_summary['yield_pct'].idxmin(), 'machine_id'] if not fleet_summary.empty else "N/A"
+
+                # Find worst machine+site combination
+                if not site_summary_filtered.empty:
+                    worst_idx = site_summary_filtered['yield_pct'].idxmin()
+                    worst_machine = site_summary_filtered.loc[worst_idx, 'machine_id']
+                    worst_site = site_summary_filtered.loc[worst_idx, 'site']
+                    worst_site_yield = site_summary_filtered.loc[worst_idx, 'yield_pct']
+                    worst_label = f"{worst_machine.upper()} / {worst_site}"
+                else:
+                    worst_label = "N/A"
+                    worst_site_yield = None
 
                 # Fleet metrics in cards
                 metric_cols = st.columns(4)
@@ -2384,7 +2404,10 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 with metric_cols[2]:
                     st.metric("Min Yield", f"{min_yield:.2f}%")
                 with metric_cols[3]:
-                    st.metric("Worst Machine", worst_machine.upper())
+                    if worst_site_yield is not None:
+                        st.metric("Worst Site", worst_label, delta=f"{worst_site_yield:.1f}%", delta_color="off")
+                    else:
+                        st.metric("Worst Site", worst_label)
 
                 # =====================================================================
                 # SOCKET HEALTH + SITE HEATMAP FOR LATEST WEEK (Side by Side)
@@ -5333,6 +5356,56 @@ def main() -> None:
 
     # Store cache preference in session state
     st.session_state.use_cache = use_cache
+
+    # PDF Export section
+    st.sidebar.divider()
+    st.sidebar.subheader("📄 Export Report")
+
+    if st.sidebar.button("Generate PDF Report", use_container_width=True, type="primary"):
+        with st.sidebar.status("Generating PDF...", expanded=True) as status:
+            try:
+                # Collect data from session state
+                charts = {}
+
+                # Get yield data if available
+                yield_data = st.session_state.get('yield_data', None)
+
+                # Get ELC data if available
+                elc_data = st.session_state.get('elc_data', None)
+
+                # Get SMT6 data if available
+                smt6_data = st.session_state.get('smt6_machine_data', None)
+
+                # Get GRACE data if available
+                grace_data = st.session_state.get('grace_fm_data', None)
+
+                # Generate PDF
+                status.update(label="Building PDF...")
+                pdf_bytes = create_dashboard_pdf(
+                    filters=filters,
+                    yield_data=yield_data,
+                    elc_data=elc_data,
+                    smt6_data=smt6_data,
+                    grace_data=grace_data,
+                    charts=charts
+                )
+
+                # Create download button
+                status.update(label="PDF Ready!", state="complete")
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                filename = f"yield_dashboard_report_{timestamp}.pdf"
+
+                st.sidebar.download_button(
+                    label="⬇️ Download PDF",
+                    data=pdf_bytes,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+
+            except Exception as e:
+                status.update(label=f"Error: {str(e)}", state="error")
+                st.sidebar.error(f"PDF generation failed: {str(e)}")
 
     # Create tabs with Home tab first
     tab_home, tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 Home", "📊 Yield Analysis", "📈 Module ELC Yield", "📉 Pareto Analysis", "🔍 Fail Viewer", "🔧 Machine Trends"])
