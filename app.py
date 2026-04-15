@@ -2158,74 +2158,86 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
             filtered_site_df = pd.DataFrame()
 
         # =====================================================================
-        # MACHINE YIELD CARDS + TREND CHART (Side by Side)
+        # COMPACT FLEET STRIP + FULL-WIDTH TREND CHART
         # =====================================================================
         if not filtered_machine_df.empty or not filtered_site_df.empty:
-            # Consistent height for both columns
-            SECTION_HEIGHT = 480
+            cards_df = filtered_machine_df if not filtered_machine_df.empty else filtered_site_df
 
-            # Create 2-column layout: Cards on left, Trend chart on right (equal width)
-            col_cards, col_chart = st.columns([1, 1])
+            # -----------------------------------------------------------------
+            # COMPACT TESTER FLEET STRIP (Horizontal metrics bar)
+            # -----------------------------------------------------------------
+            latest_ww = cards_df['workweek'].max()
+            latest_df = cards_df[cards_df['workweek'] == latest_ww]
+            machine_summary = latest_df.groupby('machine_id').agg({
+                'uin_adj': 'sum',
+                'upass_adj': 'sum'
+            }).reset_index()
+            machine_summary['yield_pct'] = (machine_summary['upass_adj'] / machine_summary['uin_adj'] * 100).round(2)
+            machine_summary = machine_summary.sort_values('machine_id')
 
-            with col_cards:
-                st.markdown("##### 🖥️ Tester Fleet")
-                cards_df = filtered_machine_df if not filtered_machine_df.empty else filtered_site_df
-                cards_html = create_machine_yield_cards(cards_df, dark_mode=True)
-                if cards_html:
-                    components.html(cards_html, height=SECTION_HEIGHT, scrolling=True)
+            # Build compact fleet strip
+            num_machines = len(machine_summary)
+            fleet_cols = st.columns([3] + [2] * num_machines + [2])
 
-            with col_chart:
-                if not filtered_machine_df.empty:
-                    # Header with inline options
-                    header_col, opt_col1, opt_col2 = st.columns([2, 1, 2])
-                    with header_col:
-                        st.markdown("##### 📈 Machine Yield Trend")
-                    with opt_col1:
-                        show_data_labels = st.checkbox(
-                            "Labels",
-                            value=False,
-                            key="smt6_show_labels",
-                            help="Show yield values"
-                        )
-                    with opt_col2:
-                        data_min = filtered_machine_df['yield_pct'].min()
-                        default_min = max(0, int(data_min - 5))
-                        y_axis_min = st.slider(
-                            "Y-Min",
-                            min_value=0,
-                            max_value=95,
-                            value=default_min,
-                            step=5,
-                            key="smt6_y_min",
-                            label_visibility="collapsed"
-                        )
+            with fleet_cols[0]:
+                st.markdown(f"##### 🖥️ Tester Fleet <span style='font-size:12px; color:#888;'>(WW{latest_ww})</span>", unsafe_allow_html=True)
 
-                    # Use the main dashboard's design_ids filter
-                    design_ids = filters.get("design_ids", [])
-                    design_id_label = ", ".join(design_ids) if design_ids else None
+            for i, (_, row) in enumerate(machine_summary.iterrows()):
+                machine = row['machine_id'].upper()
+                yield_val = row['yield_pct']
+                uin = int(row['uin_adj'])
 
-                    fig = create_smt6_yield_chart(
-                        filtered_machine_df,
-                        design_id=design_id_label,
-                        dark_mode=True,
-                        show_data_labels=show_data_labels,
-                        y_axis_min=float(y_axis_min)
+                # Status indicator
+                if yield_val >= 99.0:
+                    status = "✅"
+                    color = "#00C853"
+                elif yield_val >= 96.0:
+                    status = "⚠️"
+                    color = "#FFB300"
+                else:
+                    status = "🔴"
+                    color = "#FF1744"
+
+                with fleet_cols[i + 1]:
+                    st.markdown(
+                        f"<div style='text-align:center; padding:8px; background:linear-gradient(135deg,#1a1a2e,#16213e); "
+                        f"border-radius:8px; border-left:3px solid {color};'>"
+                        f"<div style='font-size:13px; font-weight:600; color:#fff;'>{status} {machine}</div>"
+                        f"<div style='font-size:18px; font-weight:700; color:{color};'>{yield_val:.1f}%</div>"
+                        f"<div style='font-size:10px; color:#888;'>{uin:,} UIN</div>"
+                        f"</div>",
+                        unsafe_allow_html=True
                     )
-                    if fig:
-                        plotly_cdn = 'https://cdn.plot.ly/plotly-2.27.0.min.js'
-                        chart_html = fig.to_html(
-                            full_html=True,
-                            include_plotlyjs=plotly_cdn,
-                            config={'displayModeBar': True, 'responsive': True}
-                        )
-                        components.html(chart_html, height=SECTION_HEIGHT - 35, scrolling=False)
 
-            # Machine summary table (compact, full width below)
+            # Chart options in last column
+            with fleet_cols[-1]:
+                show_data_labels = st.checkbox("Labels", value=False, key="smt6_show_labels")
+                data_min = filtered_machine_df['yield_pct'].min() if not filtered_machine_df.empty else 90
+                default_min = max(0, int(data_min - 5))
+                y_axis_min = st.slider("Y-Min", 0, 95, default_min, 5, key="smt6_y_min", label_visibility="collapsed")
+
+            # -----------------------------------------------------------------
+            # FULL-WIDTH TREND CHART
+            # -----------------------------------------------------------------
+            if not filtered_machine_df.empty:
+                design_ids = filters.get("design_ids", [])
+                design_id_label = ", ".join(design_ids) if design_ids else None
+
+                fig = create_smt6_yield_chart(
+                    filtered_machine_df,
+                    design_id=design_id_label,
+                    dark_mode=True,
+                    show_data_labels=show_data_labels,
+                    y_axis_min=float(y_axis_min)
+                )
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
+
+            # Machine summary table (compact expander)
             if not filtered_machine_df.empty:
                 with st.expander("📋 Machine Summary", expanded=False):
                     summary_html = create_smt6_summary_table(filtered_machine_df, dark_mode=True)
                     if summary_html:
-                        # Dynamic height: header(28) + rows(26 each) + footer(20)
                         num_machines = filtered_machine_df['machine_id'].nunique()
                         table_height = 28 + (num_machines * 26) + 20
                         components.html(summary_html, height=min(table_height, 180), scrolling=False)
