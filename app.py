@@ -2121,7 +2121,15 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 st.session_state.smt6_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 st.success(f"Loaded {len(smt6_df)} SMT6 machine records!")
             else:
-                st.warning("No SMT6 machine data returned.")
+                # Check if user selected HMFN step - SMT6 only fetches HMFN data
+                selected_steps = filters.get("test_steps", [])
+                hmfn_selected = "HMFN" in [s.upper() for s in selected_steps]
+                if not hmfn_selected and selected_steps:
+                    st.warning("⚠️ No SMT6 data returned. SMT6 testers only perform **HMFN** testing. "
+                              f"Your selected steps ({', '.join(selected_steps)}) do not include HMFN. "
+                              "Please add HMFN to your step selection to view SMT6 tester data.")
+                else:
+                    st.warning("No SMT6 machine data returned for the selected filters.")
 
         except Exception as e:
             st.error(f"Failed to fetch SMT6 data: {e}")
@@ -2330,7 +2338,14 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     st.success(f"✅ Loaded {len(site_df)} site records ({weeks_fetched} week{'s' if weeks_fetched > 1 else ''})")
                     st.rerun()
                 else:
-                    st.warning("No site data found")
+                    # Check if user selected HMFN step
+                    selected_steps = filters.get("test_steps", [])
+                    hmfn_selected = "HMFN" in [s.upper() for s in selected_steps]
+                    if not hmfn_selected and selected_steps:
+                        st.warning("⚠️ No site data returned. SMT6 testers only perform **HMFN** testing. "
+                                  f"Your selected steps ({', '.join(selected_steps)}) do not include HMFN.")
+                    else:
+                        st.warning("No site data found for the selected filters.")
 
         # Show site analysis if data is available
         if not filtered_site_df.empty:
