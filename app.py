@@ -2449,7 +2449,17 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 margin=dict(l=80, r=20, t=10, b=50)
                             )
                             st.plotly_chart(fig, use_container_width=True)
-                            st.caption(f"{len(pivot.index)} sites × {len(pivot.columns)} machines (WW{latest_ww})")
+
+                            # Quick insight: worst sites
+                            worst_sites = site_summary.nsmallest(3, 'yield_pct')
+                            if not worst_sites.empty and worst_sites.iloc[0]['yield_pct'] < 99.0:
+                                worst_list = ", ".join([
+                                    f"**{r['site']}** ({r['machine_id'].upper()}: {r['yield_pct']:.1f}%)"
+                                    for _, r in worst_sites.iterrows() if r['yield_pct'] < 99.0
+                                ])
+                                st.caption(f"🔍 Check: {worst_list}")
+                            else:
+                                st.caption(f"✅ All {len(pivot.index)} sites healthy (≥99%)")
 
                 # =====================================================================
                 # SITE TREND ANALYSIS (Only with Full Range data)
