@@ -577,15 +577,23 @@ def create_smt6_summary_table(df: pd.DataFrame, dark_mode: bool = True) -> str:
     if df.empty:
         return ""
 
-    # Aggregate by machine
+    # Aggregate by machine - include week range info
     summary = df.groupby('machine_id').agg({
         'uin_adj': 'sum',
         'upass_adj': 'sum',
         'yield_pct': 'mean',
-        'workweek': 'count'
+        'workweek': ['count', 'min', 'max']
     }).reset_index()
 
+    # Flatten column names
+    summary.columns = ['machine_id', 'uin_adj', 'upass_adj', 'yield_pct', 'wk_count', 'wk_min', 'wk_max']
+
     summary['overall_yield'] = (summary['upass_adj'] / summary['uin_adj'] * 100).round(2)
+    # Create week range string (show last 2 digits of workweek for brevity)
+    summary['wk_range'] = summary.apply(
+        lambda r: f"{str(r['wk_min'])[-2:]}-{str(r['wk_max'])[-2:]}" if r['wk_min'] != r['wk_max'] else str(r['wk_max'])[-2:],
+        axis=1
+    )
     summary = summary.sort_values('overall_yield', ascending=False)
 
     # Style colors
@@ -605,7 +613,7 @@ def create_smt6_summary_table(df: pd.DataFrame, dark_mode: bool = True) -> str:
                     <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: right; color: {text_color};">UIN</th>
                     <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: right; color: {text_color};">UPASS</th>
                     <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: right; color: {text_color};">Yield</th>
-                    <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: center; color: {text_color};">Wks</th>
+                    <th style="border: 1px solid {border_color}; padding: 5px 8px; text-align: center; color: {text_color};">WW Range</th>
                 </tr>
             </thead>
             <tbody>
@@ -625,7 +633,7 @@ def create_smt6_summary_table(df: pd.DataFrame, dark_mode: bool = True) -> str:
                 <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: right; color: {text_color};">{int(row['uin_adj']):,}</td>
                 <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: right; color: {text_color};">{int(row['upass_adj']):,}</td>
                 <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: right; color: {text_color}; font-weight: 600;">{yield_val:.2f}%</td>
-                <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: center; color: {text_color};">{int(row['workweek'])}</td>
+                <td style="border: 1px solid {border_color}; padding: 4px 8px; text-align: center; color: {text_color};">{row['wk_range']}</td>
             </tr>
         '''
 

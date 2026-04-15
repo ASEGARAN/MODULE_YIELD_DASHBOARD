@@ -2158,63 +2158,89 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
             filtered_site_df = pd.DataFrame()
 
         # =====================================================================
-        # COMPACT FLEET STRIP + FULL-WIDTH TREND CHART
+        # TESTER FLEET + MACHINE SUMMARY (Side by Side) + TREND CHART
         # =====================================================================
         if not filtered_machine_df.empty or not filtered_site_df.empty:
             cards_df = filtered_machine_df if not filtered_machine_df.empty else filtered_site_df
-
-            # -----------------------------------------------------------------
-            # COMPACT TESTER FLEET STRIP (Horizontal metrics bar)
-            # -----------------------------------------------------------------
             latest_ww = cards_df['workweek'].max()
-            latest_df = cards_df[cards_df['workweek'] == latest_ww]
-            machine_summary = latest_df.groupby('machine_id').agg({
-                'uin_adj': 'sum',
-                'upass_adj': 'sum'
-            }).reset_index()
-            machine_summary['yield_pct'] = (machine_summary['upass_adj'] / machine_summary['uin_adj'] * 100).round(2)
-            machine_summary = machine_summary.sort_values('machine_id')
 
-            # Build compact fleet strip
-            num_machines = len(machine_summary)
-            fleet_cols = st.columns([3] + [2] * num_machines + [2])
+            # -----------------------------------------------------------------
+            # SIDE BY SIDE: Tester Fleet (left) | Machine Summary (right)
+            # -----------------------------------------------------------------
+            col_fleet, col_summary = st.columns([1, 1])
 
-            with fleet_cols[0]:
+            with col_fleet:
                 st.markdown(f"##### 🖥️ Tester Fleet <span style='font-size:12px; color:#888;'>(WW{latest_ww})</span>", unsafe_allow_html=True)
 
-            for i, (_, row) in enumerate(machine_summary.iterrows()):
-                machine = row['machine_id'].upper()
-                yield_val = row['yield_pct']
-                uin = int(row['uin_adj'])
+                # Get all unique machines from full dataset
+                all_machines = sorted(cards_df['machine_id'].unique())
+                latest_df = cards_df[cards_df['workweek'] == latest_ww]
 
-                # Status indicator
-                if yield_val >= 99.0:
-                    status = "✅"
-                    color = "#00C853"
-                elif yield_val >= 96.0:
-                    status = "⚠️"
-                    color = "#FFB300"
-                else:
-                    status = "🔴"
-                    color = "#FF1744"
+                # Build summary for ALL machines
+                machine_stats = []
+                for machine in all_machines:
+                    machine_latest = latest_df[latest_df['machine_id'] == machine]
+                    if not machine_latest.empty:
+                        uin = machine_latest['uin_adj'].sum()
+                        upass = machine_latest['upass_adj'].sum()
+                        yield_val = (upass / uin * 100) if uin > 0 else 0
+                        machine_stats.append({'machine': machine, 'yield': yield_val, 'uin': int(uin), 'has_data': True})
+                    else:
+                        machine_stats.append({'machine': machine, 'yield': None, 'uin': 0, 'has_data': False})
 
-                with fleet_cols[i + 1]:
-                    st.markdown(
-                        f"<div style='text-align:center; padding:8px; background:linear-gradient(135deg,#1a1a2e,#16213e); "
-                        f"border-radius:8px; border-left:3px solid {color};'>"
-                        f"<div style='font-size:13px; font-weight:600; color:#fff;'>{status} {machine}</div>"
-                        f"<div style='font-size:18px; font-weight:700; color:{color};'>{yield_val:.1f}%</div>"
-                        f"<div style='font-size:10px; color:#888;'>{uin:,} UIN</div>"
-                        f"</div>",
-                        unsafe_allow_html=True
-                    )
+                # Build cards in a flex container
+                cards_html = '<div style="display:flex; gap:12px; flex-wrap:wrap;">'
+                for stats in machine_stats:
+                    machine = stats['machine'].upper()
+                    if stats['has_data']:
+                        yield_val = stats['yield']
+                        uin = stats['uin']
+                        if yield_val >= 99.0:
+                            status, color = "✅", "#00C853"
+                        elif yield_val >= 96.0:
+                            status, color = "⚠️", "#FFB300"
+                        else:
+                            status, color = "🔴", "#FF1744"
 
-            # Chart options in last column
-            with fleet_cols[-1]:
-                show_data_labels = st.checkbox("Labels", value=False, key="smt6_show_labels")
+                        cards_html += f'''
+                        <div style="text-align:center; padding:12px 16px; background:linear-gradient(135deg,#1a1a2e,#16213e);
+                            border-radius:10px; border-left:4px solid {color}; flex:1; min-width:100px;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                            <div style="font-size:12px; font-weight:600; color:#fff;">{status} {machine}</div>
+                            <div style="font-size:20px; font-weight:700; color:{color}; margin:4px 0;">{yield_val:.1f}%</div>
+                            <div style="font-size:10px; color:#888;">{uin:,} UIN</div>
+                        </div>'''
+                    else:
+                        cards_html += f'''
+                        <div style="text-align:center; padding:12px 16px; background:linear-gradient(135deg,#2a2a3e,#1e1e2e);
+                            border-radius:10px; border-left:4px solid #555; flex:1; min-width:100px;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.2); opacity:0.6;">
+                            <div style="font-size:12px; font-weight:600; color:#888;">⏸️ {machine}</div>
+                            <div style="font-size:16px; font-weight:700; color:#666; margin:4px 0;">No Data</div>
+                            <div style="font-size:10px; color:#666;">WW{latest_ww}</div>
+                        </div>'''
+                cards_html += '</div>'
+                st.markdown(cards_html, unsafe_allow_html=True)
+
+            with col_summary:
+                st.markdown("##### 📋 Machine Summary <span style='font-size:12px; color:#888;'>(All Weeks)</span>", unsafe_allow_html=True)
+                if not filtered_machine_df.empty:
+                    summary_html = create_smt6_summary_table(filtered_machine_df, dark_mode=True)
+                    if summary_html:
+                        num_machines = filtered_machine_df['machine_id'].nunique()
+                        table_height = 28 + (num_machines * 26) + 24
+                        components.html(summary_html, height=min(table_height, 200), scrolling=False)
+
+            # -----------------------------------------------------------------
+            # CHART OPTIONS ROW
+            # -----------------------------------------------------------------
+            opt_col1, opt_col2, opt_col3 = st.columns([1, 1, 4])
+            with opt_col1:
+                show_data_labels = st.checkbox("Show Labels", value=False, key="smt6_show_labels")
+            with opt_col2:
                 data_min = filtered_machine_df['yield_pct'].min() if not filtered_machine_df.empty else 90
                 default_min = max(0, int(data_min - 5))
-                y_axis_min = st.slider("Y-Min", 0, 95, default_min, 5, key="smt6_y_min", label_visibility="collapsed")
+                y_axis_min = st.slider("Y-Axis Min", 0, 95, default_min, 5, key="smt6_y_min")
 
             # -----------------------------------------------------------------
             # FULL-WIDTH TREND CHART
@@ -2232,15 +2258,6 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 )
                 if fig:
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
-
-            # Machine summary table (compact expander)
-            if not filtered_machine_df.empty:
-                with st.expander("📋 Machine Summary", expanded=False):
-                    summary_html = create_smt6_summary_table(filtered_machine_df, dark_mode=True)
-                    if summary_html:
-                        num_machines = filtered_machine_df['machine_id'].nunique()
-                        table_height = 28 + (num_machines * 26) + 20
-                        components.html(summary_html, height=min(table_height, 180), scrolling=False)
 
         # =====================================================================
         # SOCKET/SITE ANALYSIS - STREAMLINED VERSION
