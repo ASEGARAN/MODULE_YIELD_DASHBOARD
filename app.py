@@ -3864,138 +3864,6 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
 
         st.divider()
 
-        # =================================================================
-        # AI Assistant Section (single instance for all steps)
-        # =================================================================
-        # Get available FAILCRAWLERs and MSN_STATUS values across all steps
-        msn_corr_df = st.session_state.get('failcrawler_msn_corr_data', pd.DataFrame())
-        all_fc_list = []
-        all_status_list = []
-        for s in steps_to_show:
-            all_fc_list.extend(get_failcrawler_list_for_step(msn_corr_df, s))
-            all_status_list.extend(get_msn_status_list_for_step(msn_corr_df, s))
-        all_fc_list = list(dict.fromkeys(all_fc_list))  # Remove duplicates, preserve order
-        all_status_list = list(dict.fromkeys(all_status_list))
-
-        # AI Assistant UI - styled like landing page
-        ai_robot_base64 = get_ai_robot_image_base64()
-        if ai_robot_base64:
-            ai_icon_html = f'<img src="data:image/png;base64,{ai_robot_base64}" alt="AI Assistant" style="height: 50px; width: auto; border-radius: 8px; filter: drop-shadow(0 0 10px rgba(110, 231, 183, 0.5));"/>'
-        else:
-            ai_icon_html = '<div style="font-size: 32px; line-height: 1; filter: drop-shadow(0 0 8px rgba(110, 231, 183, 0.4));">🤖</div>'
-
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #022c22 0%, #064e3b 100%); border-radius: 10px; padding: 15px; margin: 10px 0 15px 0; border: 1px solid #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                {ai_icon_html}
-                <div>
-                    <div style="color: #6ee7b7; font-weight: bold; font-size: 15px;">AI Assistant</div>
-                    <div style="color: #a7f3d0; font-size: 12px;">Ask me to drill down into specific failures or analyze patterns</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        ai_query = st.text_input(
-            "AI Query",
-            placeholder=f"e.g., 'show MSNs for {all_fc_list[0] if all_fc_list else 'NOFA'} at HMFN' or 'analyze patterns'",
-            key="fc_ai_query",
-            label_visibility="collapsed"
-        )
-
-        drilldown_key = "fc_ai_drilldown"
-        analysis_key = "fc_ai_analysis"
-
-        if ai_query:
-            # Generate AI response
-            response = generate_assistant_response(
-                query=ai_query,
-                context={'tab': 'failcrawler'},
-                available_fcs=all_fc_list,
-                available_statuses=all_status_list,
-                current_step=steps_to_show[0] if steps_to_show else 'HMFN'
-            )
-
-            if response['type'] == 'drilldown' and response['action']:
-                action = response['action']
-                st.markdown(f"""
-                <div style="background: #064e3b; border-radius: 6px; padding: 10px; margin: 8px 0; border-left: 3px solid #10b981;">
-                    <div style="color: #6ee7b7; font-size: 13px;">🔍 {response['response']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                with st.spinner("Fetching data..."):
-                    drill_wws = workweeks if workweeks else []
-                    drill_dids = filters.get('design_ids', [])
-                    drill_step = action.get('step') or steps_to_show[0]
-
-                    drilldown_df = fetch_failcrawler_msn_drilldown(
-                        design_ids=drill_dids,
-                        steps=[drill_step],
-                        workweeks=drill_wws,
-                        failcrawler=action['failcrawler'],
-                        msn_status=action.get('msn_status')
-                    )
-
-                    st.session_state[drilldown_key] = {
-                        'df': drilldown_df,
-                        'failcrawler': action['failcrawler'],
-                        'msn_status': action.get('msn_status'),
-                        'step': drill_step
-                    }
-
-            elif response['type'] == 'analysis' and drilldown_key in st.session_state:
-                dd_info = st.session_state[drilldown_key]
-                if dd_info and not dd_info['df'].empty:
-                    analysis = analyze_msn_patterns(
-                        dd_info['df'],
-                        dd_info['failcrawler'],
-                        dd_info.get('msn_status')
-                    )
-                    st.session_state[analysis_key] = analysis
-
-            elif response['type'] == 'help':
-                st.markdown(f"""
-                <div style="background: #064e3b; border-radius: 6px; padding: 10px; margin: 8px 0; border-left: 3px solid #10b981;">
-                    <div style="color: #d1fae5; font-size: 13px;">{response['response'].replace(chr(10), '<br>')}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-        # Display drilldown results if available
-        if drilldown_key in st.session_state and st.session_state.get(drilldown_key):
-            dd_info = st.session_state[drilldown_key]
-            if not dd_info['df'].empty:
-                drilldown_html = create_failcrawler_drilldown_html(
-                    dd_info['df'],
-                    dd_info['failcrawler'],
-                    dd_info['step'],
-                    msn_status=dd_info.get('msn_status'),
-                    dark_mode=False
-                )
-                components.html(drilldown_html, height=350, scrolling=True)
-
-                # Pattern analysis button and results
-                col_analyze, col_clear = st.columns([1, 4])
-                with col_analyze:
-                    if st.button("🔍 Analyze Patterns", key="fc_analyze_btn"):
-                        analysis = analyze_msn_patterns(
-                            dd_info['df'],
-                            dd_info['failcrawler'],
-                            dd_info.get('msn_status')
-                        )
-                        st.session_state[analysis_key] = analysis
-
-                if analysis_key in st.session_state and st.session_state.get(analysis_key):
-                    analysis_html = create_pattern_analysis_html(st.session_state[analysis_key], dark_mode=False)
-                    components.html(analysis_html, height=180, scrolling=False)
-            else:
-                filter_desc = dd_info['failcrawler']
-                if dd_info.get('msn_status'):
-                    filter_desc += f" × {dd_info['msn_status']}"
-                st.info(f"No MSN data found for {filter_desc} at {dd_info['step']}")
-
-        st.divider()
-
         # Get FCFM decode quality data from session state
         fcfm_df = st.session_state.get('failcrawler_fcfm_data', pd.DataFrame())
 
@@ -5713,6 +5581,147 @@ def main() -> None:
             except Exception as e:
                 status.update(label=f"Error: {str(e)}", state="error")
                 st.sidebar.error(f"HTML generation failed: {str(e)}")
+
+    # =================================================================
+    # Global AI Assistant (Sidebar) - visible across all tabs
+    # =================================================================
+    st.sidebar.divider()
+
+    # AI Assistant header with robot icon
+    ai_robot_base64 = get_ai_robot_image_base64()
+    if ai_robot_base64:
+        st.sidebar.markdown(f"""
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <img src="data:image/png;base64,{ai_robot_base64}" alt="AI" style="height: 40px; width: auto; border-radius: 6px; filter: drop-shadow(0 0 8px rgba(110, 231, 183, 0.5));"/>
+            <div>
+                <div style="color: #10b981; font-weight: bold; font-size: 14px;">AI Assistant</div>
+                <div style="color: #6b7280; font-size: 11px;">Ask me anything!</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.sidebar.markdown("### 🤖 AI Assistant")
+
+    # AI query input
+    global_ai_query = st.sidebar.text_input(
+        "Ask AI",
+        placeholder="e.g., 'show MSNs for NOFA' or 'check yield'",
+        key="global_ai_query",
+        label_visibility="collapsed"
+    )
+
+    # Process AI query
+    if global_ai_query:
+        query_lower = global_ai_query.lower()
+
+        # Get context from session state
+        msn_corr_df = st.session_state.get('failcrawler_msn_corr_data', pd.DataFrame())
+        fc_list = []
+        status_list = []
+        for step in ['HMFN', 'HMB1', 'QMON', 'SLT']:
+            fc_list.extend(get_failcrawler_list_for_step(msn_corr_df, step))
+            status_list.extend(get_msn_status_list_for_step(msn_corr_df, step))
+        fc_list = list(dict.fromkeys(fc_list))
+        status_list = list(dict.fromkeys(status_list))
+
+        # Check for drill-down query (FAILCRAWLER specific)
+        response = generate_assistant_response(
+            query=global_ai_query,
+            context={'tab': 'global'},
+            available_fcs=fc_list,
+            available_statuses=status_list,
+            current_step='HMFN'
+        )
+
+        if response['type'] == 'drilldown' and response['action']:
+            action = response['action']
+            st.sidebar.success(f"🔍 {response['response']}")
+
+            # Fetch drill-down data
+            with st.sidebar.status("Fetching data...", expanded=False):
+                try:
+                    workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
+                except:
+                    workweeks = []
+
+                drilldown_df = fetch_failcrawler_msn_drilldown(
+                    design_ids=filters.get('design_ids', []),
+                    steps=[action.get('step', 'HMFN')],
+                    workweeks=workweeks,
+                    failcrawler=action['failcrawler'],
+                    msn_status=action.get('msn_status')
+                )
+
+                st.session_state['global_ai_drilldown'] = {
+                    'df': drilldown_df,
+                    'failcrawler': action['failcrawler'],
+                    'msn_status': action.get('msn_status'),
+                    'step': action.get('step', 'HMFN')
+                }
+
+        elif response['type'] == 'analysis':
+            if 'global_ai_drilldown' in st.session_state:
+                dd_info = st.session_state['global_ai_drilldown']
+                if dd_info and not dd_info['df'].empty:
+                    analysis = analyze_msn_patterns(
+                        dd_info['df'],
+                        dd_info['failcrawler'],
+                        dd_info.get('msn_status')
+                    )
+                    st.session_state['global_ai_analysis'] = analysis
+                    st.sidebar.success("Pattern analysis complete!")
+            else:
+                st.sidebar.info("Run a drill-down query first, then ask for analysis.")
+
+        else:
+            # Navigation help (existing landing page logic)
+            yield_kw = ['yield', 'trend', 'weekly', 'bin', 'heatmap', 'density', 'speed']
+            elc_kw = ['elc', 'hmfn', 'slt', 'hmb1', 'qmon', 'target']
+            pareto_kw = ['pareto', 'failcrawler', 'register', 'fallout', 'dpm', 'cdpm']
+            machine_kw = ['machine', 'smt6', 'tester', 'socket', 'grace', 'motherboard', 'hang']
+
+            if any(kw in query_lower for kw in yield_kw):
+                st.sidebar.info("📊 Go to **Yield Analysis** tab")
+            elif any(kw in query_lower for kw in elc_kw):
+                st.sidebar.info("📈 Go to **Module ELC Yield** tab")
+            elif any(kw in query_lower for kw in pareto_kw):
+                st.sidebar.info("📉 Go to **Pareto Analysis** tab for FAILCRAWLER drill-down")
+            elif any(kw in query_lower for kw in machine_kw):
+                st.sidebar.info("🔧 Go to **Machine Trends** tab")
+            else:
+                st.sidebar.caption(response['response'].replace('\n', ' ')[:200])
+
+    # Show drill-down results in sidebar
+    if 'global_ai_drilldown' in st.session_state and st.session_state.get('global_ai_drilldown'):
+        dd_info = st.session_state['global_ai_drilldown']
+        if not dd_info['df'].empty:
+            msn_count = dd_info['df']['MSN'].nunique() if 'MSN' in dd_info['df'].columns else len(dd_info['df'])
+            st.sidebar.markdown(f"""
+            <div style="background: #064e3b; border-radius: 6px; padding: 10px; margin: 8px 0;">
+                <div style="color: #6ee7b7; font-size: 12px; font-weight: bold;">
+                    {dd_info['failcrawler']}{' × ' + dd_info['msn_status'] if dd_info.get('msn_status') else ''} @ {dd_info['step']}
+                </div>
+                <div style="color: #a7f3d0; font-size: 11px;">{msn_count} modules affected</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if st.sidebar.button("🔍 Analyze Patterns", key="global_analyze_btn", use_container_width=True):
+                analysis = analyze_msn_patterns(
+                    dd_info['df'],
+                    dd_info['failcrawler'],
+                    dd_info.get('msn_status')
+                )
+                st.session_state['global_ai_analysis'] = analysis
+
+    # Show pattern analysis results
+    if 'global_ai_analysis' in st.session_state and st.session_state.get('global_ai_analysis'):
+        analysis = st.session_state['global_ai_analysis']
+        if 'summary' in analysis:
+            st.sidebar.markdown(f"""
+            <div style="background: #022c22; border-radius: 6px; padding: 10px; margin: 5px 0; border-left: 3px solid #10b981;">
+                <div style="color: #d1fae5; font-size: 11px;">{analysis['summary']}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
     # Create tabs with Home tab first
     tab_home, tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 Home", "📊 Yield Analysis", "📈 Module ELC Yield", "📉 Pareto Analysis", "🔍 Fail Viewer", "🔧 Machine Trends"])
