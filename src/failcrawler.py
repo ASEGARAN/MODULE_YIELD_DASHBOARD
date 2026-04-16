@@ -2731,28 +2731,31 @@ def fetch_failcrawler_msn_drilldown(
     step_str = ','.join(steps)
     ww_str = ','.join(str(ww) for ww in workweeks)
 
-    # Base command with FAILCRAWLER filter
-    cmd = (
-        f"mtsums -dbase={dbase} -step={step_str} -ww={ww_str} "
-        f"-failcrawler={failcrawler} "
-    )
+    # Build command list with full path (for systemd compatibility)
+    cmd_parts = [
+        '/u/dramsoft/bin/mtsums',
+        f'-dbase={dbase}',
+        f'-step={step_str}',
+        f'-ww={ww_str}',
+        f'-failcrawler={failcrawler}',
+    ]
 
     # Add MSN_STATUS filter if provided
     if msn_status:
-        cmd += f"-msn_status={msn_status} "
+        cmd_parts.append(f'-msn_status={msn_status}')
 
-    # Add output format
-    cmd += (
-        f"+msnag +fc -format+=msn,mfg_workweek,step,failcrawler,msn_status "
-        f"=islatest =isvalid +stdf +quiet +csv"
-    )
+    # Add output format flags
+    cmd_parts.extend([
+        '+msnag', '+fc',
+        '-format+=msn,mfg_workweek,step,failcrawler,msn_status',
+        '=islatest', '=isvalid', '+stdf', '+quiet', '+csv'
+    ])
 
-    logger.info(f"FAILCRAWLER drilldown command: {cmd}")
+    logger.info(f"FAILCRAWLER drilldown command: {' '.join(cmd_parts)}")
 
     try:
         result = subprocess.run(
-            cmd,
-            shell=True,
+            cmd_parts,
             capture_output=True,
             text=True,
             timeout=120

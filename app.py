@@ -4068,6 +4068,9 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                                 # Pass MSN_STATUS filter if not "All"
                                 msn_status_filter = selected_msn_status if selected_msn_status != "All" else None
 
+                                # Debug logging
+                                logger.info(f"Drill-down: FC={selected_fc}, Status={msn_status_filter}, DIDs={drill_dids}, WWs={drill_wws}, Step={step}")
+
                                 drilldown_df = fetch_failcrawler_msn_drilldown(
                                     design_ids=drill_dids,
                                     steps=[step],
@@ -4075,6 +4078,8 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                                     failcrawler=selected_fc,
                                     msn_status=msn_status_filter
                                 )
+
+                                logger.info(f"Drill-down result: {len(drilldown_df)} rows, cols={drilldown_df.columns.tolist() if not drilldown_df.empty else 'empty'}")
 
                                 # Store in session state
                                 st.session_state[drilldown_key] = {
