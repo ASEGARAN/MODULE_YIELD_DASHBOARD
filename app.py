@@ -5237,75 +5237,136 @@ def main() -> None:
     st.sidebar.divider()
     st.sidebar.subheader("📄 Export Report")
 
+    # Tab selector for export - export only the selected tab's view
+    export_tab_options = {
+        "Yield Analysis": "yield",
+        "Module ELC Yield": "elc",
+        "Pareto Analysis": "pareto",
+        "Machine Trends - SMT6": "smt6",
+        "Machine Trends - GRACE": "grace"
+    }
+    selected_export_tab = st.sidebar.selectbox(
+        "Export Tab",
+        options=list(export_tab_options.keys()),
+        key="export_tab_selector",
+        help="Select which tab view to export"
+    )
+    export_tab_key = export_tab_options[selected_export_tab]
+
     if st.sidebar.button("Generate PDF Report", use_container_width=True, type="primary"):
-        with st.sidebar.status("Generating PDF...", expanded=True) as status:
+        with st.sidebar.status(f"Generating {selected_export_tab} PDF...", expanded=True) as status:
             try:
-                # Collect data from session state (use correct variable names)
+                # Debug: Log selected tab
+                logger.info(f"[PDF Export] Selected tab: {selected_export_tab}, key: {export_tab_key}")
+
                 charts = {}
                 use_cache = st.session_state.get("use_cache", True)
 
-                # Get yield data - auto-fetch if not available
-                yield_data = st.session_state.get('data', None)
-                if yield_data is None or yield_data.empty:
+                # Initialize all data as None - only fetch what's needed for selected tab
+                yield_data = None
+                elc_data = None
+                smt6_data = None
+                grace_data = None
+
+                # Fetch only the data needed for the selected tab
+                if export_tab_key == "yield":
+                    logger.info("[PDF Export] Fetching YIELD data")
                     status.update(label="Fetching Yield Analysis data...")
-                    try:
-                        yield_data = fetch_data(filters, use_cache=use_cache)
-                        if yield_data is not None and not yield_data.empty:
-                            st.session_state.data = yield_data
-                        else:
-                            yield_data = None
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch yield data for PDF: {e}")
-                        yield_data = None
+                    yield_data = st.session_state.get('data', None)
+                    if yield_data is None or (hasattr(yield_data, 'empty') and yield_data.empty):
+                        try:
+                            yield_data = fetch_data(filters, use_cache=use_cache)
+                            if yield_data is not None and not yield_data.empty:
+                                st.session_state.data = yield_data
+                            else:
+                                yield_data = None
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch yield data for PDF: {e}")
 
-                # Get ELC data - auto-fetch if not available
-                elc_data = st.session_state.get('elc_data', None)
-                if elc_data is None or elc_data.empty:
+                elif export_tab_key == "elc":
+                    logger.info("[PDF Export] Fetching ELC data")
                     status.update(label="Fetching ELC data...")
-                    try:
-                        elc_data = fetch_elc_data(filters, use_cache=use_cache)
-                        if elc_data is not None and not elc_data.empty:
-                            st.session_state.elc_data = elc_data
-                        else:
-                            elc_data = None
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch ELC data for PDF: {e}")
-                        elc_data = None
+                    elc_data = st.session_state.get('elc_data', None)
+                    if elc_data is None or (hasattr(elc_data, 'empty') and elc_data.empty):
+                        try:
+                            elc_data = fetch_elc_data(filters, use_cache=use_cache)
+                            if elc_data is not None and not elc_data.empty:
+                                st.session_state.elc_data = elc_data
+                            else:
+                                elc_data = None
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch ELC data for PDF: {e}")
 
-                # Get SMT6 data - auto-fetch if not available
-                smt6_data = st.session_state.get('smt6_site_data', None)
-                if smt6_data is None or (hasattr(smt6_data, 'empty') and smt6_data.empty):
-                    smt6_data = st.session_state.get('smt6_data', None)
-                if smt6_data is None or (hasattr(smt6_data, 'empty') and smt6_data.empty):
+                elif export_tab_key == "smt6":
+                    logger.info("[PDF Export] Fetching SMT6 data")
                     status.update(label="Fetching SMT6 site data...")
-                    try:
-                        from src.smt6_yield import fetch_smt6_site_data
-                        wws = [str(ww) for ww in Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])]
-                        smt6_data = fetch_smt6_site_data(
-                            design_ids=filters.get("design_ids", ["Y6CP"]),
-                            workweeks=wws,
-                            form_factor=filters.get("form_factor", "socamm2").lower()
-                        )
-                        if smt6_data is not None and not smt6_data.empty:
-                            st.session_state.smt6_site_data = smt6_data
-                        else:
-                            smt6_data = None
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch SMT6 data for PDF: {e}")
-                        smt6_data = None
+                    smt6_data = st.session_state.get('smt6_site_data', None)
+                    if smt6_data is None or (hasattr(smt6_data, 'empty') and smt6_data.empty):
+                        smt6_data = st.session_state.get('smt6_data', None)
+                    if smt6_data is None or (hasattr(smt6_data, 'empty') and smt6_data.empty):
+                        try:
+                            from src.smt6_yield import fetch_smt6_site_data
+                            wws = [str(ww) for ww in Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])]
+                            smt6_data = fetch_smt6_site_data(
+                                design_ids=filters.get("design_ids", ["Y6CP"]),
+                                workweeks=wws,
+                                form_factor=filters.get("form_factor", "socamm2").lower()
+                            )
+                            if smt6_data is not None and not smt6_data.empty:
+                                st.session_state.smt6_site_data = smt6_data
+                            else:
+                                smt6_data = None
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch SMT6 data for PDF: {e}")
 
-                # Get GRACE data if available (not auto-fetched - requires specific setup)
-                grace_data = st.session_state.get('grace_fm_data', None)
-                if grace_data is not None and hasattr(grace_data, 'empty') and grace_data.empty:
-                    grace_data = None
+                elif export_tab_key == "grace":
+                    logger.info("[PDF Export] Fetching GRACE data")
+                    status.update(label="Fetching GRACE data...")
+                    grace_data = st.session_state.get('grace_fm_data', None)
+                    if grace_data is None or (hasattr(grace_data, 'empty') and grace_data.empty):
+                        try:
+                            from src.grace_motherboard import fetch_grace_fm_data
+                            # Don't pass facility if it's "all" or empty
+                            facility_raw = filters.get("facility", "")
+                            facility_filter = facility_raw if facility_raw and facility_raw.lower() != "all" else None
+                            grace_data = fetch_grace_fm_data(
+                                start_ww=filters["start_ww"],
+                                end_ww=filters["end_ww"],
+                                design_ids=filters.get("design_ids"),
+                                facility=facility_filter
+                            )
+                            if grace_data is not None and not grace_data.empty:
+                                st.session_state.grace_fm_data = grace_data
+                            else:
+                                grace_data = None
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch GRACE data for PDF: {e}")
 
-                # Check if any data available after auto-fetch
-                if all(d is None for d in [yield_data, elc_data, smt6_data, grace_data]):
-                    st.sidebar.warning("No data available. Check your filter parameters (workweeks, design IDs).")
+                elif export_tab_key == "pareto":
+                    status.update(label="Fetching Pareto data...")
+                    # Pareto uses yield_data as base
+                    yield_data = st.session_state.get('data', None)
+                    if yield_data is None or (hasattr(yield_data, 'empty') and yield_data.empty):
+                        try:
+                            yield_data = fetch_data(filters, use_cache=use_cache)
+                            if yield_data is not None and not yield_data.empty:
+                                st.session_state.data = yield_data
+                            else:
+                                yield_data = None
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch pareto data for PDF: {e}")
+
+                # Check if data available for selected tab
+                tab_data = {
+                    "yield": yield_data, "elc": elc_data, "smt6": smt6_data,
+                    "grace": grace_data, "pareto": yield_data
+                }
+                if tab_data.get(export_tab_key) is None:
+                    st.sidebar.warning(f"No data available for {selected_export_tab}. Check your filters.")
                     status.update(label="No data found", state="error")
                 else:
-                    # Generate PDF
-                    status.update(label="Building PDF...")
+                    # Generate PDF for selected tab only
+                    status.update(label=f"Building {selected_export_tab} PDF...")
                     pdf_bytes = create_dashboard_pdf(
                         filters=filters,
                         yield_data=yield_data,
@@ -5332,30 +5393,29 @@ def main() -> None:
                 status.update(label=f"Error: {str(e)}", state="error")
                 st.sidebar.error(f"PDF generation failed: {str(e)}")
 
-    # HTML Export option
+    # HTML Export option (uses same tab selector as PDF)
     if st.sidebar.button("Generate HTML Report", use_container_width=True):
-        with st.sidebar.status("Generating HTML...", expanded=True) as status:
+        with st.sidebar.status(f"Generating {selected_export_tab} HTML...", expanded=True) as status:
             try:
                 from src.html_export import create_shareable_html
                 use_cache = st.session_state.get("use_cache", True)
 
-                # Collect sections based on available data
+                # Collect sections based on selected tab only
                 sections = []
 
-                # Auto-fetch yield data if not available
-                if 'data' not in st.session_state or st.session_state.data.empty:
+                if export_tab_key == "yield":
+                    # Yield Analysis tab
                     status.update(label="Fetching Yield Analysis data...")
-                    try:
-                        yield_data = fetch_data(filters, use_cache=use_cache)
-                        if yield_data is not None and not yield_data.empty:
-                            st.session_state.data = yield_data
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch yield data for HTML: {e}")
+                    if 'data' not in st.session_state or st.session_state.data.empty:
+                        try:
+                            yield_data = fetch_data(filters, use_cache=use_cache)
+                            if yield_data is not None and not yield_data.empty:
+                                st.session_state.data = yield_data
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch yield data for HTML: {e}")
 
-                # Add yield summary if available (main dashboard data stored as 'data')
-                if 'data' in st.session_state and not st.session_state.data.empty:
-                    yield_df = st.session_state.data
-                    if not yield_df.empty:
+                    if 'data' in st.session_state and not st.session_state.data.empty:
+                        yield_df = st.session_state.data
                         summary_stats = f"""
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;">
                             <div style="background:#16213e;padding:15px;border-radius:8px;text-align:center;">
@@ -5372,58 +5432,123 @@ def main() -> None:
                             </div>
                         </div>
                         """
-                        sections.append({'title': 'Yield Summary', 'content': summary_stats, 'type': 'html'})
+                        sections.append({'title': 'Yield Analysis Summary', 'content': summary_stats, 'type': 'html'})
 
-                # Auto-fetch SMT6 site data if not available
-                if 'smt6_site_data' not in st.session_state or st.session_state.smt6_site_data.empty:
+                elif export_tab_key == "smt6":
+                    # SMT6 tab
                     status.update(label="Fetching SMT6 site data...")
-                    try:
-                        from src.smt6_yield import fetch_smt6_site_data
-                        wws = [str(ww) for ww in Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])]
-                        smt6_data = fetch_smt6_site_data(
-                            design_ids=filters.get("design_ids", ["Y6CP"]),
-                            workweeks=wws,
-                            form_factor=filters.get("form_factor", "socamm2").lower()
-                        )
-                        if smt6_data is not None and not smt6_data.empty:
-                            st.session_state.smt6_site_data = smt6_data
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch SMT6 data for HTML: {e}")
+                    if 'smt6_site_data' not in st.session_state or st.session_state.smt6_site_data.empty:
+                        try:
+                            from src.smt6_yield import fetch_smt6_site_data
+                            wws = [str(ww) for ww in Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])]
+                            smt6_data = fetch_smt6_site_data(
+                                design_ids=filters.get("design_ids", ["Y6CP"]),
+                                workweeks=wws,
+                                form_factor=filters.get("form_factor", "socamm2").lower()
+                            )
+                            if smt6_data is not None and not smt6_data.empty:
+                                st.session_state.smt6_site_data = smt6_data
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch SMT6 data for HTML: {e}")
 
-                # Add SMT6 site data if available
-                if 'smt6_site_data' in st.session_state and not st.session_state.smt6_site_data.empty:
-                    site_df = st.session_state.smt6_site_data
-                    site_summary = site_df.groupby(['machine_id', 'site']).agg({
-                        'uin_adj': 'sum', 'upass_adj': 'sum'
-                    }).reset_index()
-                    site_summary['yield_pct'] = (site_summary['upass_adj'] / site_summary['uin_adj'] * 100).round(2)
+                    if 'smt6_site_data' in st.session_state and not st.session_state.smt6_site_data.empty:
+                        site_df = st.session_state.smt6_site_data
+                        site_summary = site_df.groupby(['machine_id', 'site']).agg({
+                            'uin_adj': 'sum', 'upass_adj': 'sum'
+                        }).reset_index()
+                        site_summary['yield_pct'] = (site_summary['upass_adj'] / site_summary['uin_adj'] * 100).round(2)
 
-                    # Create heatmap
-                    pivot = site_summary.pivot_table(index='site', columns='machine_id', values='yield_pct', aggfunc='mean')
-                    if not pivot.empty:
-                        heatmap_fig = go.Figure(data=go.Heatmap(
-                            z=pivot.values, x=[m.upper() for m in pivot.columns], y=pivot.index.tolist(),
-                            colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
-                            zmin=90, zmax=100,
-                            text=[[f"{v:.0f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
-                            texttemplate="%{text}", hovertemplate="<b>%{y}</b> @ %{x}: %{z:.1f}%<extra></extra>"
-                        ))
-                        heatmap_fig.update_layout(
-                            title="SMT6 Site Yield Heatmap",
-                            xaxis=dict(tickfont=dict(size=9), side='top'),
-                            yaxis=dict(autorange='reversed', tickfont=dict(size=8)),
-                            height=min(500, max(300, len(pivot.index) * 14 + 80))
-                        )
-                        sections.append({'title': 'SMT6 Site Yield Heatmap', 'content': heatmap_fig, 'type': 'plotly'})
+                        # Create heatmap
+                        pivot = site_summary.pivot_table(index='site', columns='machine_id', values='yield_pct', aggfunc='mean')
+                        if not pivot.empty:
+                            heatmap_fig = go.Figure(data=go.Heatmap(
+                                z=pivot.values, x=[m.upper() for m in pivot.columns], y=pivot.index.tolist(),
+                                colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
+                                zmin=90, zmax=100,
+                                text=[[f"{v:.0f}%" if pd.notna(v) else "-" for v in row] for row in pivot.values],
+                                texttemplate="%{text}", hovertemplate="<b>%{y}</b> @ %{x}: %{z:.1f}%<extra></extra>"
+                            ))
+                            heatmap_fig.update_layout(
+                                title="SMT6 Site Yield Heatmap",
+                                xaxis=dict(tickfont=dict(size=9), side='top'),
+                                yaxis=dict(autorange='reversed', tickfont=dict(size=8)),
+                                height=min(500, max(300, len(pivot.index) * 14 + 80))
+                            )
+                            sections.append({'title': 'SMT6 Site Yield Heatmap', 'content': heatmap_fig, 'type': 'plotly'})
 
-                    # Add machine summary table
-                    machine_summary = site_df.groupby('machine_id').agg({
-                        'uin_adj': 'sum', 'upass_adj': 'sum'
-                    }).reset_index()
-                    machine_summary['yield_pct'] = (machine_summary['upass_adj'] / machine_summary['uin_adj'] * 100).round(2)
-                    machine_summary.columns = ['Machine', 'UIN', 'UPASS', 'Yield %']
-                    machine_summary['Machine'] = machine_summary['Machine'].str.upper()
-                    sections.append({'title': 'Machine Summary', 'content': machine_summary, 'type': 'table'})
+                        # Add machine summary table
+                        machine_summary = site_df.groupby('machine_id').agg({
+                            'uin_adj': 'sum', 'upass_adj': 'sum'
+                        }).reset_index()
+                        machine_summary['yield_pct'] = (machine_summary['upass_adj'] / machine_summary['uin_adj'] * 100).round(2)
+                        machine_summary.columns = ['Machine', 'UIN', 'UPASS', 'Yield %']
+                        machine_summary['Machine'] = machine_summary['Machine'].str.upper()
+                        sections.append({'title': 'Machine Summary', 'content': machine_summary, 'type': 'table'})
+
+                elif export_tab_key == "grace":
+                    # GRACE Motherboard tab
+                    status.update(label="Fetching GRACE data...")
+                    if 'grace_fm_data' not in st.session_state or st.session_state.get('grace_fm_data') is None:
+                        try:
+                            from src.grace_motherboard import fetch_grace_fm_data
+                            # Don't pass facility if it's "all" or empty
+                            facility_raw = filters.get("facility", "")
+                            facility_filter = facility_raw if facility_raw and facility_raw.lower() != "all" else None
+                            grace_data = fetch_grace_fm_data(
+                                start_ww=filters["start_ww"],
+                                end_ww=filters["end_ww"],
+                                design_ids=filters.get("design_ids"),
+                                facility=facility_filter
+                            )
+                            if grace_data is not None and not grace_data.empty:
+                                st.session_state.grace_fm_data = grace_data
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch GRACE data for HTML: {e}")
+
+                    if 'grace_fm_data' in st.session_state and st.session_state.grace_fm_data is not None and not st.session_state.grace_fm_data.empty:
+                        grace_df = st.session_state.grace_fm_data
+                        # Create summary
+                        hang_machines = grace_df[grace_df.get('hang_cdpm', grace_df.get('Hang', pd.Series([0]))).fillna(0) > 0]
+                        summary_html = f"""
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:15px;">
+                            <div style="background:#16213e;padding:15px;border-radius:8px;text-align:center;">
+                                <div style="font-size:24px;font-weight:bold;color:#00C853;">{len(grace_df['machine_id'].unique()) if 'machine_id' in grace_df.columns else 'N/A'}</div>
+                                <div style="font-size:12px;color:#888;">Total Machines</div>
+                            </div>
+                            <div style="background:#16213e;padding:15px;border-radius:8px;text-align:center;">
+                                <div style="font-size:24px;font-weight:bold;color:#FF5722;">{len(hang_machines['machine_id'].unique()) if 'machine_id' in hang_machines.columns else 0}</div>
+                                <div style="font-size:12px;color:#888;">Machines with Hang</div>
+                            </div>
+                        </div>
+                        """
+                        sections.append({'title': 'GRACE Motherboard Summary', 'content': summary_html, 'type': 'html'})
+
+                elif export_tab_key == "elc":
+                    # ELC tab
+                    status.update(label="Fetching ELC data...")
+                    if 'elc_data' not in st.session_state or st.session_state.elc_data.empty:
+                        try:
+                            elc_data = fetch_elc_data(filters, use_cache=use_cache)
+                            if elc_data is not None and not elc_data.empty:
+                                st.session_state.elc_data = elc_data
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch ELC data for HTML: {e}")
+
+                    if 'elc_data' in st.session_state and not st.session_state.elc_data.empty:
+                        elc_df = st.session_state.elc_data
+                        # Step summary
+                        uin_col = 'UIN' if 'UIN' in elc_df.columns else 'uin'
+                        upass_col = 'UPASS' if 'UPASS' in elc_df.columns else 'upass'
+                        if 'step' in elc_df.columns:
+                            step_summary = elc_df.groupby('step').agg({uin_col: 'sum', upass_col: 'sum'}).reset_index()
+                            step_summary['yield_pct'] = (step_summary[upass_col] / step_summary[uin_col] * 100).round(2)
+                            step_summary.columns = ['Step', 'UIN', 'UPASS', 'Yield %']
+                            sections.append({'title': 'ELC Step Summary', 'content': step_summary, 'type': 'table'})
+
+                elif export_tab_key == "pareto":
+                    # Pareto tab placeholder
+                    status.update(label="Fetching Pareto data...")
+                    sections.append({'title': 'Pareto Analysis', 'content': '<p>Pareto analysis export coming soon.</p>', 'type': 'html'})
 
                 if not sections:
                     st.sidebar.warning("No data available to export. Load some data first.")

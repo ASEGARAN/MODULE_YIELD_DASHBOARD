@@ -264,13 +264,40 @@ def create_dashboard_pdf(
         elements.append(Paragraph("4. GRACE Motherboard Health", heading_style))
         elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
 
-        # Hang summary
-        if 'hang_cdpm' in grace_data.columns:
-            hang_machines = grace_data[grace_data['hang_cdpm'] > 0]
+        # Hang summary - check for both column names
+        hang_col = 'Hang' if 'Hang' in grace_data.columns else 'hang_cdpm' if 'hang_cdpm' in grace_data.columns else None
+        if hang_col:
+            hang_machines = grace_data[grace_data[hang_col] > 0]
+            total_machines = grace_data['MACHINE_ID'].nunique() if 'MACHINE_ID' in grace_data.columns else len(grace_data)
+            hang_machine_count = hang_machines['MACHINE_ID'].nunique() if 'MACHINE_ID' in hang_machines.columns else len(hang_machines)
             elements.append(Paragraph(
-                f"Machines with Hang Issues: {len(hang_machines)} / {len(grace_data)}",
+                f"Machines with Hang Issues: {hang_machine_count} / {total_machines}",
                 normal_style
             ))
+
+            # Add top hang machines table
+            if not hang_machines.empty and 'MACHINE_ID' in hang_machines.columns:
+                top_hang = hang_machines.groupby('MACHINE_ID')[hang_col].max().sort_values(ascending=False).head(10)
+                hang_table_data = [["Machine ID", "Hang cDPM"]]
+                for machine, hang_val in top_hang.items():
+                    hang_table_data.append([str(machine).upper(), f"{hang_val:.2f}"])
+
+                if len(hang_table_data) > 1:
+                    elements.append(Spacer(1, 0.2 * inch))
+                    elements.append(Paragraph("Top Machines with Hang Issues:", subheading_style))
+                    hang_table = Table(hang_table_data, colWidths=[3 * inch, 2 * inch])
+                    hang_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a1a2e')),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 10),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                        ('TOPPADDING', (0, 0), (-1, 0), 8),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f5f5f5')),
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ]))
+                    elements.append(hang_table)
 
         # Add GRACE chart if provided
         if charts and 'grace_hang' in charts:
