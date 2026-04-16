@@ -2161,8 +2161,10 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
 
         if has_site_data:
             if selected_design_ids:
+                # Case-insensitive comparison for design_id
+                selected_dids_upper = [d.upper() for d in selected_design_ids]
                 filtered_site_df = st.session_state.smt6_site_data[
-                    st.session_state.smt6_site_data['design_id'].isin(selected_design_ids)
+                    st.session_state.smt6_site_data['design_id'].str.upper().isin(selected_dids_upper)
                 ]
             else:
                 filtered_site_df = st.session_state.smt6_site_data
@@ -2341,18 +2343,23 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     st.session_state.smt6_site_data = site_df
                     st.session_state.smt6_last_fetch_mode = site_fetch_mode
                     st.session_state.smt6_last_fetch_ww = filters.get("end_ww")
-                    # Update available machines list in session state
+
+                    # Filter by selected DIDs (case-insensitive comparison)
                     if selected_design_ids:
-                        filtered_site_df = site_df[site_df['design_id'].isin(selected_design_ids)]
+                        # Normalize both sides to uppercase for comparison
+                        selected_dids_upper = [d.upper() for d in selected_design_ids]
+                        filtered_for_machines = site_df[site_df['design_id'].str.upper().isin(selected_dids_upper)]
                     else:
-                        filtered_site_df = site_df
-                    new_machines = sorted(filtered_site_df['machine_id'].unique())
+                        filtered_for_machines = site_df
+
+                    new_machines = sorted(filtered_for_machines['machine_id'].unique())
                     st.session_state.smt6_available_machines = new_machines
 
-                    # Clear machine filter key so multiselect will use default (all machines)
-                    # Must be done BEFORE widget is created - delete key triggers default on next run
-                    if 'smt6_machine_filter' in st.session_state:
-                        del st.session_state['smt6_machine_filter']
+                    # Explicitly SET the filter to all machines (not just delete - that doesn't work)
+                    st.session_state['smt6_machine_filter'] = new_machines
+
+                    # Debug: Log the machine count for verification
+                    logger.info(f"[SMT6 Filter] Mode='{site_fetch_mode}', DIDs={selected_design_ids}, machines={len(new_machines)}")
 
             st.session_state.smt6_fetching = False
             # Rerun to refresh - multiselect will recreate with new machines as default

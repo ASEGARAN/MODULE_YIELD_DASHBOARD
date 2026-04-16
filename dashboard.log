@@ -11237,3 +11237,256 @@
 2026-04-15 22:45:50,567 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
 2026-04-15 22:45:50,568 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
 2026-04-15 22:45:50,578 - src.smt6_yield - INFO - SMT6 site fetch complete: 64 total records from 2 queries
+2026-04-15 22:50:27,674 - src.smt6_yield - INFO - Fetching SMT6 data for 20 combinations (density=None, speed=None)...
+2026-04-15 22:50:27,679 - src.smt6_yield - INFO - SMT6 cache HIT for key dda87ccb1d756586
+2026-04-15 22:50:27,685 - src.smt6_yield - INFO - SMT6 cache HIT for key 85b7a97770bce910
+2026-04-15 22:50:27,690 - src.smt6_yield - INFO - SMT6 cache HIT for key 527b1fcbca81c2b5
+2026-04-15 22:50:27,691 - src.smt6_yield - INFO - SMT6 cache HIT for key a56580ad7f4acde4
+2026-04-15 22:50:27,693 - src.smt6_yield - INFO - SMT6 cache HIT for key b4bafff4f8e4e9ce
+2026-04-15 22:50:27,695 - src.smt6_yield - INFO - SMT6 cache HIT for key 15d2cee40161e0cc
+2026-04-15 22:50:27,696 - src.smt6_yield - INFO - SMT6 cache HIT for key 49dbd7d400015f44
+2026-04-15 22:50:27,697 - src.smt6_yield - INFO - SMT6 cache HIT for key a4e001f5fc3cdbed
+2026-04-15 22:50:27,698 - src.smt6_yield - INFO - SMT6 cache HIT for key de1d617f98c3190e
+2026-04-15 22:50:27,699 - src.smt6_yield - INFO - SMT6 cache HIT for key 6f6cf02c9667664a
+2026-04-15 22:50:27,700 - src.smt6_yield - INFO - SMT6 cache HIT for key 6786feb775d62ff4
+2026-04-15 22:50:27,701 - src.smt6_yield - INFO - SMT6 cache HIT for key babf2f352afd62c8
+2026-04-15 22:50:27,703 - src.smt6_yield - INFO - SMT6 cache HIT for key e5b93797ff974980
+2026-04-15 22:50:27,704 - src.smt6_yield - INFO - SMT6 cache HIT for key ef39bbcd94a4c201
+2026-04-15 22:50:27,705 - src.smt6_yield - INFO - SMT6 cache HIT for key 450c81a2ae854c22
+2026-04-15 22:50:27,706 - src.smt6_yield - INFO - SMT6 cache HIT for key be4e84976a187dba
+2026-04-15 22:50:27,708 - src.smt6_yield - INFO - SMT6 cache HIT for key bf72439c7016ff7f
+2026-04-15 22:50:27,707 - src.smt6_yield - INFO - SMT6 cache HIT for key c1395fb3723eba21
+2026-04-15 22:50:27,714 - src.smt6_yield - INFO - SMT6 cache HIT for key 3a042039e4d33b7e
+2026-04-15 22:50:27,715 - src.smt6_yield - INFO - SMT6 cache HIT for key 20d56173f6a37af0
+2026-04-15 22:50:27,740 - src.smt6_yield - INFO - SMT6 fetch complete: 32 total records from 20 queries
+2026-04-15 22:50:28,356 - src.smt6_yield - INFO - Fetching SMT6 site data for 2 combinations (density=None, speed=None)...
+2026-04-15 22:50:28,360 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
+2026-04-15 22:50:28,366 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
+2026-04-15 22:50:28,367 - src.smt6_yield - INFO - SMT6 site fetch complete: 64 total records from 2 queries
+2026-04-15 22:50:28,369 - __main__ - INFO - [SMT6 Filter] Mode changed to 'Latest Week', available machines: 2
+2026-04-15 22:50:34,419 - src.smt6_yield - INFO - Fetching SMT6 site data for 20 combinations (density=None, speed=None)...
+2026-04-15 22:50:34,421 - src.smt6_yield - INFO - SMT6 cache HIT for key 5fa47cd5a9e32c42
+2026-04-15 22:50:34,423 - src.smt6_yield - INFO - SMT6 cache HIT for key 63c2ac08564f981e
+2026-04-15 22:50:34,425 - src.smt6_yield - INFO - SMT6 cache HIT for key 6312fcfc8cbd184e
+2026-04-15 22:50:34,438 - src.smt6_yield - INFO - SMT6 cache HIT for key 87f07a430268e107
+2026-04-15 22:50:34,440 - src.smt6_yield - INFO - SMT6 cache HIT for key 2a40488b192ed3a1
+2026-04-15 22:50:34,442 - src.smt6_yield - INFO - SMT6 cache HIT for key 353e1c703121008b
+2026-04-15 22:50:34,448 - src.smt6_yield - INFO - SMT6 cache HIT for key 58bdd77433de7b77
+2026-04-15 22:50:34,462 - src.smt6_yield - INFO - SMT6 cache HIT for key db608c6383ea96c8
+2026-04-15 22:50:34,466 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
+2026-04-15 22:50:34,467 - src.smt6_yield - INFO - SMT6 cache HIT for key 23a33c82cb584728
+2026-04-15 22:50:34,468 - src.smt6_yield - INFO - SMT6 cache HIT for key 85a270703bb9b9ea
+2026-04-15 22:50:34,473 - src.smt6_yield - INFO - SMT6 cache HIT for key d22daff044f3dd78
+2026-04-15 22:50:34,473 - src.smt6_yield - INFO - SMT6 cache HIT for key 371920e1406a52f1
+2026-04-15 22:50:34,473 - src.smt6_yield - INFO - SMT6 cache HIT for key 06d8986c402ac499
+2026-04-15 22:50:34,474 - src.smt6_yield - INFO - SMT6 cache HIT for key 6d2a4b00b66295c1
+2026-04-15 22:50:34,475 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
+2026-04-15 22:50:34,476 - src.smt6_yield - INFO - SMT6 cache HIT for key 47e02c7410bc59b2
+2026-04-15 22:50:34,477 - src.smt6_yield - INFO - SMT6 cache HIT for key 39b1f3b2a7c4dac9
+2026-04-15 22:50:34,479 - src.smt6_yield - INFO - SMT6 cache HIT for key aa3b1d43479e98e4
+2026-04-15 22:50:34,482 - src.smt6_yield - INFO - SMT6 cache HIT for key 13e5709d58b8ef5a
+2026-04-15 22:50:34,490 - src.smt6_yield - INFO - SMT6 site fetch complete: 618 total records from 20 queries
+2026-04-15 22:50:34,496 - __main__ - INFO - [SMT6 Filter] Mode changed to 'Full Range', available machines: 5
+2026-04-15 22:54:41,716 - src.smt6_yield - INFO - Fetching SMT6 data for 30 combinations (density=None, speed=None)...
+2026-04-15 22:54:41,718 - src.smt6_yield - INFO - SMT6 cache HIT for key 94ee0eab43b097b3
+2026-04-15 22:54:41,720 - src.smt6_yield - INFO - SMT6 cache HIT for key 2e33baa80d64ce8d
+2026-04-15 22:54:41,720 - src.smt6_yield - INFO - SMT6 cache HIT for key 35d98bc31974e0a4
+2026-04-15 22:54:41,720 - src.smt6_yield - INFO - SMT6 cache HIT for key e3b8381f8f2b36e3
+2026-04-15 22:54:41,721 - src.smt6_yield - INFO - SMT6 cache HIT for key 55d7456c54658865
+2026-04-15 22:54:41,721 - src.smt6_yield - INFO - SMT6 cache HIT for key b43fe04068020c44
+2026-04-15 22:54:41,722 - src.smt6_yield - INFO - SMT6 cache HIT for key 7c6a9c1196b3bfff
+2026-04-15 22:54:41,722 - src.smt6_yield - INFO - SMT6 cache HIT for key 5593d6e71dd3a280
+2026-04-15 22:54:41,722 - src.smt6_yield - INFO - SMT6 cache HIT for key 64a5680d3b65c48f
+2026-04-15 22:54:41,722 - src.smt6_yield - INFO - SMT6 cache HIT for key 49dbd7d400015f44
+2026-04-15 22:54:41,723 - src.smt6_yield - INFO - SMT6 cache HIT for key dda87ccb1d756586
+2026-04-15 22:54:41,725 - src.smt6_yield - INFO - SMT6 cache HIT for key a56580ad7f4acde4
+2026-04-15 22:54:41,726 - src.smt6_yield - INFO - SMT6 cache HIT for key 527b1fcbca81c2b5
+2026-04-15 22:54:41,726 - src.smt6_yield - INFO - SMT6 cache HIT for key 3a042039e4d33b7e
+2026-04-15 22:54:41,726 - src.smt6_yield - INFO - SMT6 cache HIT for key 85b7a97770bce910
+2026-04-15 22:54:41,727 - src.smt6_yield - INFO - SMT6 cache HIT for key 47c3556fbb148c86
+2026-04-15 22:54:41,727 - src.smt6_yield - INFO - SMT6 cache HIT for key a4e001f5fc3cdbed
+2026-04-15 22:54:41,727 - src.smt6_yield - INFO - SMT6 cache HIT for key b4bafff4f8e4e9ce
+2026-04-15 22:54:41,728 - src.smt6_yield - INFO - SMT6 cache HIT for key 15d2cee40161e0cc
+2026-04-15 22:54:41,729 - src.smt6_yield - INFO - SMT6 cache HIT for key 450c81a2ae854c22
+2026-04-15 22:54:41,730 - src.smt6_yield - INFO - SMT6 cache HIT for key 6786feb775d62ff4
+2026-04-15 22:54:41,730 - src.smt6_yield - INFO - SMT6 cache HIT for key de1d617f98c3190e
+2026-04-15 22:54:41,730 - src.smt6_yield - INFO - SMT6 cache HIT for key 6f6cf02c9667664a
+2026-04-15 22:54:41,732 - src.smt6_yield - INFO - SMT6 cache HIT for key be4e84976a187dba
+2026-04-15 22:54:41,733 - src.smt6_yield - INFO - SMT6 cache HIT for key c1395fb3723eba21
+2026-04-15 22:54:41,734 - src.smt6_yield - INFO - SMT6 cache HIT for key babf2f352afd62c8
+2026-04-15 22:54:41,736 - src.smt6_yield - INFO - SMT6 cache HIT for key ef39bbcd94a4c201
+2026-04-15 22:54:41,738 - src.smt6_yield - INFO - SMT6 cache HIT for key e5b93797ff974980
+2026-04-15 22:54:41,738 - src.smt6_yield - INFO - SMT6 cache HIT for key bf72439c7016ff7f
+2026-04-15 22:54:41,739 - src.smt6_yield - INFO - SMT6 cache HIT for key 20d56173f6a37af0
+2026-04-15 22:54:41,747 - src.smt6_yield - INFO - SMT6 fetch complete: 34 total records from 30 queries
+2026-04-15 22:54:41,970 - src.smt6_yield - INFO - Fetching SMT6 site data for 3 combinations (density=None, speed=None)...
+2026-04-15 22:54:41,971 - src.smt6_yield - INFO - SMT6 cache HIT for key ea2fc1bf294d5835
+2026-04-15 22:54:41,977 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
+2026-04-15 22:54:41,982 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
+2026-04-15 22:54:41,992 - src.smt6_yield - INFO - SMT6 site fetch complete: 64 total records from 3 queries
+2026-04-15 22:54:41,995 - __main__ - INFO - [SMT6 Filter] Mode='Latest Week', DIDs=['Y62P', 'Y6CP', 'Y63N'], machines=2
+2026-04-15 22:54:54,564 - src.smt6_yield - INFO - Fetching SMT6 site data for 30 combinations (density=None, speed=None)...
+2026-04-15 22:54:54,565 - src.smt6_yield - INFO - SMT6 cache HIT for key efaa623c58d25d65
+2026-04-15 22:54:54,573 - src.smt6_yield - INFO - SMT6 cache HIT for key 9d41416502d02b0d
+2026-04-15 22:54:54,573 - src.smt6_yield - INFO - SMT6 cache HIT for key 491fc84b35da4628
+2026-04-15 22:54:54,575 - src.smt6_yield - INFO - SMT6 cache HIT for key 0fbd7a93129ba0f8
+2026-04-15 22:54:54,576 - src.smt6_yield - INFO - SMT6 cache HIT for key a5021e255e60cbc9
+2026-04-15 22:54:54,577 - src.smt6_yield - INFO - SMT6 cache HIT for key 22f8cbac50339233
+2026-04-15 22:54:54,577 - src.smt6_yield - INFO - SMT6 cache HIT for key ca5511f5d32dd416
+2026-04-15 22:54:54,578 - src.smt6_yield - INFO - SMT6 cache HIT for key 864d14f2c39864e7
+2026-04-15 22:54:54,580 - src.smt6_yield - INFO - SMT6 cache HIT for key ea2fc1bf294d5835
+2026-04-15 22:54:54,581 - src.smt6_yield - INFO - SMT6 cache HIT for key 5fa47cd5a9e32c42
+2026-04-15 22:54:54,582 - src.smt6_yield - INFO - SMT6 cache HIT for key 83e0961f8427ac1d
+2026-04-15 22:54:54,583 - src.smt6_yield - INFO - SMT6 cache HIT for key 63c2ac08564f981e
+2026-04-15 22:54:54,584 - src.smt6_yield - INFO - SMT6 cache HIT for key 6312fcfc8cbd184e
+2026-04-15 22:54:54,587 - src.smt6_yield - INFO - SMT6 cache HIT for key 87f07a430268e107
+2026-04-15 22:54:54,587 - src.smt6_yield - INFO - SMT6 cache HIT for key 2a40488b192ed3a1
+2026-04-15 22:54:54,591 - src.smt6_yield - INFO - SMT6 cache HIT for key 58bdd77433de7b77
+2026-04-15 22:54:54,595 - src.smt6_yield - INFO - SMT6 cache HIT for key 353e1c703121008b
+2026-04-15 22:54:54,602 - src.smt6_yield - INFO - SMT6 cache HIT for key aa3b1d43479e98e4
+2026-04-15 22:54:54,602 - src.smt6_yield - INFO - SMT6 cache HIT for key 23a33c82cb584728
+2026-04-15 22:54:54,603 - src.smt6_yield - INFO - SMT6 cache HIT for key 371920e1406a52f1
+2026-04-15 22:54:54,604 - src.smt6_yield - INFO - SMT6 cache HIT for key 06d8986c402ac499
+2026-04-15 22:54:54,605 - src.smt6_yield - INFO - SMT6 cache HIT for key d22daff044f3dd78
+2026-04-15 22:54:54,605 - src.smt6_yield - INFO - SMT6 cache HIT for key 39b1f3b2a7c4dac9
+2026-04-15 22:54:54,606 - src.smt6_yield - INFO - SMT6 cache HIT for key 13e5709d58b8ef5a
+2026-04-15 22:54:54,607 - src.smt6_yield - INFO - SMT6 cache HIT for key 6d2a4b00b66295c1
+2026-04-15 22:54:54,608 - src.smt6_yield - INFO - SMT6 cache HIT for key 47e02c7410bc59b2
+2026-04-15 22:54:54,608 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
+2026-04-15 22:54:54,610 - src.smt6_yield - INFO - SMT6 cache HIT for key db608c6383ea96c8
+2026-04-15 22:54:54,615 - src.smt6_yield - INFO - SMT6 cache HIT for key 85a270703bb9b9ea
+2026-04-15 22:54:54,617 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
+2026-04-15 22:54:54,627 - src.smt6_yield - INFO - SMT6 site fetch complete: 665 total records from 30 queries
+2026-04-15 22:54:54,631 - __main__ - INFO - [SMT6 Filter] Mode='Full Range', DIDs=['Y62P', 'Y6CP', 'Y63N'], machines=5
+2026-04-15 22:59:31,636 - src.smt6_yield - INFO - Fetching SMT6 data for 30 combinations (density=None, speed=None)...
+2026-04-15 22:59:31,638 - src.smt6_yield - INFO - SMT6 cache HIT for key 55d7456c54658865
+2026-04-15 22:59:31,639 - src.smt6_yield - INFO - SMT6 cache HIT for key 94ee0eab43b097b3
+2026-04-15 22:59:31,641 - src.smt6_yield - INFO - SMT6 cache HIT for key 47c3556fbb148c86
+2026-04-15 22:59:31,642 - src.smt6_yield - INFO - SMT6 cache HIT for key 2e33baa80d64ce8d
+2026-04-15 22:59:31,645 - src.smt6_yield - INFO - SMT6 cache HIT for key 35d98bc31974e0a4
+2026-04-15 22:59:31,645 - src.smt6_yield - INFO - SMT6 cache HIT for key e3b8381f8f2b36e3
+2026-04-15 22:59:31,646 - src.smt6_yield - INFO - SMT6 cache HIT for key 64a5680d3b65c48f
+2026-04-15 22:59:31,646 - src.smt6_yield - INFO - SMT6 cache HIT for key 7c6a9c1196b3bfff
+2026-04-15 22:59:31,649 - src.smt6_yield - INFO - SMT6 cache HIT for key 5593d6e71dd3a280
+2026-04-15 22:59:31,650 - src.smt6_yield - INFO - SMT6 cache HIT for key b43fe04068020c44
+2026-04-15 22:59:31,651 - src.smt6_yield - INFO - SMT6 cache HIT for key 49dbd7d400015f44
+2026-04-15 22:59:31,652 - src.smt6_yield - INFO - SMT6 cache HIT for key dda87ccb1d756586
+2026-04-15 22:59:31,653 - src.smt6_yield - INFO - SMT6 cache HIT for key 527b1fcbca81c2b5
+2026-04-15 22:59:31,653 - src.smt6_yield - INFO - SMT6 cache HIT for key a56580ad7f4acde4
+2026-04-15 22:59:31,654 - src.smt6_yield - INFO - SMT6 cache HIT for key 3a042039e4d33b7e
+2026-04-15 22:59:31,655 - src.smt6_yield - INFO - SMT6 cache HIT for key 6f6cf02c9667664a
+2026-04-15 22:59:31,656 - src.smt6_yield - INFO - SMT6 cache HIT for key b4bafff4f8e4e9ce
+2026-04-15 22:59:31,657 - src.smt6_yield - INFO - SMT6 cache HIT for key 6786feb775d62ff4
+2026-04-15 22:59:31,658 - src.smt6_yield - INFO - SMT6 cache HIT for key c1395fb3723eba21
+2026-04-15 22:59:31,659 - src.smt6_yield - INFO - SMT6 cache HIT for key 85b7a97770bce910
+2026-04-15 22:59:31,660 - src.smt6_yield - INFO - SMT6 cache HIT for key de1d617f98c3190e
+2026-04-15 22:59:31,660 - src.smt6_yield - INFO - SMT6 cache HIT for key babf2f352afd62c8
+2026-04-15 22:59:31,661 - src.smt6_yield - INFO - SMT6 cache HIT for key 15d2cee40161e0cc
+2026-04-15 22:59:31,661 - src.smt6_yield - INFO - SMT6 cache HIT for key ef39bbcd94a4c201
+2026-04-15 22:59:31,664 - src.smt6_yield - INFO - SMT6 cache HIT for key bf72439c7016ff7f
+2026-04-15 22:59:31,664 - src.smt6_yield - INFO - SMT6 cache HIT for key 450c81a2ae854c22
+2026-04-15 22:59:31,666 - src.smt6_yield - INFO - SMT6 cache HIT for key 20d56173f6a37af0
+2026-04-15 22:59:31,667 - src.smt6_yield - INFO - SMT6 cache HIT for key a4e001f5fc3cdbed
+2026-04-15 22:59:31,667 - src.smt6_yield - INFO - SMT6 cache HIT for key be4e84976a187dba
+2026-04-15 22:59:31,673 - src.smt6_yield - INFO - SMT6 cache HIT for key e5b93797ff974980
+2026-04-15 22:59:31,687 - src.smt6_yield - INFO - SMT6 fetch complete: 34 total records from 30 queries
+2026-04-15 22:59:31,856 - src.smt6_yield - INFO - Fetching SMT6 site data for 3 combinations (density=None, speed=None)...
+2026-04-15 22:59:31,867 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
+2026-04-15 22:59:31,879 - src.smt6_yield - INFO - SMT6 cache HIT for key ea2fc1bf294d5835
+2026-04-15 22:59:31,880 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
+2026-04-15 22:59:31,882 - src.smt6_yield - INFO - SMT6 site fetch complete: 64 total records from 3 queries
+2026-04-15 22:59:31,885 - __main__ - INFO - [SMT6 Filter] Mode='Latest Week', DIDs=['Y62P', 'Y6CP', 'Y63N'], machines=2
+2026-04-15 22:59:42,065 - src.smt6_yield - INFO - Fetching SMT6 site data for 30 combinations (density=None, speed=None)...
+2026-04-15 22:59:42,067 - src.smt6_yield - INFO - SMT6 cache HIT for key efaa623c58d25d65
+2026-04-15 22:59:42,070 - src.smt6_yield - INFO - SMT6 cache HIT for key 9d41416502d02b0d
+2026-04-15 22:59:42,071 - src.smt6_yield - INFO - SMT6 cache HIT for key 491fc84b35da4628
+2026-04-15 22:59:42,073 - src.smt6_yield - INFO - SMT6 cache HIT for key 0fbd7a93129ba0f8
+2026-04-15 22:59:42,078 - src.smt6_yield - INFO - SMT6 cache HIT for key a5021e255e60cbc9
+2026-04-15 22:59:42,079 - src.smt6_yield - INFO - SMT6 cache HIT for key 22f8cbac50339233
+2026-04-15 22:59:42,082 - src.smt6_yield - INFO - SMT6 cache HIT for key 864d14f2c39864e7
+2026-04-15 22:59:42,083 - src.smt6_yield - INFO - SMT6 cache HIT for key ca5511f5d32dd416
+2026-04-15 22:59:42,083 - src.smt6_yield - INFO - SMT6 cache HIT for key 83e0961f8427ac1d
+2026-04-15 22:59:42,085 - src.smt6_yield - INFO - SMT6 cache HIT for key ea2fc1bf294d5835
+2026-04-15 22:59:42,085 - src.smt6_yield - INFO - SMT6 cache HIT for key 5fa47cd5a9e32c42
+2026-04-15 22:59:42,088 - src.smt6_yield - INFO - SMT6 cache HIT for key 63c2ac08564f981e
+2026-04-15 22:59:42,089 - src.smt6_yield - INFO - SMT6 cache HIT for key 2a40488b192ed3a1
+2026-04-15 22:59:42,092 - src.smt6_yield - INFO - SMT6 cache HIT for key 353e1c703121008b
+2026-04-15 22:59:42,094 - src.smt6_yield - INFO - SMT6 cache HIT for key 58bdd77433de7b77
+2026-04-15 22:59:42,097 - src.smt6_yield - INFO - SMT6 cache HIT for key 85a270703bb9b9ea
+2026-04-15 22:59:42,098 - src.smt6_yield - INFO - SMT6 cache HIT for key 87f07a430268e107
+2026-04-15 22:59:42,099 - src.smt6_yield - INFO - SMT6 cache HIT for key db608c6383ea96c8
+2026-04-15 22:59:42,106 - src.smt6_yield - INFO - SMT6 cache HIT for key 23a33c82cb584728
+2026-04-15 22:59:42,110 - src.smt6_yield - INFO - SMT6 cache HIT for key 6312fcfc8cbd184e
+2026-04-15 22:59:42,115 - src.smt6_yield - INFO - SMT6 cache HIT for key 06d8986c402ac499
+2026-04-15 22:59:42,115 - src.smt6_yield - INFO - SMT6 cache HIT for key 39b1f3b2a7c4dac9
+2026-04-15 22:59:42,116 - src.smt6_yield - INFO - SMT6 cache HIT for key 371920e1406a52f1
+2026-04-15 22:59:42,116 - src.smt6_yield - INFO - SMT6 cache HIT for key aa3b1d43479e98e4
+2026-04-15 22:59:42,117 - src.smt6_yield - INFO - SMT6 cache HIT for key 47e02c7410bc59b2
+2026-04-15 22:59:42,117 - src.smt6_yield - INFO - SMT6 cache HIT for key d22daff044f3dd78
+2026-04-15 22:59:42,118 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
+2026-04-15 22:59:42,119 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
+2026-04-15 22:59:42,124 - src.smt6_yield - INFO - SMT6 cache HIT for key 13e5709d58b8ef5a
+2026-04-15 22:59:42,126 - src.smt6_yield - INFO - SMT6 cache HIT for key 6d2a4b00b66295c1
+2026-04-15 22:59:42,127 - src.smt6_yield - INFO - SMT6 site fetch complete: 665 total records from 30 queries
+2026-04-15 22:59:42,149 - __main__ - INFO - [SMT6 Filter] Mode='Full Range', DIDs=['Y62P', 'Y6CP', 'Y63N'], machines=5
+2026-04-15 23:04:10,563 - src.smt6_yield - INFO - Fetching SMT6 data for 30 combinations (density=None, speed=None)...
+2026-04-15 23:04:10,567 - src.smt6_yield - INFO - SMT6 cache HIT for key 55d7456c54658865
+2026-04-15 23:04:10,567 - src.smt6_yield - INFO - SMT6 cache HIT for key 94ee0eab43b097b3
+2026-04-15 23:04:10,571 - src.smt6_yield - INFO - SMT6 cache HIT for key 2e33baa80d64ce8d
+2026-04-15 23:04:10,571 - src.smt6_yield - INFO - SMT6 cache HIT for key e3b8381f8f2b36e3
+2026-04-15 23:04:10,572 - src.smt6_yield - INFO - SMT6 cache HIT for key 47c3556fbb148c86
+2026-04-15 23:04:10,573 - src.smt6_yield - INFO - SMT6 cache HIT for key 64a5680d3b65c48f
+2026-04-15 23:04:10,574 - src.smt6_yield - INFO - SMT6 cache HIT for key b43fe04068020c44
+2026-04-15 23:04:10,575 - src.smt6_yield - INFO - SMT6 cache HIT for key 7c6a9c1196b3bfff
+2026-04-15 23:04:10,575 - src.smt6_yield - INFO - SMT6 cache HIT for key dda87ccb1d756586
+2026-04-15 23:04:10,575 - src.smt6_yield - INFO - SMT6 cache HIT for key 49dbd7d400015f44
+2026-04-15 23:04:10,575 - src.smt6_yield - INFO - SMT6 cache HIT for key 5593d6e71dd3a280
+2026-04-15 23:04:10,577 - src.smt6_yield - INFO - SMT6 cache HIT for key 35d98bc31974e0a4
+2026-04-15 23:04:10,577 - src.smt6_yield - INFO - SMT6 cache HIT for key a56580ad7f4acde4
+2026-04-15 23:04:10,577 - src.smt6_yield - INFO - SMT6 cache HIT for key 527b1fcbca81c2b5
+2026-04-15 23:04:10,578 - src.smt6_yield - INFO - SMT6 cache HIT for key 85b7a97770bce910
+2026-04-15 23:04:10,578 - src.smt6_yield - INFO - SMT6 cache HIT for key 3a042039e4d33b7e
+2026-04-15 23:04:10,579 - src.smt6_yield - INFO - SMT6 cache HIT for key 6f6cf02c9667664a
+2026-04-15 23:04:10,579 - src.smt6_yield - INFO - SMT6 cache HIT for key b4bafff4f8e4e9ce
+2026-04-15 23:04:10,580 - src.smt6_yield - INFO - SMT6 cache HIT for key 15d2cee40161e0cc
+2026-04-15 23:04:10,581 - src.smt6_yield - INFO - SMT6 cache HIT for key e5b93797ff974980
+2026-04-15 23:04:10,581 - src.smt6_yield - INFO - SMT6 cache HIT for key de1d617f98c3190e
+2026-04-15 23:04:10,582 - src.smt6_yield - INFO - SMT6 cache HIT for key babf2f352afd62c8
+2026-04-15 23:04:10,583 - src.smt6_yield - INFO - SMT6 cache HIT for key a4e001f5fc3cdbed
+2026-04-15 23:04:10,585 - src.smt6_yield - INFO - SMT6 cache HIT for key ef39bbcd94a4c201
+2026-04-15 23:04:10,585 - src.smt6_yield - INFO - SMT6 cache HIT for key bf72439c7016ff7f
+2026-04-15 23:04:10,586 - src.smt6_yield - INFO - SMT6 cache HIT for key c1395fb3723eba21
+2026-04-15 23:04:10,586 - src.smt6_yield - INFO - SMT6 cache HIT for key 450c81a2ae854c22
+2026-04-15 23:04:10,586 - src.smt6_yield - INFO - SMT6 cache HIT for key be4e84976a187dba
+2026-04-15 23:04:10,587 - src.smt6_yield - INFO - SMT6 cache HIT for key 6786feb775d62ff4
+2026-04-15 23:04:10,587 - src.smt6_yield - INFO - SMT6 cache HIT for key 20d56173f6a37af0
+2026-04-15 23:04:10,589 - src.smt6_yield - INFO - SMT6 fetch complete: 34 total records from 30 queries
+2026-04-15 23:04:10,722 - src.smt6_yield - INFO - Fetching SMT6 site data for 3 combinations (density=None, speed=None)...
+2026-04-15 23:04:10,726 - src.smt6_yield - INFO - SMT6 cache HIT for key ea2fc1bf294d5835
+2026-04-15 23:04:10,728 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
+2026-04-15 23:04:10,738 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
+2026-04-15 23:04:10,746 - src.smt6_yield - INFO - SMT6 site fetch complete: 64 total records from 3 queries
+2026-04-15 23:04:10,749 - __main__ - INFO - [SMT6 Filter] Mode='Latest Week', DIDs=['Y62P', 'Y6CP', 'Y63N'], machines=2
+2026-04-15 23:06:57,395 - src.smt6_yield - INFO - Fetching SMT6 site data for 20 combinations (density=None, speed=None)...
+2026-04-15 23:06:57,397 - src.smt6_yield - INFO - SMT6 cache HIT for key 5fa47cd5a9e32c42
+2026-04-15 23:06:57,402 - src.smt6_yield - INFO - SMT6 cache HIT for key 63c2ac08564f981e
+2026-04-15 23:06:57,404 - src.smt6_yield - INFO - SMT6 cache HIT for key 87f07a430268e107
+2026-04-15 23:06:57,406 - src.smt6_yield - INFO - SMT6 cache HIT for key 2a40488b192ed3a1
+2026-04-15 23:06:57,408 - src.smt6_yield - INFO - SMT6 cache HIT for key 353e1c703121008b
+2026-04-15 23:06:57,414 - src.smt6_yield - INFO - SMT6 cache HIT for key 85a270703bb9b9ea
+2026-04-15 23:06:57,416 - src.smt6_yield - INFO - SMT6 cache HIT for key 58bdd77433de7b77
+2026-04-15 23:06:57,429 - src.smt6_yield - INFO - SMT6 cache HIT for key 9362b001455caf6f
+2026-04-15 23:06:57,433 - src.smt6_yield - INFO - SMT6 cache HIT for key 23a33c82cb584728
+2026-04-15 23:06:57,434 - src.smt6_yield - INFO - SMT6 cache HIT for key aa3b1d43479e98e4
+2026-04-15 23:06:57,434 - src.smt6_yield - INFO - SMT6 cache HIT for key 371920e1406a52f1
+2026-04-15 23:06:57,434 - src.smt6_yield - INFO - SMT6 cache HIT for key 39b1f3b2a7c4dac9
+2026-04-15 23:06:57,435 - src.smt6_yield - INFO - SMT6 cache HIT for key 6312fcfc8cbd184e
+2026-04-15 23:06:57,436 - src.smt6_yield - INFO - SMT6 cache HIT for key d22daff044f3dd78
+2026-04-15 23:06:57,436 - src.smt6_yield - INFO - SMT6 cache HIT for key 06d8986c402ac499
+2026-04-15 23:06:57,437 - src.smt6_yield - INFO - SMT6 cache HIT for key 13e5709d58b8ef5a
+2026-04-15 23:06:57,440 - src.smt6_yield - INFO - SMT6 cache HIT for key db608c6383ea96c8
+2026-04-15 23:06:57,440 - src.smt6_yield - INFO - SMT6 cache HIT for key b3cac499a66f3039
+2026-04-15 23:06:57,440 - src.smt6_yield - INFO - SMT6 cache HIT for key 47e02c7410bc59b2
+2026-04-15 23:06:57,440 - src.smt6_yield - INFO - SMT6 cache HIT for key 6d2a4b00b66295c1
+2026-04-15 23:06:57,457 - src.smt6_yield - INFO - SMT6 site fetch complete: 618 total records from 20 queries
+2026-04-15 23:06:57,463 - __main__ - INFO - [SMT6 Filter] Mode='Full Range', DIDs=['Y6CP', 'Y63N'], machines=5
