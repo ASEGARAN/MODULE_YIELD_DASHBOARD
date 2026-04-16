@@ -67,6 +67,9 @@ from src.failcrawler import (
     # Trend detection and alerts
     detect_excursions,
     create_alert_summary_html,
+    # Top Movers
+    calculate_failcrawler_wow_changes,
+    create_top_movers_html,
 )
 
 # SMT6 yield module
@@ -3897,6 +3900,13 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 )
                 if summary_html:
                     components.html(summary_html, height=180, scrolling=False)
+
+            # Show Top Movers (FAILCRAWLERs with >25% WoW increase)
+            fc_changes = calculate_failcrawler_wow_changes(fc_df, step)
+            if fc_changes:
+                top_movers_html = create_top_movers_html(fc_changes, step, threshold=25.0, dark_mode=False)
+                if top_movers_html:
+                    components.html(top_movers_html, height=80, scrolling=False)
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(

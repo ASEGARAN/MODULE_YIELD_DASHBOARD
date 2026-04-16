@@ -336,6 +336,145 @@ def create_alert_summary_html(excursions: list[dict], dark_mode: bool = False) -
     return html
 
 
+def calculate_failcrawler_wow_changes(
+    fcdpm_df: pd.DataFrame,
+    step: str
+) -> list[dict]:
+    """
+    Calculate WoW changes for each FAILCRAWLER category.
+
+    Args:
+        fcdpm_df: FAILCRAWLER DPM data (wide format with FC columns)
+        step: Test step to filter
+
+    Returns:
+        List of dictionaries with FAILCRAWLER name, current/previous values, and change %
+    """
+    if fcdpm_df.empty:
+        return []
+
+    # Filter by step
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in fcdpm_df.columns else 'STEP'
+    if step_col not in fcdpm_df.columns:
+        return []
+
+    step_df = fcdpm_df[fcdpm_df[step_col].str.upper() == step.upper()].copy()
+    if step_df.empty or 'MFG_WORKWEEK' not in step_df.columns:
+        return []
+
+    # Get sorted workweeks
+    workweeks = sorted(step_df['MFG_WORKWEEK'].unique())
+    if len(workweeks) < 2:
+        return []
+
+    current_ww = workweeks[-1]
+    previous_ww = workweeks[-2]
+
+    # Get FAILCRAWLER columns (exclude metadata)
+    metadata_cols = ['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'FCFM', 'QUERY_STEP',
+                     'UIN', 'UFAIL', 'UPASS', 'ALL', 'ALL(DPM)', 'UNKNOWN',
+                     'MOD_CUSTOM_TEST_FLOW', 'MSN_STATUS', 'VERIFIED', 'FID_STATUS',
+                     'MUIN', 'MUFAIL']
+    fc_cols = [col for col in step_df.columns if col not in metadata_cols]
+
+    # Calculate WoW change for each FAILCRAWLER
+    changes = []
+    current_df = step_df[step_df['MFG_WORKWEEK'] == current_ww]
+    previous_df = step_df[step_df['MFG_WORKWEEK'] == previous_ww]
+
+    for fc_col in fc_cols:
+        current_val = pd.to_numeric(current_df[fc_col], errors='coerce').mean() if fc_col in current_df.columns else 0
+        previous_val = pd.to_numeric(previous_df[fc_col], errors='coerce').mean() if fc_col in previous_df.columns else 0
+
+        # Skip if both are 0 or negligible
+        if current_val < 0.1 and previous_val < 0.1:
+            continue
+
+        # Calculate change
+        if previous_val > 0:
+            change_pct = ((current_val - previous_val) / previous_val) * 100
+        elif current_val > 0:
+            change_pct = 100  # New failure (didn't exist before)
+        else:
+            continue
+
+        changes.append({
+            'failcrawler': fc_col,
+            'current_value': round(current_val, 1),
+            'previous_value': round(previous_val, 1),
+            'change_pct': round(change_pct, 1),
+            'current_ww': int(current_ww),
+            'previous_ww': int(previous_ww)
+        })
+
+    # Sort by change % descending (biggest increases first)
+    changes.sort(key=lambda x: x['change_pct'], reverse=True)
+
+    return changes
+
+
+def create_top_movers_html(
+    changes: list[dict],
+    step: str,
+    threshold: float = 25.0,
+    dark_mode: bool = False
+) -> str:
+    """
+    Create HTML for Top Movers section showing FAILCRAWLERs with significant increases.
+
+    Args:
+        changes: List from calculate_failcrawler_wow_changes
+        step: Test step name
+        threshold: Minimum % increase to show (default 25% matches yellow alert)
+        dark_mode: Theme setting
+
+    Returns:
+        HTML string for Top Movers section, or empty if no significant movers
+    """
+    # Filter to only increases above threshold
+    movers = [c for c in changes if c['change_pct'] >= threshold]
+
+    if not movers:
+        return ''
+
+    bg_color = '#2d2d2d' if dark_mode else '#fff8f0'
+    text_color = '#ffffff' if dark_mode else '#1a1a1a'
+    border_color = '#E74C3C' if any(m['change_pct'] >= 50 for m in movers) else '#F39C12'
+
+    # Build mover tags
+    mover_tags = []
+    for m in movers:
+        # Color based on severity
+        if m['change_pct'] >= 50:
+            tag_color = '#E74C3C'  # Red for >50%
+        else:
+            tag_color = '#F39C12'  # Yellow for 25-50%
+
+        fc_color = FAILCRAWLER_COLORS.get(m['failcrawler'], '#888888')
+        mover_tags.append(
+            f"<span style='background-color: {fc_color}20; color: {text_color}; "
+            f"padding: 4px 8px; border-radius: 4px; margin: 2px; display: inline-block; "
+            f"border-left: 3px solid {tag_color};'>"
+            f"<span style='color: {fc_color}; font-weight: bold;'>■</span> "
+            f"{m['failcrawler']} <span style='color: {tag_color}; font-weight: bold;'>↑+{m['change_pct']:.0f}%</span>"
+            f"</span>"
+        )
+
+    html = f'''
+    <div style="background-color: {bg_color}; border-left: 4px solid {border_color};
+                border-radius: 4px; padding: 10px 14px; margin-bottom: 12px;">
+        <div style="font-size: 12px; font-weight: bold; color: {text_color}; margin-bottom: 8px;">
+            🔥 {step} Top Movers (>{threshold:.0f}% WoW increase)
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            {''.join(mover_tags)}
+        </div>
+    </div>
+    '''
+
+    return html
+
+
 def _build_step_specific_cmd(
     step: str,
     design_ids: list[str],
