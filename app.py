@@ -60,6 +60,10 @@ from src.failcrawler import (
     fetch_all_dpm_metrics,
     create_dpm_metrics_summary_html,
     create_dpm_comparison_table_html,
+    # Decode quality functions
+    fetch_fcfm_decode_quality,
+    calculate_decode_quality,
+    create_decode_quality_html,
 )
 
 # SMT6 yield module
@@ -348,6 +352,8 @@ def init_session_state() -> None:
         st.session_state.failcrawler_cdpm_data = pd.DataFrame()
     if "failcrawler_mdpm_data" not in st.session_state:
         st.session_state.failcrawler_mdpm_data = pd.DataFrame()
+    if "failcrawler_fcfm_data" not in st.session_state:
+        st.session_state.failcrawler_fcfm_data = pd.DataFrame()
     if "failcrawler_last_fetch_time" not in st.session_state:
         st.session_state.failcrawler_last_fetch_time = None
     if "failcrawler_filters" not in st.session_state:
@@ -3760,12 +3766,20 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     workweeks=workweeks
                 )
 
+                # Fetch FCFM decode quality data
+                fcfm_df = fetch_fcfm_decode_quality(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks
+                )
+
                 st.session_state.failcrawler_data = fc_df
                 st.session_state.failcrawler_msn_corr_data = msn_corr_df
                 st.session_state.failcrawler_fid_counts = fid_counts_df
                 st.session_state.failcrawler_total_uin = total_uin_df
                 st.session_state.failcrawler_cdpm_data = cdpm_df
                 st.session_state.failcrawler_mdpm_data = mdpm_df
+                st.session_state.failcrawler_fcfm_data = fcfm_df
                 st.session_state.failcrawler_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 st.session_state.failcrawler_filters = filters.copy()
                 st.success(f"Loaded {len(fc_df):,} FAILCRAWLER + {len(cdpm_df):,} cDPM + {len(mdpm_df):,} MDPM records!")
@@ -3847,12 +3861,23 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
 
         st.divider()
 
+        # Get FCFM decode quality data from session state
+        fcfm_df = st.session_state.get('failcrawler_fcfm_data', pd.DataFrame())
+
         for step in steps_to_show:
             data = process_failcrawler_data(fc_df, step, design_id=filter_design_id)
             if data is None:
                 continue
 
             st.subheader(f"📊 {step} FAILCRAWLER cDPM")
+
+            # Show decode quality indicator (UE% vs UNKNOWN%)
+            if not fcfm_df.empty:
+                decode_data = calculate_decode_quality(fcfm_df, step, workweek=latest_ww)
+                if decode_data:
+                    decode_html = create_decode_quality_html(decode_data, dark_mode=False)
+                    if decode_html:
+                        components.html(decode_html, height=40, scrolling=False)
 
             # Show DPM metrics summary cards for this step
             if not cdpm_df.empty or not mdpm_df.empty:

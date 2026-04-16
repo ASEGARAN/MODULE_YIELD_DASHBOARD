@@ -356,6 +356,206 @@ def fetch_all_dpm_metrics(
     }
 
 
+def fetch_fcfm_decode_quality(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch FCFM (Fail Category Fail Mechanism) breakdown for decode quality metrics.
+
+    Returns data showing how much of the FCDPM is:
+    - UE (Uncorrectable Error) = Successfully decoded, known fail mechanism
+    - ECC = ECC-related failures
+    - UNKNOWN = Fail mechanism could not be determined
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with FCFM breakdown by step and workweek
+    """
+    all_results = []
+
+    for step in steps:
+        cmd = _build_step_specific_cmd(
+            step=step,
+            design_ids=design_ids,
+            workweeks=workweeks,
+            metric_flags=['+fidag', '+fc'],
+            format_cols=['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'FCFM']
+        )
+
+        logger.info(f"Fetching FCFM decode quality for {step}...")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=600
+            )
+
+            if result.returncode != 0:
+                logger.error(f"mtsums FCFM error for {step}: {result.stderr.decode() if result.stderr else 'Unknown'}")
+                continue
+
+            output = result.stdout.decode()
+            if not output.strip():
+                continue
+
+            df = pd.read_csv(StringIO(output))
+            df.columns = [col.upper() for col in df.columns]
+            df['QUERY_STEP'] = step.upper()
+            all_results.append(df)
+            logger.info(f"Fetched {len(df)} FCFM records for {step}")
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"mtsums FCFM timed out for {step}")
+        except Exception as e:
+            logger.exception(f"Error fetching FCFM for {step}: {e}")
+
+    if not all_results:
+        return pd.DataFrame()
+
+    combined = pd.concat(all_results, ignore_index=True)
+    logger.info(f"Total FCFM records: {len(combined)}")
+    return combined
+
+
+def calculate_decode_quality(
+    fcfm_df: pd.DataFrame,
+    step: str,
+    workweek: int = None
+) -> dict:
+    """
+    Calculate decode quality metrics from FCFM data.
+
+    Returns percentage breakdown of:
+    - UE% = Decoded failures (known fail mechanism)
+    - ECC% = ECC-related failures
+    - UNKNOWN% = Undecoded failures
+
+    Args:
+        fcfm_df: DataFrame from fetch_fcfm_decode_quality
+        step: Test step to filter
+        workweek: Optional specific workweek (None = all)
+
+    Returns:
+        Dictionary with decode quality metrics
+    """
+    if fcfm_df.empty:
+        return None
+
+    # Filter by step
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in fcfm_df.columns else 'STEP'
+    step_df = fcfm_df[fcfm_df[step_col].str.upper() == step.upper()].copy()
+
+    if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
+        step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
+
+    if step_df.empty or 'FCFM' not in step_df.columns:
+        return None
+
+    # Aggregate by FCFM category
+    # Use UFAIL column for fail counts, or ALL if available
+    fail_col = 'UFAIL' if 'UFAIL' in step_df.columns else 'ALL' if 'ALL' in step_df.columns else None
+    uin_col = 'UIN' if 'UIN' in step_df.columns else None
+
+    if fail_col is None:
+        return None
+
+    # Convert to numeric
+    step_df[fail_col] = pd.to_numeric(step_df[fail_col], errors='coerce').fillna(0)
+
+    fcfm_agg = step_df.groupby('FCFM').agg({fail_col: 'sum'}).reset_index()
+    total_fails = fcfm_agg[fail_col].sum()
+
+    if total_fails == 0:
+        return None
+
+    # Calculate percentages
+    result = {
+        'step': step,
+        'workweek': workweek,
+        'total_fails': float(total_fails),
+        'ue_pct': 0.0,
+        'ecc_pct': 0.0,
+        'unknown_pct': 0.0,
+        'ue_fails': 0.0,
+        'ecc_fails': 0.0,
+        'unknown_fails': 0.0
+    }
+
+    for _, row in fcfm_agg.iterrows():
+        fcfm = str(row['FCFM']).upper()
+        fails = float(row[fail_col])
+        pct = round((fails / total_fails) * 100, 1)
+
+        if fcfm == 'UE':
+            result['ue_pct'] = pct
+            result['ue_fails'] = fails
+        elif fcfm == 'ECC':
+            result['ecc_pct'] = pct
+            result['ecc_fails'] = fails
+        elif fcfm == 'UNKNOWN':
+            result['unknown_pct'] = pct
+            result['unknown_fails'] = fails
+
+    return result
+
+
+def create_decode_quality_html(decode_data: dict, dark_mode: bool = False) -> str:
+    """
+    Create HTML indicator for decode quality (UE% vs UNKNOWN%).
+
+    Args:
+        decode_data: Dictionary from calculate_decode_quality
+        dark_mode: Theme setting
+
+    Returns:
+        HTML string for the decode quality indicator
+    """
+    if decode_data is None:
+        return ""
+
+    ue_pct = decode_data.get('ue_pct', 0)
+    ecc_pct = decode_data.get('ecc_pct', 0)
+    unknown_pct = decode_data.get('unknown_pct', 0)
+
+    # Colors
+    text_color = '#ffffff' if dark_mode else '#1a1a1a'
+    subtext_color = '#aaaaaa' if dark_mode else '#666666'
+    bg_color = '#2d2d2d' if dark_mode else '#f8f9fa'
+
+    # Color coding for quality
+    if ue_pct >= 80:
+        quality_color = '#28a745'  # Green - good decode coverage
+        quality_label = 'Good'
+    elif ue_pct >= 50:
+        quality_color = '#ffc107'  # Yellow - moderate
+        quality_label = 'Moderate'
+    else:
+        quality_color = '#dc3545'  # Red - poor decode coverage
+        quality_label = 'Low'
+
+    html = f'''
+    <div style="display: inline-flex; align-items: center; gap: 12px; background: {bg_color};
+                border-radius: 6px; padding: 6px 12px; font-size: 11px; margin-bottom: 8px;">
+        <span style="color: {subtext_color}; font-weight: 500;">Decode Quality:</span>
+        <span style="color: {quality_color}; font-weight: bold;">{quality_label}</span>
+        <span style="color: #28a745;">UE {ue_pct:.0f}%</span>
+        <span style="color: {subtext_color};">|</span>
+        <span style="color: #dc3545;">UNKNOWN {unknown_pct:.0f}%</span>
+        {f'<span style="color: {subtext_color};">|</span><span style="color: #17a2b8;">ECC {ecc_pct:.0f}%</span>' if ecc_pct > 0 else ''}
+    </div>
+    '''
+
+    return html
+
+
 def process_dpm_metrics(
     cdpm_df: pd.DataFrame,
     mdpm_df: pd.DataFrame,
@@ -1764,9 +1964,9 @@ def create_dpm_metrics_summary_html(
         if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
             step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
         if not step_df.empty:
-            total_uin = step_df['UIN'].sum() if 'UIN' in step_df.columns else 0
-            total_ufail = step_df['UFAIL'].sum() if 'UFAIL' in step_df.columns else 0
-            uin = int(total_uin)
+            total_uin = pd.to_numeric(step_df['UIN'], errors='coerce').sum() if 'UIN' in step_df.columns else 0
+            total_ufail = pd.to_numeric(step_df['UFAIL'], errors='coerce').sum() if 'UFAIL' in step_df.columns else 0
+            uin = int(total_uin) if total_uin > 0 else 0
             if total_uin > 0:
                 cdpm_val = round((total_ufail / total_uin) * 1_000_000, 2)
 
@@ -1776,9 +1976,9 @@ def create_dpm_metrics_summary_html(
         if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
             step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
         if not step_df.empty:
-            total_muin = step_df['MUIN'].sum() if 'MUIN' in step_df.columns else 0
-            total_mufail = step_df['MUFAIL'].sum() if 'MUFAIL' in step_df.columns else 0
-            muin = int(total_muin)
+            total_muin = pd.to_numeric(step_df['MUIN'], errors='coerce').sum() if 'MUIN' in step_df.columns else 0
+            total_mufail = pd.to_numeric(step_df['MUFAIL'], errors='coerce').sum() if 'MUFAIL' in step_df.columns else 0
+            muin = int(total_muin) if total_muin > 0 else 0
             if total_muin > 0:
                 mdpm_val = round((total_mufail / total_muin) * 1_000_000, 2)
 
@@ -1793,18 +1993,18 @@ def create_dpm_metrics_summary_html(
                              'UIN', 'UFAIL', 'UPASS', 'ALL', 'UNKNOWN']
             fc_cols = [col for col in step_df.columns if col not in metadata_cols]
 
-            total_uin_fc = step_df['UIN'].sum() if 'UIN' in step_df.columns else 0
+            total_uin_fc = pd.to_numeric(step_df['UIN'], errors='coerce').sum() if 'UIN' in step_df.columns else 0
             if total_uin_fc > 0:
                 total_dpm = 0
                 for fc_col in fc_cols[:10]:  # Top 10 FAILCRAWLERs
-                    fc_dpm = step_df[fc_col].sum() if fc_col in step_df.columns else 0
+                    fc_dpm = pd.to_numeric(step_df[fc_col], errors='coerce').sum() if fc_col in step_df.columns else 0
                     if fc_dpm > 0:
                         fcdpm_breakdown.append({
                             'category': fc_col,
-                            'dpm': round(fc_dpm, 2)
+                            'dpm': round(float(fc_dpm), 2)
                         })
                         total_dpm += fc_dpm
-                fcdpm_total = round(total_dpm, 2)
+                fcdpm_total = round(float(total_dpm), 2)
                 fcdpm_breakdown.sort(key=lambda x: x['dpm'], reverse=True)
 
     # Format workweek display
@@ -1944,9 +2144,9 @@ def create_dpm_comparison_table_html(
             if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
                 step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
             if not step_df.empty:
-                total_uin = step_df['UIN'].sum() if 'UIN' in step_df.columns else 0
-                total_ufail = step_df['UFAIL'].sum() if 'UFAIL' in step_df.columns else 0
-                uin = int(total_uin)
+                total_uin = pd.to_numeric(step_df['UIN'], errors='coerce').sum() if 'UIN' in step_df.columns else 0
+                total_ufail = pd.to_numeric(step_df['UFAIL'], errors='coerce').sum() if 'UFAIL' in step_df.columns else 0
+                uin = int(total_uin) if total_uin > 0 else 0
                 if total_uin > 0:
                     cdpm_val = round((total_ufail / total_uin) * 1_000_000, 2)
 
@@ -1956,9 +2156,9 @@ def create_dpm_comparison_table_html(
             if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
                 step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
             if not step_df.empty:
-                total_muin = step_df['MUIN'].sum() if 'MUIN' in step_df.columns else 0
-                total_mufail = step_df['MUFAIL'].sum() if 'MUFAIL' in step_df.columns else 0
-                muin = int(total_muin)
+                total_muin = pd.to_numeric(step_df['MUIN'], errors='coerce').sum() if 'MUIN' in step_df.columns else 0
+                total_mufail = pd.to_numeric(step_df['MUFAIL'], errors='coerce').sum() if 'MUFAIL' in step_df.columns else 0
+                muin = int(total_muin) if total_muin > 0 else 0
                 if total_muin > 0:
                     mdpm_val = round((total_mufail / total_muin) * 1_000_000, 2)
 
