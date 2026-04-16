@@ -133,10 +133,12 @@ def create_dashboard_pdf(
             ["Design IDs", f"{yield_data['design_id'].nunique() if 'design_id' in yield_data.columns else 'N/A'}"],
         ]
 
-        if 'yield_pct' in yield_data.columns:
-            summary_stats.append(["Avg Yield", f"{yield_data['yield_pct'].mean():.2f}%"])
-            summary_stats.append(["Min Yield", f"{yield_data['yield_pct'].min():.2f}%"])
-            summary_stats.append(["Max Yield", f"{yield_data['yield_pct'].max():.2f}%"])
+        # Check for yield column (could be 'yield_pct' or 'YIELD%')
+        yield_col = 'yield_pct' if 'yield_pct' in yield_data.columns else 'YIELD%' if 'YIELD%' in yield_data.columns else None
+        if yield_col:
+            summary_stats.append(["Avg Yield", f"{yield_data[yield_col].mean():.2f}%"])
+            summary_stats.append(["Min Yield", f"{yield_data[yield_col].min():.2f}%"])
+            summary_stats.append(["Max Yield", f"{yield_data[yield_col].max():.2f}%"])
 
         summary_table = Table(summary_stats, colWidths=[2 * inch, 2 * inch])
         summary_table.setStyle(TableStyle([
@@ -167,20 +169,23 @@ def create_dashboard_pdf(
         elements.append(Paragraph("2. Module ELC Yield", heading_style))
         elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
 
-        # ELC summary by step
+        # ELC summary by step (handle both uppercase and lowercase column names)
         if 'step' in elc_data.columns:
+            uin_col = 'UIN' if 'UIN' in elc_data.columns else 'uin'
+            upass_col = 'UPASS' if 'UPASS' in elc_data.columns else 'upass'
+
             step_summary = elc_data.groupby('step').agg({
-                'uin': 'sum',
-                'upass': 'sum'
+                uin_col: 'sum',
+                upass_col: 'sum'
             }).reset_index()
-            step_summary['yield_pct'] = (step_summary['upass'] / step_summary['uin'] * 100).round(2)
+            step_summary['yield_pct'] = (step_summary[upass_col] / step_summary[uin_col] * 100).round(2)
 
             step_data = [["Step", "UIN", "UPASS", "Yield %"]]
             for _, row in step_summary.iterrows():
                 step_data.append([
                     row['step'],
-                    f"{int(row['uin']):,}",
-                    f"{int(row['upass']):,}",
+                    f"{int(row[uin_col]):,}",
+                    f"{int(row[upass_col]):,}",
                     f"{row['yield_pct']:.2f}%"
                 ])
 
