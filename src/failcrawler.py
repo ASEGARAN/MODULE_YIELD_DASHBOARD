@@ -62,6 +62,280 @@ def sort_workweek(ww):
     return year * 100 + week
 
 
+# =============================================================================
+# WoW Trend Detection & Alert Thresholds
+# =============================================================================
+
+# Alert thresholds for WoW % change (Moderate setting)
+ALERT_THRESHOLD_RED = 50      # >50% increase = Red alert
+ALERT_THRESHOLD_YELLOW = 25   # >25% increase = Yellow warning
+# <=25% = Green (stable/improving)
+
+
+def calculate_wow_change(current_value: float, previous_value: float) -> dict:
+    """
+    Calculate week-over-week change and determine alert level.
+
+    Args:
+        current_value: Current week's DPM value
+        previous_value: Previous week's DPM value
+
+    Returns:
+        Dictionary with change %, direction, and alert level
+    """
+    if previous_value is None or previous_value == 0:
+        return {
+            'change_pct': None,
+            'direction': 'flat',
+            'arrow': '―',
+            'alert_level': 'none',
+            'alert_color': '#9E9E9E'  # Grey
+        }
+
+    change_pct = ((current_value - previous_value) / previous_value) * 100
+
+    # Determine direction and arrow
+    if change_pct > 1:
+        direction = 'up'
+        arrow = '↑'
+    elif change_pct < -1:
+        direction = 'down'
+        arrow = '↓'
+    else:
+        direction = 'flat'
+        arrow = '―'
+
+    # Determine alert level (only for increases)
+    if change_pct > ALERT_THRESHOLD_RED:
+        alert_level = 'red'
+        alert_color = '#E74C3C'  # Red
+    elif change_pct > ALERT_THRESHOLD_YELLOW:
+        alert_level = 'yellow'
+        alert_color = '#F39C12'  # Orange/Yellow
+    elif change_pct < -10:
+        alert_level = 'improving'
+        alert_color = '#27AE60'  # Green (improving)
+    else:
+        alert_level = 'stable'
+        alert_color = '#3498DB'  # Blue (stable)
+
+    return {
+        'change_pct': round(change_pct, 1),
+        'direction': direction,
+        'arrow': arrow,
+        'alert_level': alert_level,
+        'alert_color': alert_color
+    }
+
+
+def calculate_dpm_trend_by_week(
+    df: pd.DataFrame,
+    step: str,
+    metric: str = 'fcdpm'
+) -> dict:
+    """
+    Calculate DPM values per workweek for trend analysis.
+
+    Args:
+        df: DataFrame with DPM data (fcdpm_df, cdpm_df, or mdpm_df)
+        step: Test step to filter
+        metric: Which metric ('fcdpm', 'cdpm', 'mdpm')
+
+    Returns:
+        Dictionary with workweeks as keys and DPM values
+    """
+    if df.empty:
+        return {}
+
+    # Filter by step
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in df.columns else 'STEP'
+    if step_col not in df.columns:
+        return {}
+
+    step_df = df[df[step_col].str.upper() == step.upper()].copy()
+    if step_df.empty or 'MFG_WORKWEEK' not in step_df.columns:
+        return {}
+
+    trend_data = {}
+
+    if metric == 'fcdpm':
+        # For FCDPM, sum FAILCRAWLER columns per workweek
+        metadata_cols = ['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'FCFM', 'QUERY_STEP',
+                         'UIN', 'UFAIL', 'UPASS', 'ALL', 'ALL(DPM)', 'UNKNOWN',
+                         'MOD_CUSTOM_TEST_FLOW', 'MSN_STATUS', 'VERIFIED', 'FID_STATUS',
+                         'MUIN', 'MUFAIL']
+        fc_cols = [col for col in step_df.columns if col not in metadata_cols]
+
+        for ww in step_df['MFG_WORKWEEK'].unique():
+            ww_df = step_df[step_df['MFG_WORKWEEK'] == ww]
+            total_dpm = 0
+            for fc_col in fc_cols:
+                if fc_col in ww_df.columns:
+                    val = pd.to_numeric(ww_df[fc_col], errors='coerce').mean()
+                    if pd.notna(val) and val > 0:
+                        total_dpm += val
+            trend_data[int(ww)] = round(total_dpm, 2)
+
+    elif metric == 'cdpm':
+        # For cDPM, calculate (UFAIL / UIN) * 1M per workweek
+        for ww in step_df['MFG_WORKWEEK'].unique():
+            ww_df = step_df[step_df['MFG_WORKWEEK'] == ww]
+            uin = pd.to_numeric(ww_df['UIN'], errors='coerce').sum() if 'UIN' in ww_df.columns else 0
+            ufail = pd.to_numeric(ww_df['UFAIL'], errors='coerce').sum() if 'UFAIL' in ww_df.columns else 0
+            if uin > 0:
+                trend_data[int(ww)] = round((ufail / uin) * 1_000_000, 2)
+
+    elif metric == 'mdpm':
+        # For MDPM, calculate (MUFAIL / MUIN) * 1M per workweek
+        for ww in step_df['MFG_WORKWEEK'].unique():
+            ww_df = step_df[step_df['MFG_WORKWEEK'] == ww]
+            muin = pd.to_numeric(ww_df['MUIN'], errors='coerce').sum() if 'MUIN' in ww_df.columns else 0
+            mufail = pd.to_numeric(ww_df['MUFAIL'], errors='coerce').sum() if 'MUFAIL' in ww_df.columns else 0
+            if muin > 0:
+                trend_data[int(ww)] = round((mufail / muin) * 1_000_000, 2)
+
+    return trend_data
+
+
+def generate_sparkline_svg(
+    values: list[float],
+    width: int = 80,
+    height: int = 20,
+    color: str = '#3498DB',
+    alert_color: str = None
+) -> str:
+    """
+    Generate an inline SVG sparkline.
+
+    Args:
+        values: List of values to plot
+        width: SVG width in pixels
+        height: SVG height in pixels
+        color: Line color
+        alert_color: Optional color for the last point (alert indicator)
+
+    Returns:
+        SVG string for inline HTML
+    """
+    if not values or len(values) < 2:
+        return ''
+
+    # Normalize values to fit in SVG
+    min_val = min(values)
+    max_val = max(values)
+    val_range = max_val - min_val if max_val != min_val else 1
+
+    # Calculate points
+    points = []
+    x_step = width / (len(values) - 1)
+    for i, val in enumerate(values):
+        x = i * x_step
+        y = height - ((val - min_val) / val_range * (height - 4) + 2)  # 2px padding
+        points.append(f"{x:.1f},{y:.1f}")
+
+    polyline_points = ' '.join(points)
+
+    # Last point for dot
+    last_x = (len(values) - 1) * x_step
+    last_y = height - ((values[-1] - min_val) / val_range * (height - 4) + 2)
+    dot_color = alert_color if alert_color else color
+
+    svg = f'''<svg width="{width}" height="{height}" style="vertical-align: middle;">
+        <polyline points="{polyline_points}" fill="none" stroke="{color}" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="3" fill="{dot_color}"/>
+    </svg>'''
+
+    return svg
+
+
+def detect_excursions(
+    fcdpm_df: pd.DataFrame,
+    cdpm_df: pd.DataFrame,
+    mdpm_df: pd.DataFrame,
+    steps: list[str]
+) -> list[dict]:
+    """
+    Detect WoW excursions across all steps.
+
+    Args:
+        fcdpm_df: FAILCRAWLER DPM data
+        cdpm_df: Component DPM data
+        mdpm_df: Module DPM data
+        steps: List of test steps to check
+
+    Returns:
+        List of excursion dictionaries with step, metric, change %, alert level
+    """
+    excursions = []
+
+    for step in steps:
+        # Check FCDPM trend
+        fcdpm_trend = calculate_dpm_trend_by_week(fcdpm_df, step, 'fcdpm')
+        if len(fcdpm_trend) >= 2:
+            sorted_wws = sorted(fcdpm_trend.keys())
+            current_ww = sorted_wws[-1]
+            previous_ww = sorted_wws[-2]
+            wow = calculate_wow_change(fcdpm_trend[current_ww], fcdpm_trend[previous_ww])
+
+            if wow['alert_level'] in ['red', 'yellow']:
+                excursions.append({
+                    'step': step,
+                    'metric': 'FCDPM',
+                    'current_ww': current_ww,
+                    'current_value': fcdpm_trend[current_ww],
+                    'previous_value': fcdpm_trend[previous_ww],
+                    'change_pct': wow['change_pct'],
+                    'alert_level': wow['alert_level'],
+                    'alert_color': wow['alert_color']
+                })
+
+    return excursions
+
+
+def create_alert_summary_html(excursions: list[dict], dark_mode: bool = False) -> str:
+    """
+    Create HTML alert summary banner for excursions.
+
+    Args:
+        excursions: List of excursion dictionaries from detect_excursions
+        dark_mode: Theme setting
+
+    Returns:
+        HTML string for alert banner, or empty string if no excursions
+    """
+    if not excursions:
+        return ''
+
+    bg_color = '#2d2d2d' if dark_mode else '#fff3cd'
+    border_color = '#E74C3C' if any(e['alert_level'] == 'red' for e in excursions) else '#F39C12'
+    text_color = '#ffffff' if dark_mode else '#856404'
+
+    # Build excursion list
+    excursion_items = []
+    for exc in sorted(excursions, key=lambda x: abs(x['change_pct']), reverse=True):
+        arrow = '↑' if exc['change_pct'] > 0 else '↓'
+        color = exc['alert_color']
+        excursion_items.append(
+            f"<span style='color: {color}; font-weight: bold;'>{exc['step']}</span> "
+            f"<span style='color: {color};'>{arrow}{abs(exc['change_pct']):.0f}% WoW</span>"
+        )
+
+    excursion_text = ' | '.join(excursion_items)
+    icon = '🔴' if any(e['alert_level'] == 'red' for e in excursions) else '🟡'
+
+    html = f'''
+    <div style="background-color: {bg_color}; border-left: 4px solid {border_color};
+                border-radius: 4px; padding: 10px 14px; margin-bottom: 16px;">
+        <span style="font-size: 14px; color: {text_color};">
+            {icon} <b>{len(excursions)} excursion{'s' if len(excursions) > 1 else ''} detected:</b>
+            {excursion_text}
+        </span>
+    </div>
+    '''
+
+    return html
+
+
 def _build_step_specific_cmd(
     step: str,
     design_ids: list[str],
@@ -1918,7 +2192,8 @@ def create_dpm_metrics_summary_html(
     step: str,
     workweek: int = None,
     dark_mode: bool = False,
-    fcfm_df: pd.DataFrame = None
+    fcfm_df: pd.DataFrame = None,
+    show_trends: bool = True
 ) -> str:
     """
     Create HTML summary table showing cDPM, MDPM, and FCDPM side by side.
@@ -1931,6 +2206,7 @@ def create_dpm_metrics_summary_html(
         workweek: Optional specific workweek (None = all)
         dark_mode: Theme setting
         fcfm_df: Optional FCFM DataFrame for UE/UNKNOWN breakdown
+        show_trends: Whether to show WoW trends and sparklines
 
     Returns:
         HTML string for the DPM summary card
@@ -2039,6 +2315,63 @@ def create_dpm_metrics_summary_html(
     # Format workweek display
     ww_display = f"WW{workweek}" if workweek else "Cumulative"
 
+    # Calculate trends and WoW changes if enabled
+    cdpm_wow = {'arrow': '', 'change_pct': None, 'alert_color': '#3498DB'}
+    mdpm_wow = {'arrow': '', 'change_pct': None, 'alert_color': '#E74C3C'}
+    fcdpm_wow = {'arrow': '', 'change_pct': None, 'alert_color': '#F39C12'}
+
+    cdpm_sparkline = ''
+    mdpm_sparkline = ''
+    fcdpm_sparkline = ''
+
+    if show_trends and workweek is not None:
+        # Calculate FCDPM trend
+        fcdpm_trend = calculate_dpm_trend_by_week(fcdpm_df, step, 'fcdpm')
+        if len(fcdpm_trend) >= 2:
+            sorted_wws = sorted(fcdpm_trend.keys())
+            if workweek in fcdpm_trend and sorted_wws.index(workweek) > 0:
+                prev_idx = sorted_wws.index(workweek) - 1
+                prev_ww = sorted_wws[prev_idx]
+                fcdpm_wow = calculate_wow_change(fcdpm_trend[workweek], fcdpm_trend[prev_ww])
+            # Generate sparkline
+            trend_values = [fcdpm_trend[ww] for ww in sorted_wws if ww in fcdpm_trend]
+            if len(trend_values) >= 2:
+                fcdpm_sparkline = generate_sparkline_svg(trend_values, color='#F39C12', alert_color=fcdpm_wow.get('alert_color'))
+
+        # Calculate cDPM trend
+        cdpm_trend = calculate_dpm_trend_by_week(cdpm_df, step, 'cdpm')
+        if len(cdpm_trend) >= 2:
+            sorted_wws = sorted(cdpm_trend.keys())
+            if workweek in cdpm_trend and sorted_wws.index(workweek) > 0:
+                prev_idx = sorted_wws.index(workweek) - 1
+                prev_ww = sorted_wws[prev_idx]
+                cdpm_wow = calculate_wow_change(cdpm_trend[workweek], cdpm_trend[prev_ww])
+            trend_values = [cdpm_trend[ww] for ww in sorted_wws if ww in cdpm_trend]
+            if len(trend_values) >= 2:
+                cdpm_sparkline = generate_sparkline_svg(trend_values, color='#3498DB', alert_color=cdpm_wow.get('alert_color'))
+
+        # Calculate MDPM trend
+        mdpm_trend = calculate_dpm_trend_by_week(mdpm_df, step, 'mdpm')
+        if len(mdpm_trend) >= 2:
+            sorted_wws = sorted(mdpm_trend.keys())
+            if workweek in mdpm_trend and sorted_wws.index(workweek) > 0:
+                prev_idx = sorted_wws.index(workweek) - 1
+                prev_ww = sorted_wws[prev_idx]
+                mdpm_wow = calculate_wow_change(mdpm_trend[workweek], mdpm_trend[prev_ww])
+            trend_values = [mdpm_trend[ww] for ww in sorted_wws if ww in mdpm_trend]
+            if len(trend_values) >= 2:
+                mdpm_sparkline = generate_sparkline_svg(trend_values, color='#E74C3C', alert_color=mdpm_wow.get('alert_color'))
+
+    # Helper to build WoW indicator HTML
+    def wow_indicator_html(wow_data: dict) -> str:
+        if wow_data.get('change_pct') is None:
+            return ''
+        arrow = wow_data.get('arrow', '')
+        pct = wow_data.get('change_pct', 0)
+        color = wow_data.get('alert_color', '#666666')
+        sign = '+' if pct > 0 else ''
+        return f'<span style="font-size: 12px; color: {color}; margin-left: 8px;">{arrow} {sign}{pct:.0f}%</span>'
+
     # Build HTML
     html = f'''
     <div style="background-color: {bg_color}; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
@@ -2048,30 +2381,45 @@ def create_dpm_metrics_summary_html(
 
         <div style="display: flex; gap: 16px; flex-wrap: wrap;">
             <!-- cDPM Card -->
-            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid #3498DB;">
-                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">cDPM</div>
-                <div style="font-size: 24px; font-weight: bold; color: #3498DB; margin: 4px 0;">
-                    {cdpm_val if cdpm_val is not None else 'N/A'}
+            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid {cdpm_wow.get('alert_color', '#3498DB')};">
+                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">
+                    cDPM {wow_indicator_html(cdpm_wow)}
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 24px; font-weight: bold; color: #3498DB;">
+                        {cdpm_val if cdpm_val is not None else 'N/A'}
+                    </span>
+                    {cdpm_sparkline}
                 </div>
                 <div style="font-size: 10px; color: {subtext_color};">Component/Package Level</div>
                 <div style="font-size: 10px; color: {subtext_color}; margin-top: 4px;">UIN: {uin:,}</div>
             </div>
 
             <!-- MDPM Card -->
-            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid #E74C3C;">
-                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">MDPM</div>
-                <div style="font-size: 24px; font-weight: bold; color: #E74C3C; margin: 4px 0;">
-                    {mdpm_val if mdpm_val is not None else 'N/A'}
+            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid {mdpm_wow.get('alert_color', '#E74C3C')};">
+                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">
+                    MDPM {wow_indicator_html(mdpm_wow)}
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 24px; font-weight: bold; color: #E74C3C;">
+                        {mdpm_val if mdpm_val is not None else 'N/A'}
+                    </span>
+                    {mdpm_sparkline}
                 </div>
                 <div style="font-size: 10px; color: {subtext_color};">Module Level</div>
                 <div style="font-size: 10px; color: {subtext_color}; margin-top: 4px;">MUIN: {muin:,}</div>
             </div>
 
             <!-- FCDPM Total Card -->
-            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid #F39C12;">
-                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">FCDPM Total</div>
-                <div style="font-size: 24px; font-weight: bold; color: #F39C12; margin: 4px 0;">
-                    {fcdpm_total if fcdpm_total is not None else 'N/A'}
+            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid {fcdpm_wow.get('alert_color', '#F39C12')};">
+                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">
+                    FCDPM Total {wow_indicator_html(fcdpm_wow)}
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 24px; font-weight: bold; color: #F39C12;">
+                        {fcdpm_total if fcdpm_total is not None else 'N/A'}
+                    </span>
+                    {fcdpm_sparkline}
                 </div>
                 <div style="font-size: 10px; color: {subtext_color};">All FAILCRAWLERs (UE+UNKNOWN)</div>
                 <div style="font-size: 10px; color: {subtext_color}; margin-top: 4px;">Target: {TARGET_CDPM}</div>

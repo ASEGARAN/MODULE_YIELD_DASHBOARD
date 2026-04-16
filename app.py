@@ -64,6 +64,9 @@ from src.failcrawler import (
     fetch_fcfm_decode_quality,
     calculate_decode_quality,
     create_decode_quality_html,
+    # Trend detection and alerts
+    detect_excursions,
+    create_alert_summary_html,
 )
 
 # SMT6 yield module
@@ -3833,6 +3836,13 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
         if 'MFG_WORKWEEK' in fc_df.columns:
             latest_ww = int(fc_df['MFG_WORKWEEK'].max())
 
+        # Detect and display excursions (WoW alerts)
+        excursions = detect_excursions(fc_df, cdpm_df, mdpm_df, steps_to_show)
+        if excursions:
+            alert_html = create_alert_summary_html(excursions, dark_mode=False)
+            if alert_html:
+                components.html(alert_html, height=50, scrolling=False)
+
         # Show DPM comparison table for all steps (above individual step charts)
         if not cdpm_df.empty or not mdpm_df.empty:
             with st.expander("📊 DPM Metrics Comparison (All Steps)", expanded=True):
@@ -3879,14 +3889,14 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     if decode_html:
                         components.html(decode_html, height=40, scrolling=False)
 
-            # Show DPM metrics summary cards for this step
+            # Show DPM metrics summary cards for this step (with WoW trends and sparklines)
             if not cdpm_df.empty or not mdpm_df.empty:
                 summary_html = create_dpm_metrics_summary_html(
                     cdpm_df, mdpm_df, fc_df, step, workweek=latest_ww, dark_mode=False,
-                    fcfm_df=fcfm_df
+                    fcfm_df=fcfm_df, show_trends=True
                 )
                 if summary_html:
-                    components.html(summary_html, height=200, scrolling=False)
+                    components.html(summary_html, height=220, scrolling=False)
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(
