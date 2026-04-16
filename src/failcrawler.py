@@ -2697,3 +2697,358 @@ def create_dpm_comparison_table_html(
     '''
 
     return html
+
+
+# =============================================================================
+# FAILCRAWLER Drill-down Functions
+# =============================================================================
+
+def fetch_failcrawler_msn_drilldown(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[int],
+    failcrawler: str,
+    msn_status: str = None
+) -> pd.DataFrame:
+    """
+    Fetch MSN-level data for a specific FAILCRAWLER category and optionally MSN_STATUS.
+
+    Args:
+        design_ids: List of Design IDs
+        steps: List of test steps
+        workweeks: List of workweeks in YYYYWW format
+        failcrawler: FAILCRAWLER category to drill down on
+        msn_status: Optional MSN_STATUS filter (e.g., 'DQ', 'Downbin', 'Good')
+
+    Returns:
+        DataFrame with MSN-level fail details
+    """
+    if not design_ids or not steps or not workweeks:
+        return pd.DataFrame()
+
+    # Build mtsums command with MSN grouping
+    dbase = ','.join(design_ids)
+    step_str = ','.join(steps)
+    ww_str = ','.join(str(ww) for ww in workweeks)
+
+    # Base command with FAILCRAWLER filter
+    cmd = (
+        f"mtsums -dbase={dbase} -step={step_str} -ww={ww_str} "
+        f"-failcrawler={failcrawler} "
+    )
+
+    # Add MSN_STATUS filter if provided
+    if msn_status:
+        cmd += f"-msn_status={msn_status} "
+
+    # Add output format
+    cmd += (
+        f"+msnag +fc -format+=msn,mfg_workweek,step,failcrawler,msn_status "
+        f"=islatest =isvalid +stdf +quiet +csv"
+    )
+
+    logger.info(f"FAILCRAWLER drilldown command: {cmd}")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if result.returncode != 0:
+            logger.error(f"mtsums error: {result.stderr}")
+            return pd.DataFrame()
+
+        if not result.stdout.strip():
+            return pd.DataFrame()
+
+        df = pd.read_csv(StringIO(result.stdout))
+        logger.info(f"FAILCRAWLER drilldown returned {len(df)} rows")
+        return df
+
+    except Exception as e:
+        logger.exception(f"FAILCRAWLER drilldown error: {e}")
+        return pd.DataFrame()
+
+
+def create_failcrawler_drilldown_html(
+    drilldown_df: pd.DataFrame,
+    failcrawler: str,
+    step: str,
+    msn_status: str = None,
+    dark_mode: bool = False,
+    max_rows: int = 20
+) -> str:
+    """
+    Create HTML table showing MSNs affected by a FAILCRAWLER category and optionally MSN_STATUS.
+
+    Args:
+        drilldown_df: DataFrame with MSN-level data
+        failcrawler: FAILCRAWLER category name
+        step: Test step
+        msn_status: Optional MSN_STATUS filter
+        dark_mode: Use dark mode styling
+        max_rows: Maximum rows to display
+
+    Returns:
+        HTML string for the drilldown table
+    """
+    if drilldown_df.empty:
+        filter_desc = f"{failcrawler}" + (f" × {msn_status}" if msn_status else "")
+        return f"<p style='color: #888;'>No MSN data found for {filter_desc}</p>"
+
+    # Filter by step if present
+    df = drilldown_df.copy()
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in df.columns else 'STEP'
+    if step_col in df.columns:
+        df = df[df[step_col].str.upper() == step.upper()]
+
+    if df.empty:
+        filter_desc = f"{failcrawler}" + (f" × {msn_status}" if msn_status else "")
+        return f"<p style='color: #888;'>No MSN data found for {filter_desc} at {step}</p>"
+
+    # Style colors
+    bg_color = '#2d2d2d' if dark_mode else '#ffffff'
+    text_color = '#ffffff' if dark_mode else '#1a1a1a'
+    header_bg = '#1a237e' if not dark_mode else '#283593'
+    border_color = '#555555' if dark_mode else '#e0e0e0'
+
+    # Get FAILCRAWLER color
+    fc_color = FAILCRAWLER_COLORS.get(failcrawler, '#888')
+
+    # Aggregate by MSN
+    msn_col = 'MSN' if 'MSN' in df.columns else None
+    if not msn_col:
+        return f"<p style='color: #888;'>MSN column not found in data</p>"
+
+    # Calculate metrics per MSN
+    msn_data = []
+    for msn in df[msn_col].unique():
+        msn_df = df[df[msn_col] == msn]
+        ufail = pd.to_numeric(msn_df['UFAIL'], errors='coerce').sum() if 'UFAIL' in msn_df.columns else 0
+        uin = pd.to_numeric(msn_df['UIN'], errors='coerce').sum() if 'UIN' in msn_df.columns else 0
+
+        # Get workweek (use most recent)
+        ww = None
+        if 'MFG_WORKWEEK' in msn_df.columns:
+            ww = msn_df['MFG_WORKWEEK'].max()
+
+        # Get MSN_STATUS if available
+        status = None
+        if 'MSN_STATUS' in msn_df.columns:
+            status = msn_df['MSN_STATUS'].iloc[0] if len(msn_df) > 0 else None
+
+        msn_data.append({
+            'msn': msn,
+            'ufail': int(ufail),
+            'uin': int(uin),
+            'workweek': ww,
+            'status': status
+        })
+
+    # Sort by UFAIL descending
+    msn_data = sorted(msn_data, key=lambda x: -x['ufail'])
+
+    total_msns = len(msn_data)
+    total_ufail = sum(m['ufail'] for m in msn_data)
+
+    # Build title with optional MSN_STATUS
+    title_parts = [failcrawler]
+    if msn_status:
+        title_parts.append(msn_status)
+    title = " × ".join(title_parts)
+
+    html = f'''
+    <div style="background-color: {bg_color}; padding: 12px; border-radius: 8px; border: 1px solid {border_color}; margin: 8px 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 13px; font-weight: 600; color: {text_color};">
+                <span style="display: inline-block; width: 12px; height: 12px; background-color: {fc_color}; border-radius: 3px; margin-right: 8px;"></span>
+                🔍 {title} - Affected MSNs ({step})
+            </span>
+            <span style="font-size: 11px; color: #888;">{total_msns} modules | {total_ufail:,} total FID fails</span>
+        </div>
+        <table style="border-collapse: collapse; width: 100%; font-size: 11px; font-family: monospace;">
+            <thead>
+                <tr style="background-color: {header_bg};">
+                    <th style="padding: 6px 8px; text-align: left; color: white;">MSN</th>
+                    <th style="padding: 6px 8px; text-align: right; color: white;">FID Fails</th>
+                    <th style="padding: 6px 8px; text-align: right; color: white;">UIN</th>
+                    <th style="padding: 6px 8px; text-align: center; color: white;">WW</th>
+                </tr>
+            </thead>
+            <tbody>
+    '''
+
+    # Show top MSNs
+    for i, msn_info in enumerate(msn_data[:max_rows]):
+        row_bg = bg_color if i % 2 == 0 else ('#363636' if dark_mode else '#f8f9fa')
+
+        html += f'''
+            <tr style="background-color: {row_bg};">
+                <td style="padding: 5px 8px; color: {text_color}; border-bottom: 1px solid {border_color};">
+                    {msn_info['msn']}
+                </td>
+                <td style="padding: 5px 8px; text-align: right; color: #E74C3C; font-weight: 600; border-bottom: 1px solid {border_color};">
+                    {msn_info['ufail']:,}
+                </td>
+                <td style="padding: 5px 8px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">
+                    {msn_info['uin']:,}
+                </td>
+                <td style="padding: 5px 8px; text-align: center; color: #888; border-bottom: 1px solid {border_color};">
+                    {msn_info['workweek'] if msn_info['workweek'] else '-'}
+                </td>
+            </tr>
+        '''
+
+    # Show "more" indicator if truncated
+    if total_msns > max_rows:
+        remaining = total_msns - max_rows
+        remaining_ufail = sum(m['ufail'] for m in msn_data[max_rows:])
+        html += f'''
+            <tr style="background-color: {bg_color};">
+                <td colspan="4" style="padding: 8px; text-align: center; color: #888; font-style: italic; border-bottom: 1px solid {border_color};">
+                    ... and {remaining} more MSNs ({remaining_ufail:,} additional FID fails)
+                </td>
+            </tr>
+        '''
+
+    html += '''
+            </tbody>
+        </table>
+    </div>
+    '''
+
+    return html
+
+
+def get_failcrawler_list_for_step(fc_df: pd.DataFrame, step: str) -> list[str]:
+    """
+    Get list of FAILCRAWLER categories for a step, sorted by cDPM.
+
+    Args:
+        fc_df: FAILCRAWLER DataFrame
+        step: Test step
+
+    Returns:
+        List of FAILCRAWLER names sorted by cDPM descending
+    """
+    if fc_df.empty:
+        return []
+
+    # Filter by step
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in fc_df.columns else 'STEP'
+    df = fc_df.copy()
+
+    if step_col in df.columns:
+        df = df[df[step_col].str.upper() == step.upper()]
+
+    if df.empty or 'FAILCRAWLER' not in df.columns:
+        return []
+
+    # Exclude metadata/aggregate rows
+    exclude_vals = {'ALL', 'SUM', 'TOTAL', 'PASS', 'ALL(DPM)', 'ALL(SUM)', 'MOD_CUSTOM_TEST_FLOW'}
+    df = df[~df['FAILCRAWLER'].str.upper().isin(exclude_vals)]
+
+    # Aggregate by FAILCRAWLER and sort by UFAIL
+    fc_data = []
+    for fc in df['FAILCRAWLER'].unique():
+        if fc and pd.notna(fc):
+            fc_df_filtered = df[df['FAILCRAWLER'] == fc]
+            ufail = pd.to_numeric(fc_df_filtered['UFAIL'], errors='coerce').sum() if 'UFAIL' in fc_df_filtered.columns else 0
+            fc_data.append((fc, ufail))
+
+    # Sort by UFAIL descending
+    fc_data = sorted(fc_data, key=lambda x: -x[1])
+
+    return [fc for fc, _ in fc_data]
+
+
+def get_msn_status_list_for_step(msn_corr_df: pd.DataFrame, step: str) -> list[str]:
+    """
+    Get list of MSN_STATUS values for a step, sorted by UFAIL.
+
+    Args:
+        msn_corr_df: MSN_STATUS correlation DataFrame
+        step: Test step
+
+    Returns:
+        List of MSN_STATUS values sorted by UFAIL descending
+    """
+    if msn_corr_df.empty:
+        return []
+
+    # Filter by step
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
+    df = msn_corr_df.copy()
+
+    if step_col in df.columns:
+        df = df[df[step_col].str.upper() == step.upper()]
+
+    if df.empty or 'MSN_STATUS' not in df.columns:
+        return []
+
+    # Exclude Pass status (typically not useful for drill-down)
+    df = df[df['MSN_STATUS'].str.upper() != 'PASS']
+
+    # Aggregate by MSN_STATUS and sort by UFAIL
+    status_data = []
+    for status in df['MSN_STATUS'].unique():
+        if status and pd.notna(status):
+            status_df = df[df['MSN_STATUS'] == status]
+            ufail = pd.to_numeric(status_df['UFAIL'], errors='coerce').sum() if 'UFAIL' in status_df.columns else 0
+            status_data.append((status, ufail))
+
+    # Sort by UFAIL descending
+    status_data = sorted(status_data, key=lambda x: -x[1])
+
+    return [status for status, _ in status_data]
+
+
+def get_heatmap_combinations(msn_corr_df: pd.DataFrame, step: str) -> list[tuple[str, str, float]]:
+    """
+    Get FAILCRAWLER × MSN_STATUS combinations from correlation data.
+
+    Args:
+        msn_corr_df: MSN_STATUS correlation DataFrame
+        step: Test step
+
+    Returns:
+        List of (FAILCRAWLER, MSN_STATUS, cDPM) tuples sorted by cDPM descending
+    """
+    if msn_corr_df.empty:
+        return []
+
+    # Filter by step
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
+    df = msn_corr_df.copy()
+
+    if step_col in df.columns:
+        df = df[df[step_col].str.upper() == step.upper()]
+
+    if df.empty:
+        return []
+
+    # Check required columns
+    if 'FAILCRAWLER' not in df.columns or 'MSN_STATUS' not in df.columns:
+        return []
+
+    # Exclude metadata rows
+    exclude_fcs = {'ALL', 'SUM', 'TOTAL', 'PASS', 'ALL(DPM)', 'ALL(SUM)', 'MOD_CUSTOM_TEST_FLOW'}
+    df = df[~df['FAILCRAWLER'].str.upper().isin(exclude_fcs)]
+    df = df[df['MSN_STATUS'].str.upper() != 'PASS']
+
+    # Calculate cDPM for each combination
+    combinations = []
+    for (fc, status), group in df.groupby(['FAILCRAWLER', 'MSN_STATUS']):
+        if fc and status and pd.notna(fc) and pd.notna(status):
+            uin = pd.to_numeric(group['UIN'], errors='coerce').sum() if 'UIN' in group.columns else 0
+            ufail = pd.to_numeric(group['UFAIL'], errors='coerce').sum() if 'UFAIL' in group.columns else 0
+            cdpm = (ufail / uin) * 1_000_000 if uin > 0 else 0
+            if cdpm > 0:
+                combinations.append((fc, status, round(cdpm, 2)))
+
+    # Sort by cDPM descending
+    return sorted(combinations, key=lambda x: -x[2])

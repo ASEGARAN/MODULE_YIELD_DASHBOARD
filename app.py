@@ -70,6 +70,11 @@ from src.failcrawler import (
     # Top Movers
     calculate_failcrawler_wow_changes,
     create_top_movers_html,
+    # Drill-down
+    fetch_failcrawler_msn_drilldown,
+    create_failcrawler_drilldown_html,
+    get_failcrawler_list_for_step,
+    get_msn_status_list_for_step,
 )
 
 # SMT6 yield module
@@ -4016,6 +4021,89 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                         ranked_html = create_msn_status_ranked_table_html(correlation_data, dark_mode=False)
                         if ranked_html:
                             components.html(ranked_html, height=450, scrolling=True)
+
+                    # Drill-down section: Select FAILCRAWLER × MSN_STATUS to see affected MSNs
+                    st.markdown("##### 🔍 Drill-down: View Affected MSNs")
+                    st.caption("Select a FAILCRAWLER and MSN_STATUS from the heatmap to see affected modules")
+
+                    # Get available options from the correlation data
+                    fc_list = get_failcrawler_list_for_step(filtered_msn_corr_df, step)
+                    msn_status_list = get_msn_status_list_for_step(filtered_msn_corr_df, step)
+
+                    if fc_list and msn_status_list:
+                        drill_col1, drill_col2, drill_col3 = st.columns([2, 2, 1])
+
+                        with drill_col1:
+                            selected_fc = st.selectbox(
+                                "FAILCRAWLER",
+                                options=fc_list,
+                                key=f"drill_fc_{step}",
+                                help="Select FAILCRAWLER category"
+                            )
+
+                        with drill_col2:
+                            selected_msn_status = st.selectbox(
+                                "MSN_STATUS",
+                                options=["All"] + msn_status_list,
+                                key=f"drill_status_{step}",
+                                help="Select MSN_STATUS (or All for any status)"
+                            )
+
+                        with drill_col3:
+                            drill_btn = st.button(
+                                "🔎 Show MSNs",
+                                key=f"drill_btn_{step}",
+                                use_container_width=True
+                            )
+
+                        # Store drilldown data per step
+                        drilldown_key = f"heatmap_drilldown_{step}"
+
+                        if drill_btn and selected_fc:
+                            with st.spinner(f"Fetching MSNs for {selected_fc}..."):
+                                # Use current workweeks from filter
+                                drill_wws = workweeks if workweeks else []
+                                drill_dids = filters.get('design_ids', [])
+
+                                # Pass MSN_STATUS filter if not "All"
+                                msn_status_filter = selected_msn_status if selected_msn_status != "All" else None
+
+                                drilldown_df = fetch_failcrawler_msn_drilldown(
+                                    design_ids=drill_dids,
+                                    steps=[step],
+                                    workweeks=drill_wws,
+                                    failcrawler=selected_fc,
+                                    msn_status=msn_status_filter
+                                )
+
+                                # Store in session state
+                                st.session_state[drilldown_key] = {
+                                    'df': drilldown_df,
+                                    'failcrawler': selected_fc,
+                                    'msn_status': msn_status_filter,
+                                    'step': step
+                                }
+
+                        # Display drilldown if available
+                        if drilldown_key in st.session_state and st.session_state[drilldown_key]:
+                            dd_info = st.session_state[drilldown_key]
+                            if not dd_info['df'].empty:
+                                drilldown_html = create_failcrawler_drilldown_html(
+                                    dd_info['df'],
+                                    dd_info['failcrawler'],
+                                    dd_info['step'],
+                                    msn_status=dd_info['msn_status'],
+                                    dark_mode=False
+                                )
+                                components.html(drilldown_html, height=400, scrolling=True)
+                            else:
+                                filter_desc = dd_info['failcrawler']
+                                if dd_info['msn_status']:
+                                    filter_desc += f" × {dd_info['msn_status']}"
+                                st.info(f"No MSN data found for {filter_desc} at {step}")
+                    else:
+                        st.info("No drill-down data available")
+
                 else:
                     st.info(f"No MSN_STATUS correlation data for {step}. All failures may be 'Pass' status.")
 
