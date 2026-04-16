@@ -2928,8 +2928,12 @@ def get_failcrawler_list_for_step(fc_df: pd.DataFrame, step: str) -> list[str]:
     """
     Get list of FAILCRAWLER categories for a step, sorted by cDPM.
 
+    Handles two data formats:
+    1. Row format: DataFrame has 'FAILCRAWLER' column with one row per category
+    2. Pivoted format: DataFrame has FAILCRAWLER names as columns (cDPM values)
+
     Args:
-        fc_df: FAILCRAWLER DataFrame
+        fc_df: FAILCRAWLER DataFrame (either format)
         step: Test step
 
     Returns:
@@ -2945,25 +2949,46 @@ def get_failcrawler_list_for_step(fc_df: pd.DataFrame, step: str) -> list[str]:
     if step_col in df.columns:
         df = df[df[step_col].str.upper() == step.upper()]
 
-    if df.empty or 'FAILCRAWLER' not in df.columns:
+    if df.empty:
         return []
 
-    # Exclude metadata/aggregate rows
-    exclude_vals = {'ALL', 'SUM', 'TOTAL', 'PASS', 'ALL(DPM)', 'ALL(SUM)', 'MOD_CUSTOM_TEST_FLOW'}
-    df = df[~df['FAILCRAWLER'].str.upper().isin(exclude_vals)]
+    # Metadata columns to exclude
+    exclude_cols = {
+        'STEPTYPE', 'DESIGN_ID', 'STEP', 'QUERY_STEP', 'MFG_WORKWEEK', 'MSN_STATUS',
+        'MOD_CUSTOM_TEST_FLOW', 'ALL(DPM)', 'ALL', 'UIN', 'UFAIL', 'MUIN', 'MUFAIL',
+        'ALL(SUM)', 'SUM', 'TOTAL', 'PASS', 'UNKNOWN'
+    }
 
-    # Aggregate by FAILCRAWLER and sort by UFAIL
-    fc_data = []
-    for fc in df['FAILCRAWLER'].unique():
-        if fc and pd.notna(fc):
-            fc_df_filtered = df[df['FAILCRAWLER'] == fc]
-            ufail = pd.to_numeric(fc_df_filtered['UFAIL'], errors='coerce').sum() if 'UFAIL' in fc_df_filtered.columns else 0
-            fc_data.append((fc, ufail))
+    # Check if data is in row format (has FAILCRAWLER column)
+    if 'FAILCRAWLER' in df.columns:
+        # Row format: aggregate by FAILCRAWLER
+        exclude_vals = {'ALL', 'SUM', 'TOTAL', 'PASS', 'ALL(DPM)', 'ALL(SUM)', 'MOD_CUSTOM_TEST_FLOW'}
+        df = df[~df['FAILCRAWLER'].str.upper().isin(exclude_vals)]
 
-    # Sort by UFAIL descending
-    fc_data = sorted(fc_data, key=lambda x: -x[1])
+        fc_data = []
+        for fc in df['FAILCRAWLER'].unique():
+            if fc and pd.notna(fc):
+                fc_df_filtered = df[df['FAILCRAWLER'] == fc]
+                ufail = pd.to_numeric(fc_df_filtered['UFAIL'], errors='coerce').sum() if 'UFAIL' in fc_df_filtered.columns else 0
+                fc_data.append((fc, ufail))
 
-    return [fc for fc, _ in fc_data]
+        fc_data = sorted(fc_data, key=lambda x: -x[1])
+        return [fc for fc, _ in fc_data]
+
+    else:
+        # Pivoted format: FAILCRAWLER names are columns (cDPM values)
+        # Get numeric columns that are potential FAILCRAWLERs
+        fc_data = []
+        for col in df.columns:
+            if col.upper() not in exclude_cols:
+                # Sum the cDPM values across all rows for this FAILCRAWLER
+                total_cdpm = pd.to_numeric(df[col], errors='coerce').sum()
+                if total_cdpm > 0:
+                    fc_data.append((col, total_cdpm))
+
+        # Sort by total cDPM descending
+        fc_data = sorted(fc_data, key=lambda x: -x[1])
+        return [fc for fc, _ in fc_data]
 
 
 def get_msn_status_list_for_step(msn_corr_df: pd.DataFrame, step: str) -> list[str]:
