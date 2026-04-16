@@ -4466,9 +4466,10 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
 
 **Recovery (WW{next_ww}):** Checks if machine passed next week
 
-**⚠️ SOP Violation:** Same lot/MSN retested on same MOBO after HANG
-- HUNG1 → Move to different MOBO
-- HUNG2/HUNG → **Violation!** (retested on same MOBO)
+**⚠️ SOP Violation:** Retest after HUNG2 on same MOBO
+- HUNG1 → OK to retest on same MOBO
+- HUNG2 → Must move to different MOBO after this
+- HUNG (3rd+) → **Violation!** (retested after HUNG2)
                             """)
 
                         # Analyze button
@@ -4493,184 +4494,86 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                         if has_drill_results:
                             drill_df = st.session_state.grace_drill_results
 
-                            # Summary metrics row
+                            # Summary metrics row - only show relevant metrics
                             recovered_count = len(drill_df[drill_df['recovery_status'].str.contains('Recovered', na=False)])
                             still_failing_count = len(drill_df[drill_df['recovery_status'].str.contains('Still Failing', na=False)])
                             sop_violation_count = len(drill_df[drill_df['sop_violation'] == True])
+                            not_reseated_total = int(drill_df['not_reseated'].sum()) if 'not_reseated' in drill_df.columns else 0
 
-                            metric_cols = st.columns(3)
+                            # Dynamic columns based on data (hide "Not Reseated" when 0)
+                            if not_reseated_total > 0:
+                                metric_cols = st.columns(4)
+                            else:
+                                metric_cols = st.columns(3)
+
                             with metric_cols[0]:
                                 st.metric("✅ Recovered", recovered_count)
                             with metric_cols[1]:
                                 st.metric("❌ Still Failing", still_failing_count)
                             with metric_cols[2]:
                                 st.metric("⚠️ SOP Violations", sop_violation_count)
+                            if not_reseated_total > 0:
+                                with metric_cols[3]:
+                                    st.metric("🔍 Not Reseated", not_reseated_total, help="Modules tested at same site (not physically reseated)")
 
-                            # 100% Fail Analysis Table (moved to top)
-                            fail_display = drill_df[['machine_id', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
-                            fail_display.columns = ['Machine ID', 'Status', f'WW{selected_ww}', f'Recovery (WW{next_ww})', 'Remarks']
+                            # Add WoW Status from the comparison table to link the two views
+                            # Map machine_id to WoW status from problematic_display
+                            wow_status_map = dict(zip(
+                                problematic_display['machine_id'],
+                                problematic_display['Hang Status']
+                            ))
+                            drill_df['wow_status'] = drill_df['machine_id'].map(wow_status_map).fillna('—')
 
-                            def highlight_fail_status(row):
-                                # Only highlight concerning items that need action
+                            # Build display table with WoW Status for context
+                            fail_display = drill_df[['machine_id', 'wow_status', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
+                            fail_display.columns = ['Machine ID', 'WoW Hang', '100% Fail', f'Lots (WW{selected_ww})', f'WW{next_ww} Status', 'Remarks']
+
+                            # Simplified highlighting: SOP violations or Bad MOBO
+                            def highlight_row(row):
                                 remarks = str(row.get('Remarks', ''))
-                                recovery = str(row.get(f'Recovery (WW{next_ww})', ''))
-
-                                # Priority 1: SOP Violation (Critical - operator not following procedure)
-                                if 'SOP Violation' in remarks:
-                                    return ['background-color: #FFAB91; font-weight: bold'] * len(row)  # Orange
-                                # Priority 2: Still Failing (needs attention - machine not recovered)
-                                elif '❌ Still Failing' in recovery:
-                                    return ['background-color: #FFCDD2; font-weight: bold'] * len(row)  # Light red
-                                # No highlight for recovered or healthy machines
+                                if '🔴 Bad MOBO' in remarks:
+                                    return ['background-color: #FFCDD2'] * len(row)  # Light red for Bad MOBO
+                                elif '⚠️ SOP' in remarks:
+                                    return ['background-color: #FFF3E0'] * len(row)  # Light orange for SOP
                                 return [''] * len(row)
 
-                            styled_fail = fail_display.style.apply(highlight_fail_status, axis=1)
-                            st.dataframe(styled_fail, use_container_width=True, hide_index=True, height=280)
+                            styled_fail = fail_display.style.apply(highlight_row, axis=1)
+                            # Auto-fit height based on row count (no scrolling)
+                            st.dataframe(styled_fail, use_container_width=True, hide_index=True)
 
-                            # SOP Violation Visualization (below table, if any violations exist)
-                            if sop_violation_count > 0:
-                                sop_df = drill_df[drill_df['sop_violation'] == True].copy()
+                            # Combined Details expander (Lot Details + SOP Rules in parallel grid)
+                            with st.expander("📋 Details (Lots & SOP Rules)", expanded=False):
+                                detail_col1, detail_col2 = st.columns([3, 2])
 
-                                # Parse violation type from remarks
-                                def get_violation_type(remarks):
-                                    if 'MSN-level' in str(remarks):
-                                        return 'MSN-level (HUNG progression)'
-                                    elif 'lot-level' in str(remarks):
-                                        return 'Lot-level (retest on same MOBO)'
-                                    return 'Unknown'
+                                # Left: Lot Details
+                                with detail_col1:
+                                    st.markdown("**Lot Details (100% Fail)**")
+                                    fail_machines = drill_df[drill_df['status'].str.contains('Chronic|New', regex=True)]
+                                    if not fail_machines.empty:
+                                        for _, row in fail_machines.iterrows():
+                                            sop_badge = "⚠️" if row.get('sop_violation') else ""
+                                            st.markdown(f"{sop_badge} **{row['machine_id']}** - {row['status']}")
+                                            if row['lots_current']:
+                                                st.caption(f"WW{selected_ww}: {row['lots_current'][:60]}{'...' if len(str(row['lots_current'])) > 60 else ''}")
+                                            if row['lots_prev']:
+                                                st.caption(f"WW{prev_ww}: {row['lots_prev'][:60]}{'...' if len(str(row['lots_prev'])) > 60 else ''}")
+                                    else:
+                                        st.info("No 100% fail cases")
 
-                                def get_violation_count(remarks):
-                                    """Extract violation count from remarks."""
-                                    import re
-                                    # Try MSN-level pattern first
-                                    msn_match = re.search(r'(\d+) module\(s\)', str(remarks))
-                                    if msn_match:
-                                        return int(msn_match.group(1))
-                                    # Try lot-level pattern
-                                    lot_match = re.search(r'(\d+) lot\(s\)', str(remarks))
-                                    if lot_match:
-                                        return int(lot_match.group(1))
-                                    return 1
-
-                                sop_df['violation_type'] = sop_df['remarks'].apply(get_violation_type)
-                                sop_df['violation_count'] = sop_df['remarks'].apply(get_violation_count)
-
-                                # Create horizontal bar chart for SOP violations
-                                fig_sop = go.Figure()
-
-                                # Color map for violation types
-                                color_map = {
-                                    'MSN-level (HUNG progression)': '#FF6B6B',  # Red - more severe
-                                    'Lot-level (retest on same MOBO)': '#FFA726',  # Orange
-                                    'Unknown': '#BDBDBD'
-                                }
-
-                                # Sort by violation count descending
-                                sop_df_sorted = sop_df.sort_values('violation_count', ascending=True)
-
-                                for v_type in sop_df_sorted['violation_type'].unique():
-                                    subset = sop_df_sorted[sop_df_sorted['violation_type'] == v_type]
-                                    fig_sop.add_trace(go.Bar(
-                                        y=subset['machine_id'],
-                                        x=subset['violation_count'],
-                                        name=v_type,
-                                        orientation='h',
-                                        marker_color=color_map.get(v_type, '#BDBDBD'),
-                                        text=subset['violation_count'],
-                                        textposition='outside',
-                                        hovertemplate=(
-                                            '<b>%{y}</b><br>'
-                                            'Violations: %{x}<br>'
-                                            'Type: ' + v_type + '<br>'
-                                            '<extra></extra>'
-                                        )
-                                    ))
-
-                                fig_sop.update_layout(
-                                    title=dict(
-                                        text=f'⚠️ SOP Violations by Machine (WW{selected_ww})',
-                                        font=dict(size=16, color='#FF6B6B')
-                                    ),
-                                    xaxis_title='Number of Violations',
-                                    yaxis_title='Machine ID',
-                                    barmode='stack',
-                                    height=max(200, len(sop_df) * 40 + 100),
-                                    margin=dict(l=120, r=40, t=60, b=40),
-                                    legend=dict(
-                                        orientation='h',
-                                        yanchor='bottom',
-                                        y=1.02,
-                                        xanchor='right',
-                                        x=1
-                                    ),
-                                    plot_bgcolor='rgba(0,0,0,0)',
-                                    paper_bgcolor='rgba(0,0,0,0)',
-                                    font=dict(color='#E0E0E0')
-                                )
-
-                                fig_sop.update_xaxes(gridcolor='rgba(255,255,255,0.1)', showgrid=True)
-                                fig_sop.update_yaxes(gridcolor='rgba(255,255,255,0.1)', showgrid=False)
-
-                                st.plotly_chart(fig_sop, use_container_width=True)
-
-                                # SOP Violation Details expander
-                                with st.expander("📋 SOP Violation Details", expanded=False):
+                                # Right: SOP Rules (compact)
+                                with detail_col2:
+                                    st.markdown("**SOP Rules (HANG)**")
                                     st.markdown("""
-**What is an SOP Violation?**
-- When a module fails with HANG, SOP requires moving it to a **different motherboard**
-- **Lot-level violation**: Same lot retested on same MOBO after HANG
-- **MSN-level violation**: Same module serial number shows HUNG1 → HUNG2 → HUNG progression (retested on same MOBO)
-
-**SBIN Progression:**
-- `HUNG1` = First HANG (should move to different MOBO)
-- `HUNG2` = Second HANG on same MOBO (**SOP Violation!**)
-- `HUNG` = Third+ HANG on same MOBO (**Severe Violation!**)
-                                    """)
-
-                                    # Show violation lots/MSNs
-                                    for _, row in sop_df.iterrows():
-                                        st.markdown(f"**{row['machine_id']}** - {row['violation_type']}")
-                                        if row['sop_violation_lots']:
-                                            st.code(row['sop_violation_lots'], language=None)
-                                        st.markdown("---")
+`HUNG1` → OK to retest same MOBO
+`HUNG2` → Must move to diff MOBO
+`HUNG` → ⚠️ **Violation** (retest after HUNG2)
+""")
+                                    if sop_violation_count > 0:
+                                        st.markdown(f"**{sop_violation_count} violation(s)** in WW{selected_ww}")
 
                         else:
                             # Placeholder when no analysis yet
                             st.info("👆 Click **Analyze** to run 100% fail drill-down")
-
-                    # Lot details expander (full width below the columns)
-                    if has_drill_results:
-                        drill_df = st.session_state.grace_drill_results
-                        with st.expander("📋 Lot Details (100% Fail Cases)", expanded=False):
-                            fail_machines = drill_df[drill_df['status'].str.contains('Chronic|New', regex=True)]
-                            if not fail_machines.empty:
-                                lot_col1, lot_col2 = st.columns(2)
-                                machines_list = fail_machines.to_dict('records')
-                                half = len(machines_list) // 2 + len(machines_list) % 2
-
-                                with lot_col1:
-                                    for row in machines_list[:half]:
-                                        st.markdown(f"**{row['machine_id']}** - {row['status']}")
-                                        if row['recovery_status']:
-                                            st.markdown(f"  Recovery: {row['recovery_status']}")
-                                        if row['lots_current']:
-                                            st.markdown(f"  - WW{selected_ww}: `{row['lots_current']}`")
-                                        if row['lots_prev']:
-                                            st.markdown(f"  - WW{prev_ww}: `{row['lots_prev']}`")
-                                        st.markdown("---")
-
-                                with lot_col2:
-                                    for row in machines_list[half:]:
-                                        st.markdown(f"**{row['machine_id']}** - {row['status']}")
-                                        if row['recovery_status']:
-                                            st.markdown(f"  Recovery: {row['recovery_status']}")
-                                        if row['lots_current']:
-                                            st.markdown(f"  - WW{selected_ww}: `{row['lots_current']}`")
-                                        if row['lots_prev']:
-                                            st.markdown(f"  - WW{prev_ww}: `{row['lots_prev']}`")
-                                        st.markdown("---")
-                            else:
-                                st.info("No 100% fail cases found")
 
             else:
                 st.success(f"No machines with Hang failures in WW{selected_ww} or WW{prev_ww}")

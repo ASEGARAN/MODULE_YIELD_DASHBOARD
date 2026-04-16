@@ -684,7 +684,7 @@ def fetch_msn_sbin_data(
         steps: Test steps to include
 
     Returns:
-        DataFrame with columns: LOT, MSN, SBIN, STEP, MFG_WORKWEEK
+        DataFrame with columns: LOT, MSN, SBIN, STEP, MFG_WORKWEEK, SITE
     """
     step_list = ','.join(steps)
 
@@ -694,7 +694,7 @@ def fetch_msn_sbin_data(
         f'-ww={workweek}',
         f'-step={step_list}',
         '-msn',
-        '-format=lot,msn,sbin,step,mfg_workweek',
+        '-format=lot,msn,sbin,step,mfg_workweek,site',
         '+csv',
         '+quiet'
     ]
@@ -739,14 +739,13 @@ def detect_sop_violations_msn(
     Detect SOP violations using MSN-level SBIN tracking.
 
     SOP Violation Pattern (per HMB1 HANG Failure SOP):
-    - Same MSN with multiple HUNG1, HUNG2, HUNG on same MACHINE_ID
-    - After HANG failure, module should be moved to DIFFERENT motherboard
-    - Retesting on same MOBO is an SOP violation
+    - HUNG1 = First hang, OK to retest on same MOBO
+    - HUNG2 = Second hang, module MUST be moved to different MOBO after this
+    - Violation = Any test AFTER HUNG2 on same MOBO (HUNG or 3+ hang entries)
 
-    SBIN Progression:
-    - HUNG1: First HANG failure (should trigger MOBO change)
-    - HUNG2: Second HANG on same MOBO (SOP violation!)
-    - HUNG: Third+ HANG on same MOBO (severe SOP violation!)
+    Also tracks site to observe if module was reseated:
+    - Same site across tests = Module not reseated
+    - Different sites = Module was reseated (but still on same MOBO)
 
     Args:
         machine_id: Machine ID to analyze
@@ -758,6 +757,7 @@ def detect_sop_violations_msn(
         - has_violation: True if SOP violation detected
         - violation_msns: List of MSNs with violations
         - hang_progression: Dict mapping MSN to SBIN sequence
+        - site_info: Dict mapping MSN to site observation
         - total_hangs: Total HANG-related SBIN count
     """
     df = fetch_msn_sbin_data(machine_id, workweek, steps)
@@ -767,6 +767,8 @@ def detect_sop_violations_msn(
             'has_violation': False,
             'violation_msns': [],
             'hang_progression': {},
+            'site_info': {},
+            'not_reseated_count': 0,
             'total_hangs': 0,
             'error': 'No MSN data available'
         }
@@ -782,29 +784,55 @@ def detect_sop_violations_msn(
             'has_violation': False,
             'violation_msns': [],
             'hang_progression': {},
+            'site_info': {},
+            'not_reseated_count': 0,
             'total_hangs': 0
         }
 
-    # Track SBIN progression per MSN
+    # Track SBIN progression and site per MSN
     hang_progression = {}
+    site_info = {}
     violation_msns = []
+    not_reseated_count = 0
+
+    # SOP Logic:
+    # - HUNG1 = First hang, OK to retest on same MOBO
+    # - HUNG2 = Second hang, module MUST be moved to different MOBO after this
+    # - Violation = Any test AFTER HUNG2 on same MOBO (i.e., HUNG or another entry after HUNG2)
 
     for msn in hang_df['MSN'].unique():
-        msn_sbins = hang_df[hang_df['MSN'] == msn]['SBIN'].tolist()
+        msn_data = hang_df[hang_df['MSN'] == msn]
+        msn_sbins = msn_data['SBIN'].tolist()
         hang_progression[msn] = msn_sbins
 
-        # SOP Violation: MSN has multiple HANG SBINs on same machine
-        # HUNG2 or HUNG indicates retest on same MOBO (violation)
-        has_hung2_or_hung = any(s in ['HUNG2', 'HUNG', 'HANG2', 'HANG'] for s in msn_sbins)
-        has_multiple_hangs = len(msn_sbins) > 1
+        # Track site information
+        if 'SITE' in msn_data.columns:
+            msn_sites = msn_data['SITE'].unique().tolist()
+            same_site = len(msn_sites) == 1
+            site_info[msn] = {
+                'sites': msn_sites,
+                'same_site': same_site,
+                'reseated': not same_site
+            }
+            if same_site and len(msn_sbins) > 1:
+                not_reseated_count += 1
 
-        if has_hung2_or_hung or has_multiple_hangs:
+        # Check for violation: test after HUNG2 on same machine
+        # HUNG (third+ hang) indicates retest after HUNG2 - this is the violation
+        has_hung_after_hung2 = any(s in ['HUNG', 'HANG'] for s in msn_sbins)
+
+        # Also violation if there are 3+ hang entries (HUNG1 -> HUNG2 -> another test)
+        has_three_or_more_hangs = len(msn_sbins) >= 3
+
+        if has_hung_after_hung2 or has_three_or_more_hangs:
             violation_msns.append(msn)
 
     return {
         'has_violation': len(violation_msns) > 0,
         'violation_msns': violation_msns,
         'hang_progression': hang_progression,
+        'site_info': site_info,
+        'not_reseated_count': not_reseated_count,
         'total_hangs': len(hang_df),
         'violation_count': len(violation_msns)
     }
@@ -854,6 +882,7 @@ def analyze_machines_100pct_fails(
                     'count_next': 0,
                     'sop_violation': False,
                     'sop_violation_lots': '',
+                    'not_reseated': 0,
                     'remarks': '',
                     'lots_current': '',
                     'lots_prev': ''
@@ -908,28 +937,25 @@ def analyze_machines_100pct_fails(
                         # Partial or other results
                         recovery_status = f'🔶 Partial ({len(next_ww_data)} runs)'
 
-                # Add recovery remark
-                if 'Recovered' in recovery_status:
-                    remarks.append("🔧 Potential PM done, machine recovered")
-
-                # SOP Violation Check (Level 1): Same lot with multiple 100% fails on same machine
-                # indicates retest on same MOBO instead of moving to different one
-                lot_fail_counts = current_fails.groupby('lot').size()
-                repeated_lots = lot_fail_counts[lot_fail_counts > 1].index.tolist()
-                if repeated_lots:
-                    sop_violation = True
-                    sop_violation_lots = repeated_lots
-                    remarks.append(f"⚠️ SOP Violation (lot-level) WW{current_ww}: {len(repeated_lots)} lot(s) retested on same MOBO")
-
-                # SOP Violation Check (Level 2): MSN-level SBIN tracking
-                # Look for HUNG1 -> HUNG2 -> HUNG progression on same MSN
+                # SOP Violation Check
                 msn_violation = detect_sop_violations_msn(machine_id, current_ww)
+                not_reseated = msn_violation.get('not_reseated_count', 0)
+
                 if msn_violation.get('has_violation'):
                     sop_violation = True
-                    violation_count = msn_violation.get('violation_count', 0)
-                    remarks.append(f"⚠️ SOP Violation (MSN-level) WW{current_ww}: {violation_count} module(s) with HUNG progression")
+                    remarks.append(f"⚠️ SOP WW{current_ww}: same MOBO retest")
+
+                # Recovery status remarks (for Equipment team alerts)
+                if 'Recovered' in recovery_status:
+                    remarks.append("✅ Recovered")
+
+                # Bad MOBO: >= 3 lots in BOTH current WW AND recovery WW
+                # Logic: HUNG1 + HUNG2 can happen normally, need 3+ in EACH week to confirm bad MOBO
+                if count_current >= 3 and count_next >= 3:
+                    remarks.append(f"🔴 Bad MOBO")
             else:
                 recovery_status = '—'
+                not_reseated = 0
 
             results.append({
                 'machine_id': machine_id,
@@ -940,6 +966,7 @@ def analyze_machines_100pct_fails(
                 'count_next': count_next,
                 'sop_violation': sop_violation,
                 'sop_violation_lots': ', '.join(sop_violation_lots) if sop_violation_lots else '',
+                'not_reseated': not_reseated,
                 'remarks': ' | '.join(remarks) if remarks else '',
                 'lots_current': lots_current,
                 'lots_prev': lots_prev
@@ -956,6 +983,7 @@ def analyze_machines_100pct_fails(
                 'count_next': 0,
                 'sop_violation': False,
                 'sop_violation_lots': '',
+                'not_reseated': 0,
                 'remarks': str(e)[:50],
                 'lots_current': '',
                 'lots_prev': ''
