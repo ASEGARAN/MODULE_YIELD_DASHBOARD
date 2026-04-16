@@ -62,6 +62,390 @@ def sort_workweek(ww):
     return year * 100 + week
 
 
+def _build_step_specific_cmd(
+    step: str,
+    design_ids: list[str],
+    workweeks: list[str],
+    metric_flags: list[str],
+    format_cols: list[str]
+) -> list[str]:
+    """
+    Build step-specific mtsums command with proper filters.
+
+    Step-specific filters:
+    - HMFN: '-step<>HMB1' (exclude HMB1)
+    - HMB1: '-MOD_CUSTOM_TEST_FLOW<>HMB1_NPI_FLOW' and '-MOD_CUSTOM_TEST_FLOW-+HMB1_NPI_FLOW'
+    - QMON: '-step<>HMB1' (exclude HMB1)
+    - SLT: '-step<>HMB1' (same as QMON pattern)
+
+    Args:
+        step: Test step (HMFN, HMB1, QMON, SLT)
+        design_ids: List of design IDs
+        workweeks: List of workweeks
+        metric_flags: List of metric flags (e.g., ['+fidag'], ['+msnag'], ['+fidag', '+fc'])
+        format_cols: List of format columns
+
+    Returns:
+        List of command arguments
+    """
+    design_id_str = ','.join(design_ids)
+    workweek_str = ','.join([str(ww) for ww in workweeks])
+    format_str = ','.join(format_cols)
+
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        '-FORCEAPI', '+quiet', '+csv', '+stdf',
+        f'-DESIGN_ID={design_id_str}',
+        f'-mfg_workweek={workweek_str}',
+        f'-step={step.lower()}',
+        f'-format={format_str}',
+    ]
+
+    # Add metric-specific flags
+    cmd.extend(metric_flags)
+
+    # Add step-specific filters
+    if step.upper() == 'HMB1':
+        # HMB1 uses MOD_CUSTOM_TEST_FLOW filters
+        cmd.extend([
+            '-MOD_CUSTOM_TEST_FLOW<>HMB1_NPI_FLOW',
+            '-MOD_CUSTOM_TEST_FLOW-+HMB1_NPI_FLOW'
+        ])
+    else:
+        # HMFN, QMON, SLT use -step<>HMB1 filter
+        cmd.append('-step<>HMB1')
+
+    return cmd
+
+
+def fetch_cdpm_data(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch cDPM (Component DPM) data using mtsums +fidag.
+
+    cDPM = (Failing FIDs / Total FID UIN) × 1,000,000
+    FID = Package level (not die level)
+    SOCAMM/SOCAMM2 has 4 packages per module
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with FID-level aggregate data by step and workweek
+    """
+    all_results = []
+
+    for step in steps:
+        cmd = _build_step_specific_cmd(
+            step=step,
+            design_ids=design_ids,
+            workweeks=workweeks,
+            metric_flags=['+fidag'],
+            format_cols=['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'VERIFIED', 'FID_STATUS']
+        )
+
+        logger.info(f"Fetching cDPM data for {step}...")
+        logger.debug(f"Command: {' '.join(cmd)}")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=600
+            )
+
+            if result.returncode != 0:
+                logger.error(f"mtsums cDPM error for {step}: {result.stderr.decode() if result.stderr else 'Unknown'}")
+                continue
+
+            output = result.stdout.decode()
+            if not output.strip():
+                logger.warning(f"mtsums cDPM returned empty output for {step}")
+                continue
+
+            df = pd.read_csv(StringIO(output))
+            df.columns = [col.upper() for col in df.columns]
+            df['QUERY_STEP'] = step.upper()  # Track which step query this came from
+            all_results.append(df)
+            logger.info(f"Fetched {len(df)} cDPM records for {step}")
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"mtsums cDPM timed out for {step}")
+        except Exception as e:
+            logger.exception(f"Error fetching cDPM for {step}: {e}")
+
+    if not all_results:
+        return pd.DataFrame()
+
+    combined = pd.concat(all_results, ignore_index=True)
+    logger.info(f"Total cDPM records: {len(combined)}")
+    return combined
+
+
+def fetch_mdpm_data(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch MDPM (Module DPM) data using mtsums +msnag.
+
+    MDPM = (Failing Modules / Total Module UIN) × 1,000,000
+    MSN = Module Serial Number (module level)
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with MSN-level aggregate data by step and workweek
+    """
+    all_results = []
+
+    for step in steps:
+        cmd = _build_step_specific_cmd(
+            step=step,
+            design_ids=design_ids,
+            workweeks=workweeks,
+            metric_flags=['+msnag'],
+            format_cols=['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'VERIFIED', 'MSN_STATUS']
+        )
+
+        logger.info(f"Fetching MDPM data for {step}...")
+        logger.debug(f"Command: {' '.join(cmd)}")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=600
+            )
+
+            if result.returncode != 0:
+                logger.error(f"mtsums MDPM error for {step}: {result.stderr.decode() if result.stderr else 'Unknown'}")
+                continue
+
+            output = result.stdout.decode()
+            if not output.strip():
+                logger.warning(f"mtsums MDPM returned empty output for {step}")
+                continue
+
+            df = pd.read_csv(StringIO(output))
+            df.columns = [col.upper() for col in df.columns]
+            df['QUERY_STEP'] = step.upper()
+            all_results.append(df)
+            logger.info(f"Fetched {len(df)} MDPM records for {step}")
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"mtsums MDPM timed out for {step}")
+        except Exception as e:
+            logger.exception(f"Error fetching MDPM for {step}: {e}")
+
+    if not all_results:
+        return pd.DataFrame()
+
+    combined = pd.concat(all_results, ignore_index=True)
+    logger.info(f"Total MDPM records: {len(combined)}")
+    return combined
+
+
+def fetch_fcdpm_data(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch FCDPM (FAILCRAWLER cDPM) data using mtsums +fidag +fc.
+
+    FCDPM = cDPM broken down by FAILCRAWLER category
+    Uses FID-level (package) aggregation with FAILCRAWLER classification
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with FAILCRAWLER cDPM data by step and workweek
+    """
+    all_results = []
+
+    for step in steps:
+        cmd = _build_step_specific_cmd(
+            step=step,
+            design_ids=design_ids,
+            workweeks=workweeks,
+            metric_flags=['+fidag', '+fc'],
+            format_cols=['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'FCFM']
+        )
+
+        logger.info(f"Fetching FCDPM data for {step}...")
+        logger.debug(f"Command: {' '.join(cmd)}")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=600
+            )
+
+            if result.returncode != 0:
+                logger.error(f"mtsums FCDPM error for {step}: {result.stderr.decode() if result.stderr else 'Unknown'}")
+                continue
+
+            output = result.stdout.decode()
+            if not output.strip():
+                logger.warning(f"mtsums FCDPM returned empty output for {step}")
+                continue
+
+            df = pd.read_csv(StringIO(output))
+            df.columns = [col.upper() for col in df.columns]
+            df['QUERY_STEP'] = step.upper()
+            all_results.append(df)
+            logger.info(f"Fetched {len(df)} FCDPM records for {step}")
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"mtsums FCDPM timed out for {step}")
+        except Exception as e:
+            logger.exception(f"Error fetching FCDPM for {step}: {e}")
+
+    if not all_results:
+        return pd.DataFrame()
+
+    combined = pd.concat(all_results, ignore_index=True)
+    logger.info(f"Total FCDPM records: {len(combined)}")
+    return combined
+
+
+def fetch_all_dpm_metrics(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> dict[str, pd.DataFrame]:
+    """
+    Fetch all three DPM metrics (cDPM, MDPM, FCDPM) in one call.
+
+    Returns dictionary with keys:
+    - 'cdpm': Component DPM data (FID/package level)
+    - 'mdpm': Module DPM data (MSN/module level)
+    - 'fcdpm': FAILCRAWLER cDPM data (FID level by FAILCRAWLER category)
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        Dictionary of DataFrames
+    """
+    logger.info(f"Fetching all DPM metrics for {len(design_ids)} DIDs × {len(steps)} steps × {len(workweeks)} weeks")
+
+    return {
+        'cdpm': fetch_cdpm_data(design_ids, steps, workweeks),
+        'mdpm': fetch_mdpm_data(design_ids, steps, workweeks),
+        'fcdpm': fetch_fcdpm_data(design_ids, steps, workweeks)
+    }
+
+
+def process_dpm_metrics(
+    cdpm_df: pd.DataFrame,
+    mdpm_df: pd.DataFrame,
+    step: str,
+    workweek: int = None
+) -> dict:
+    """
+    Process cDPM and MDPM data for a specific step and optionally workweek.
+
+    Calculates:
+    - cDPM: (Total UFAIL / Total UIN) × 1,000,000 at FID level
+    - MDPM: (Total MUFAIL / Total MUIN) × 1,000,000 at MSN level
+
+    Args:
+        cdpm_df: cDPM DataFrame from fetch_cdpm_data
+        mdpm_df: MDPM DataFrame from fetch_mdpm_data
+        step: Test step to filter
+        workweek: Optional specific workweek (None = all)
+
+    Returns:
+        Dictionary with processed metrics
+    """
+    result = {
+        'step': step,
+        'workweek': workweek,
+        'cdpm': None,
+        'mdpm': None,
+        'cdpm_by_status': {},
+        'mdpm_by_status': {},
+        'uin': 0,
+        'muin': 0
+    }
+
+    # Process cDPM
+    if not cdpm_df.empty:
+        step_df = cdpm_df[cdpm_df['QUERY_STEP'].str.upper() == step.upper()].copy()
+        if workweek is not None:
+            step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
+
+        if not step_df.empty:
+            total_uin = step_df['UIN'].sum() if 'UIN' in step_df.columns else 0
+            total_ufail = step_df['UFAIL'].sum() if 'UFAIL' in step_df.columns else 0
+
+            result['uin'] = int(total_uin)
+            if total_uin > 0:
+                result['cdpm'] = round((total_ufail / total_uin) * 1_000_000, 2)
+
+            # cDPM by FID_STATUS
+            if 'FID_STATUS' in step_df.columns:
+                status_agg = step_df.groupby('FID_STATUS').agg({'UIN': 'sum', 'UFAIL': 'sum'}).reset_index()
+                for _, row in status_agg.iterrows():
+                    status = row['FID_STATUS']
+                    if row['UIN'] > 0 and status != 'Pass':
+                        cdpm_val = round((row['UFAIL'] / total_uin) * 1_000_000, 2)
+                        result['cdpm_by_status'][status] = {
+                            'ufail': int(row['UFAIL']),
+                            'uin': int(row['UIN']),
+                            'cdpm': cdpm_val
+                        }
+
+    # Process MDPM
+    if not mdpm_df.empty:
+        step_df = mdpm_df[mdpm_df['QUERY_STEP'].str.upper() == step.upper()].copy()
+        if workweek is not None:
+            step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
+
+        if not step_df.empty:
+            total_muin = step_df['MUIN'].sum() if 'MUIN' in step_df.columns else 0
+            total_mufail = step_df['MUFAIL'].sum() if 'MUFAIL' in step_df.columns else 0
+
+            result['muin'] = int(total_muin)
+            if total_muin > 0:
+                result['mdpm'] = round((total_mufail / total_muin) * 1_000_000, 2)
+
+            # MDPM by MSN_STATUS
+            if 'MSN_STATUS' in step_df.columns:
+                status_agg = step_df.groupby('MSN_STATUS').agg({'MUIN': 'sum', 'MUFAIL': 'sum'}).reset_index()
+                for _, row in status_agg.iterrows():
+                    status = row['MSN_STATUS']
+                    if row['MUIN'] > 0 and status != 'Pass':
+                        mdpm_val = round((row['MUFAIL'] / total_muin) * 1_000_000, 2)
+                        result['mdpm_by_status'][status] = {
+                            'mufail': int(row['MUFAIL']),
+                            'muin': int(row['MUIN']),
+                            'mdpm': mdpm_val
+                        }
+
+    return result
+
+
 def fetch_failcrawler_data(
     design_ids: list[str],
     steps: list[str],
@@ -1320,6 +1704,291 @@ def create_msn_status_ranked_table_html(data: dict, dark_mode: bool = False) -> 
         </table>
         <p style="font-size: 10px; color: {subtext_color}; margin-top: 5px;">
             🔴 Red rows = Top 80% contributors | MDPM = Module DPM | cDPM = Component DPM
+        </p>
+    </div>
+    '''
+
+    return html
+
+
+def create_dpm_metrics_summary_html(
+    cdpm_df: pd.DataFrame,
+    mdpm_df: pd.DataFrame,
+    fcdpm_df: pd.DataFrame,
+    step: str,
+    workweek: int = None,
+    dark_mode: bool = False
+) -> str:
+    """
+    Create HTML summary table showing cDPM, MDPM, and FCDPM side by side.
+
+    Args:
+        cdpm_df: cDPM DataFrame
+        mdpm_df: MDPM DataFrame
+        fcdpm_df: FCDPM DataFrame
+        step: Test step
+        workweek: Optional specific workweek (None = all)
+        dark_mode: Theme setting
+
+    Returns:
+        HTML string for the DPM summary card
+    """
+    # Style colors
+    bg_color = '#2d2d2d' if dark_mode else '#ffffff'
+    text_color = '#ffffff' if dark_mode else '#1a1a1a'
+    header_bg = '#1a237e' if not dark_mode else '#283593'  # Dashboard theme blue
+    border_color = '#555555' if dark_mode else '#cccccc'
+    card_bg = '#f5f5f5' if not dark_mode else '#3d3d3d'
+    subtext_color = '#aaaaaa' if dark_mode else '#666666'
+
+    # Calculate metrics
+    cdpm_val = None
+    mdpm_val = None
+    uin = 0
+    muin = 0
+    fcdpm_total = None
+    fcdpm_breakdown = []
+
+    # Helper to filter by step (handles both QUERY_STEP and STEP columns)
+    def filter_by_step(df: pd.DataFrame, step_name: str) -> pd.DataFrame:
+        if df.empty:
+            return df
+        step_col = 'QUERY_STEP' if 'QUERY_STEP' in df.columns else 'STEP'
+        if step_col in df.columns:
+            return df[df[step_col].str.upper() == step_name.upper()].copy()
+        return df.copy()
+
+    # Process cDPM
+    if not cdpm_df.empty:
+        step_df = filter_by_step(cdpm_df, step)
+        if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
+            step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
+        if not step_df.empty:
+            total_uin = step_df['UIN'].sum() if 'UIN' in step_df.columns else 0
+            total_ufail = step_df['UFAIL'].sum() if 'UFAIL' in step_df.columns else 0
+            uin = int(total_uin)
+            if total_uin > 0:
+                cdpm_val = round((total_ufail / total_uin) * 1_000_000, 2)
+
+    # Process MDPM
+    if not mdpm_df.empty:
+        step_df = filter_by_step(mdpm_df, step)
+        if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
+            step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
+        if not step_df.empty:
+            total_muin = step_df['MUIN'].sum() if 'MUIN' in step_df.columns else 0
+            total_mufail = step_df['MUFAIL'].sum() if 'MUFAIL' in step_df.columns else 0
+            muin = int(total_muin)
+            if total_muin > 0:
+                mdpm_val = round((total_mufail / total_muin) * 1_000_000, 2)
+
+    # Process FCDPM
+    if not fcdpm_df.empty:
+        step_df = filter_by_step(fcdpm_df, step)
+        if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
+            step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
+        if not step_df.empty:
+            # Get FAILCRAWLER category columns (exclude metadata)
+            metadata_cols = ['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'FCFM', 'QUERY_STEP',
+                             'UIN', 'UFAIL', 'UPASS', 'ALL', 'UNKNOWN']
+            fc_cols = [col for col in step_df.columns if col not in metadata_cols]
+
+            total_uin_fc = step_df['UIN'].sum() if 'UIN' in step_df.columns else 0
+            if total_uin_fc > 0:
+                total_dpm = 0
+                for fc_col in fc_cols[:10]:  # Top 10 FAILCRAWLERs
+                    fc_dpm = step_df[fc_col].sum() if fc_col in step_df.columns else 0
+                    if fc_dpm > 0:
+                        fcdpm_breakdown.append({
+                            'category': fc_col,
+                            'dpm': round(fc_dpm, 2)
+                        })
+                        total_dpm += fc_dpm
+                fcdpm_total = round(total_dpm, 2)
+                fcdpm_breakdown.sort(key=lambda x: x['dpm'], reverse=True)
+
+    # Format workweek display
+    ww_display = f"WW{workweek}" if workweek else "Cumulative"
+
+    # Build HTML
+    html = f'''
+    <div style="background-color: {bg_color}; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+        <h3 style="color: {text_color}; margin-bottom: 12px; font-size: 16px;">
+            📊 {step} DPM Metrics Summary ({ww_display})
+        </h3>
+
+        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <!-- cDPM Card -->
+            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid #3498DB;">
+                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">cDPM</div>
+                <div style="font-size: 24px; font-weight: bold; color: #3498DB; margin: 4px 0;">
+                    {cdpm_val if cdpm_val is not None else 'N/A'}
+                </div>
+                <div style="font-size: 10px; color: {subtext_color};">Component/Package Level</div>
+                <div style="font-size: 10px; color: {subtext_color}; margin-top: 4px;">UIN: {uin:,}</div>
+            </div>
+
+            <!-- MDPM Card -->
+            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid #E74C3C;">
+                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">MDPM</div>
+                <div style="font-size: 24px; font-weight: bold; color: #E74C3C; margin: 4px 0;">
+                    {mdpm_val if mdpm_val is not None else 'N/A'}
+                </div>
+                <div style="font-size: 10px; color: {subtext_color};">Module Level</div>
+                <div style="font-size: 10px; color: {subtext_color}; margin-top: 4px;">MUIN: {muin:,}</div>
+            </div>
+
+            <!-- FCDPM Card -->
+            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid #F39C12;">
+                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">FCDPM Total</div>
+                <div style="font-size: 24px; font-weight: bold; color: #F39C12; margin: 4px 0;">
+                    {fcdpm_total if fcdpm_total is not None else 'N/A'}
+                </div>
+                <div style="font-size: 10px; color: {subtext_color};">FAILCRAWLER cDPM</div>
+                <div style="font-size: 10px; color: {subtext_color}; margin-top: 4px;">Target: {TARGET_CDPM}</div>
+            </div>
+        </div>
+    '''
+
+    # Add top FAILCRAWLER breakdown if available
+    if fcdpm_breakdown:
+        html += f'''
+        <div style="margin-top: 16px;">
+            <div style="font-size: 12px; font-weight: bold; color: {text_color}; margin-bottom: 8px;">Top FAILCRAWLERs:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        '''
+        for fc in fcdpm_breakdown[:5]:
+            fc_color = FAILCRAWLER_COLORS.get(fc['category'], '#888888')
+            html += f'''
+                <div style="background-color: {fc_color}20; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 4px;">
+                    <span style="color: {fc_color}; font-weight: bold;">■</span>
+                    <span style="font-size: 11px; color: {text_color};">{fc['category']}: {fc['dpm']}</span>
+                </div>
+            '''
+        html += '''
+            </div>
+        </div>
+        '''
+
+    html += '''
+    </div>
+    '''
+
+    return html
+
+
+def create_dpm_comparison_table_html(
+    cdpm_df: pd.DataFrame,
+    mdpm_df: pd.DataFrame,
+    steps: list[str],
+    workweek: int = None,
+    dark_mode: bool = False
+) -> str:
+    """
+    Create HTML table comparing cDPM and MDPM across multiple steps.
+
+    Args:
+        cdpm_df: cDPM DataFrame
+        mdpm_df: MDPM DataFrame
+        steps: List of test steps to compare
+        workweek: Optional specific workweek
+        dark_mode: Theme setting
+
+    Returns:
+        HTML string for the comparison table
+    """
+    # Style colors
+    bg_color = '#2d2d2d' if dark_mode else '#ffffff'
+    text_color = '#ffffff' if dark_mode else '#1a1a1a'
+    header_bg = '#1a237e' if not dark_mode else '#283593'
+    border_color = '#555555' if dark_mode else '#cccccc'
+    subtext_color = '#aaaaaa' if dark_mode else '#666666'
+
+    ww_display = f"WW{workweek}" if workweek else "Cumulative"
+
+    html = f'''
+    <div style="margin-bottom: 20px;">
+        <h4 style="color: {text_color}; margin-bottom: 10px;">DPM Comparison by Step ({ww_display})</h4>
+        <table style="border-collapse: collapse; width: 100%; font-size: 12px; font-family: Arial, sans-serif; background-color: {bg_color};">
+            <thead>
+                <tr style="background-color: {header_bg};">
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: left; color: white;">Step</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: white;">cDPM</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: white;">UIN (Pkg)</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: white;">MDPM</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: white;">MUIN (Mod)</th>
+                    <th style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: white;">Ratio (c/M)</th>
+                </tr>
+            </thead>
+            <tbody>
+    '''
+
+    # Helper to filter by step (handles both QUERY_STEP and STEP columns)
+    def filter_by_step(df: pd.DataFrame, step_name: str) -> pd.DataFrame:
+        if df.empty:
+            return df
+        step_col = 'QUERY_STEP' if 'QUERY_STEP' in df.columns else 'STEP'
+        if step_col in df.columns:
+            return df[df[step_col].str.upper() == step_name.upper()].copy()
+        return df.copy()
+
+    for step in steps:
+        cdpm_val = None
+        mdpm_val = None
+        uin = 0
+        muin = 0
+
+        # Calculate cDPM
+        if not cdpm_df.empty:
+            step_df = filter_by_step(cdpm_df, step)
+            if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
+                step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
+            if not step_df.empty:
+                total_uin = step_df['UIN'].sum() if 'UIN' in step_df.columns else 0
+                total_ufail = step_df['UFAIL'].sum() if 'UFAIL' in step_df.columns else 0
+                uin = int(total_uin)
+                if total_uin > 0:
+                    cdpm_val = round((total_ufail / total_uin) * 1_000_000, 2)
+
+        # Calculate MDPM
+        if not mdpm_df.empty:
+            step_df = filter_by_step(mdpm_df, step)
+            if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
+                step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
+            if not step_df.empty:
+                total_muin = step_df['MUIN'].sum() if 'MUIN' in step_df.columns else 0
+                total_mufail = step_df['MUFAIL'].sum() if 'MUFAIL' in step_df.columns else 0
+                muin = int(total_muin)
+                if total_muin > 0:
+                    mdpm_val = round((total_mufail / total_muin) * 1_000_000, 2)
+
+        # Calculate ratio
+        ratio = None
+        if cdpm_val is not None and mdpm_val is not None and mdpm_val > 0:
+            ratio = round(cdpm_val / mdpm_val, 2)
+
+        html += f'''
+            <tr>
+                <td style="border: 1px solid {border_color}; padding: 8px; font-weight: bold; color: {text_color};">{step}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: #3498DB; font-weight: bold;">
+                    {cdpm_val if cdpm_val is not None else 'N/A'}
+                </td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{uin:,}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: #E74C3C; font-weight: bold;">
+                    {mdpm_val if mdpm_val is not None else 'N/A'}
+                </td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">{muin:,}</td>
+                <td style="border: 1px solid {border_color}; padding: 8px; text-align: right; color: {text_color};">
+                    {ratio if ratio is not None else 'N/A'}
+                </td>
+            </tr>
+        '''
+
+    html += f'''
+            </tbody>
+        </table>
+        <p style="font-size: 10px; color: {subtext_color}; margin-top: 5px;">
+            cDPM = Component/Package DPM (FID level) | MDPM = Module DPM (MSN level) | Ratio = cDPM/MDPM (≈4 expected for 4-pkg modules)
         </p>
     </div>
     '''

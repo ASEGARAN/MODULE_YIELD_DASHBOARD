@@ -53,6 +53,13 @@ from src.failcrawler import (
     process_msn_status_correlation,
     create_msn_status_correlation_chart,
     create_msn_status_ranked_table_html,
+    # New DPM metric functions
+    fetch_cdpm_data,
+    fetch_mdpm_data,
+    fetch_fcdpm_data,
+    fetch_all_dpm_metrics,
+    create_dpm_metrics_summary_html,
+    create_dpm_comparison_table_html,
 )
 
 # SMT6 yield module
@@ -337,6 +344,10 @@ def init_session_state() -> None:
         st.session_state.failcrawler_fid_counts = pd.DataFrame()
     if "failcrawler_total_uin" not in st.session_state:
         st.session_state.failcrawler_total_uin = pd.DataFrame()
+    if "failcrawler_cdpm_data" not in st.session_state:
+        st.session_state.failcrawler_cdpm_data = pd.DataFrame()
+    if "failcrawler_mdpm_data" not in st.session_state:
+        st.session_state.failcrawler_mdpm_data = pd.DataFrame()
     if "failcrawler_last_fetch_time" not in st.session_state:
         st.session_state.failcrawler_last_fetch_time = None
     if "failcrawler_filters" not in st.session_state:
@@ -3737,13 +3748,27 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     workweeks=workweeks
                 )
 
+                # Fetch new DPM metrics (cDPM, MDPM) using step-specific commands
+                cdpm_df = fetch_cdpm_data(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks
+                )
+                mdpm_df = fetch_mdpm_data(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks
+                )
+
                 st.session_state.failcrawler_data = fc_df
                 st.session_state.failcrawler_msn_corr_data = msn_corr_df
                 st.session_state.failcrawler_fid_counts = fid_counts_df
                 st.session_state.failcrawler_total_uin = total_uin_df
+                st.session_state.failcrawler_cdpm_data = cdpm_df
+                st.session_state.failcrawler_mdpm_data = mdpm_df
                 st.session_state.failcrawler_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 st.session_state.failcrawler_filters = filters.copy()
-                st.success(f"Loaded {len(fc_df):,} FAILCRAWLER records + {len(msn_corr_df):,} MSN_STATUS correlation records!")
+                st.success(f"Loaded {len(fc_df):,} FAILCRAWLER + {len(cdpm_df):,} cDPM + {len(mdpm_df):,} MDPM records!")
                 st.rerun()
 
         except Exception as e:
@@ -3785,12 +3810,57 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
         # Display charts for each selected step
         import streamlit.components.v1 as components
 
+        # Get cDPM and MDPM data from session state
+        cdpm_df = st.session_state.get('failcrawler_cdpm_data', pd.DataFrame())
+        mdpm_df = st.session_state.get('failcrawler_mdpm_data', pd.DataFrame())
+
+        # Get the latest workweek from the data for metrics display
+        latest_ww = None
+        if 'MFG_WORKWEEK' in fc_df.columns:
+            latest_ww = int(fc_df['MFG_WORKWEEK'].max())
+
+        # Show DPM comparison table for all steps (above individual step charts)
+        if not cdpm_df.empty or not mdpm_df.empty:
+            with st.expander("📊 DPM Metrics Comparison (All Steps)", expanded=True):
+                # Toggle for latest WW or cumulative
+                metrics_col1, metrics_col2 = st.columns([1, 3])
+                with metrics_col1:
+                    metrics_time_range = st.radio(
+                        "View",
+                        options=["Latest WW", "Cumulative"],
+                        horizontal=True,
+                        key="fc_metrics_time_range",
+                        label_visibility="collapsed"
+                    )
+                selected_ww = latest_ww if metrics_time_range == "Latest WW" else None
+                with metrics_col2:
+                    if selected_ww:
+                        st.caption(f"📅 WW{selected_ww}")
+                    else:
+                        st.caption("📅 Cumulative (all weeks)")
+
+                comparison_html = create_dpm_comparison_table_html(
+                    cdpm_df, mdpm_df, steps_to_show, workweek=selected_ww, dark_mode=False
+                )
+                if comparison_html:
+                    components.html(comparison_html, height=250, scrolling=True)
+
+        st.divider()
+
         for step in steps_to_show:
             data = process_failcrawler_data(fc_df, step, design_id=filter_design_id)
             if data is None:
                 continue
 
             st.subheader(f"📊 {step} FAILCRAWLER cDPM")
+
+            # Show DPM metrics summary cards for this step
+            if not cdpm_df.empty or not mdpm_df.empty:
+                summary_html = create_dpm_metrics_summary_html(
+                    cdpm_df, mdpm_df, fc_df, step, workweek=latest_ww, dark_mode=False
+                )
+                if summary_html:
+                    components.html(summary_html, height=200, scrolling=False)
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(
