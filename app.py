@@ -5173,33 +5173,52 @@ def main() -> None:
             try:
                 # Collect data from session state (use correct variable names)
                 charts = {}
+                use_cache = st.session_state.get("use_cache", True)
 
-                # Get yield data if available
-                yield_data = st.session_state.get('data', None)  # Main dashboard data
-                if yield_data is not None and yield_data.empty:
-                    yield_data = None
+                # Get yield data - auto-fetch if not available
+                yield_data = st.session_state.get('data', None)
+                if yield_data is None or yield_data.empty:
+                    status.update(label="Fetching Yield Analysis data...")
+                    try:
+                        yield_data = fetch_data(filters, use_cache=use_cache)
+                        if yield_data is not None and not yield_data.empty:
+                            st.session_state.data = yield_data
+                        else:
+                            yield_data = None
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch yield data for PDF: {e}")
+                        yield_data = None
 
-                # Get ELC data if available
+                # Get ELC data - auto-fetch if not available
                 elc_data = st.session_state.get('elc_data', None)
-                if elc_data is not None and elc_data.empty:
-                    elc_data = None
+                if elc_data is None or elc_data.empty:
+                    status.update(label="Fetching ELC data...")
+                    try:
+                        elc_data = fetch_elc_data(filters, use_cache=use_cache)
+                        if elc_data is not None and not elc_data.empty:
+                            st.session_state.elc_data = elc_data
+                        else:
+                            elc_data = None
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch ELC data for PDF: {e}")
+                        elc_data = None
 
-                # Get SMT6 data if available (correct variable name: smt6_data or smt6_site_data)
+                # Get SMT6 data if available (not auto-fetched - requires specific machine selection)
                 smt6_data = st.session_state.get('smt6_site_data', None)
-                if smt6_data is None or smt6_data.empty:
+                if smt6_data is None or (hasattr(smt6_data, 'empty') and smt6_data.empty):
                     smt6_data = st.session_state.get('smt6_data', None)
-                if smt6_data is not None and smt6_data.empty:
+                if smt6_data is not None and hasattr(smt6_data, 'empty') and smt6_data.empty:
                     smt6_data = None
 
-                # Get GRACE data if available
+                # Get GRACE data if available (not auto-fetched - requires specific setup)
                 grace_data = st.session_state.get('grace_fm_data', None)
-                if grace_data is not None and grace_data.empty:
+                if grace_data is not None and hasattr(grace_data, 'empty') and grace_data.empty:
                     grace_data = None
 
-                # Check if any data available
+                # Check if any data available after auto-fetch
                 if all(d is None for d in [yield_data, elc_data, smt6_data, grace_data]):
-                    st.sidebar.warning("No data available to export. Please load some data first.")
-                    status.update(label="No data", state="error")
+                    st.sidebar.warning("No data available. Check your filter parameters (workweeks, design IDs).")
+                    status.update(label="No data found", state="error")
                 else:
                     # Generate PDF
                     status.update(label="Building PDF...")
@@ -5234,9 +5253,20 @@ def main() -> None:
         with st.sidebar.status("Generating HTML...", expanded=True) as status:
             try:
                 from src.html_export import create_shareable_html
+                use_cache = st.session_state.get("use_cache", True)
 
                 # Collect sections based on available data
                 sections = []
+
+                # Auto-fetch yield data if not available
+                if 'data' not in st.session_state or st.session_state.data.empty:
+                    status.update(label="Fetching Yield Analysis data...")
+                    try:
+                        yield_data = fetch_data(filters, use_cache=use_cache)
+                        if yield_data is not None and not yield_data.empty:
+                            st.session_state.data = yield_data
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch yield data for HTML: {e}")
 
                 # Add yield summary if available (main dashboard data stored as 'data')
                 if 'data' in st.session_state and not st.session_state.data.empty:
