@@ -2461,9 +2461,10 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     max_issues=5  # Always show max 5 critical sockets per machine
                 )
                 if summary_html:
-                    # Dynamic height: ~28px per row + 70px for header/legend
-                    summary_height = min(350, 75 + max_display * 30)
-                    components.html(summary_html, height=summary_height, scrolling=False)
+                    # Dynamic height based on number of machines with issues
+                    num_machines_with_issues = len([m for m in machine_list if (site_summary[site_summary['machine_id'] == m]['yield_pct'] < 95).any()])
+                    summary_height = min(400, 100 + num_machines_with_issues * 50)
+                    components.html(summary_html, height=summary_height, scrolling=True)
 
         elif not filtered_site_df.empty:
             st.warning("Select at least one machine.")
@@ -5170,44 +5171,59 @@ def main() -> None:
     if st.sidebar.button("Generate PDF Report", use_container_width=True, type="primary"):
         with st.sidebar.status("Generating PDF...", expanded=True) as status:
             try:
-                # Collect data from session state
+                # Collect data from session state (use correct variable names)
                 charts = {}
 
                 # Get yield data if available
-                yield_data = st.session_state.get('yield_data', None)
+                yield_data = st.session_state.get('data', None)  # Main dashboard data
+                if yield_data is not None and yield_data.empty:
+                    yield_data = None
 
                 # Get ELC data if available
                 elc_data = st.session_state.get('elc_data', None)
+                if elc_data is not None and elc_data.empty:
+                    elc_data = None
 
-                # Get SMT6 data if available
-                smt6_data = st.session_state.get('smt6_machine_data', None)
+                # Get SMT6 data if available (correct variable name: smt6_data or smt6_site_data)
+                smt6_data = st.session_state.get('smt6_site_data', None)
+                if smt6_data is None or smt6_data.empty:
+                    smt6_data = st.session_state.get('smt6_data', None)
+                if smt6_data is not None and smt6_data.empty:
+                    smt6_data = None
 
                 # Get GRACE data if available
                 grace_data = st.session_state.get('grace_fm_data', None)
+                if grace_data is not None and grace_data.empty:
+                    grace_data = None
 
-                # Generate PDF
-                status.update(label="Building PDF...")
-                pdf_bytes = create_dashboard_pdf(
-                    filters=filters,
-                    yield_data=yield_data,
-                    elc_data=elc_data,
-                    smt6_data=smt6_data,
-                    grace_data=grace_data,
-                    charts=charts
-                )
+                # Check if any data available
+                if all(d is None for d in [yield_data, elc_data, smt6_data, grace_data]):
+                    st.sidebar.warning("No data available to export. Please load some data first.")
+                    status.update(label="No data", state="error")
+                else:
+                    # Generate PDF
+                    status.update(label="Building PDF...")
+                    pdf_bytes = create_dashboard_pdf(
+                        filters=filters,
+                        yield_data=yield_data,
+                        elc_data=elc_data,
+                        smt6_data=smt6_data,
+                        grace_data=grace_data,
+                        charts=charts
+                    )
 
-                # Create download button
-                status.update(label="PDF Ready!", state="complete")
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-                filename = f"yield_dashboard_report_{timestamp}.pdf"
+                    # Create download button
+                    status.update(label="PDF Ready!", state="complete")
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    filename = f"yield_dashboard_report_{timestamp}.pdf"
 
-                st.sidebar.download_button(
-                    label="⬇️ Download PDF",
-                    data=pdf_bytes,
-                    file_name=filename,
-                    mime="application/pdf",
-                    use_container_width=True
-                )
+                    st.sidebar.download_button(
+                        label="⬇️ Download PDF",
+                        data=pdf_bytes,
+                        file_name=filename,
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
 
             except Exception as e:
                 status.update(label=f"Error: {str(e)}", state="error")
@@ -5222,9 +5238,9 @@ def main() -> None:
                 # Collect sections based on available data
                 sections = []
 
-                # Add yield summary if available
-                if 'yield_data' in st.session_state and st.session_state.yield_data is not None:
-                    yield_df = st.session_state.yield_data
+                # Add yield summary if available (main dashboard data stored as 'data')
+                if 'data' in st.session_state and not st.session_state.data.empty:
+                    yield_df = st.session_state.data
                     if not yield_df.empty:
                         summary_stats = f"""
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;">
