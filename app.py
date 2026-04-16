@@ -2443,23 +2443,27 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                     row_text.append("-")
                             custom_text.append(row_text)
 
+                        # Simplified text for cells - just yield % (details in hover)
+                        simple_text = [[f"{v:.0f}%" if pd.notna(v) else "-" for v in row] for row in pivot_yield.values]
+
                         fig = go.Figure(data=go.Heatmap(
                             z=pivot_yield.values, x=[m.upper() for m in pivot_yield.columns], y=pivot_yield.index.tolist(),
                             colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
                             zmin=90, zmax=100,
-                            text=custom_text,
-                            texttemplate="%{text}", textfont={"size": 7},
-                            hovertemplate="<b>%{y}</b> @ %{x}<br>Yield: %{z:.1f}%<extra></extra>",
-                            colorbar=dict(title="", ticksuffix="%", len=0.6, thickness=10)
+                            text=simple_text,
+                            texttemplate="%{text}", textfont={"size": 11, "color": "white"},
+                            hovertemplate="<b>%{y}</b> @ %{x}<br>Yield: %{z:.1f}%<br>UIN: %{customdata[0]:,}<br>UFAIL: %{customdata[1]:,}<extra></extra>",
+                            customdata=[[(pivot_uin.iloc[i, j], pivot_ufail.iloc[i, j]) for j in range(len(pivot_yield.columns))] for i in range(len(pivot_yield.index))],
+                            colorbar=dict(title="", ticksuffix="%", len=0.6, thickness=12, tickfont=dict(size=10))
                         ))
                         fig.update_layout(
-                            xaxis=dict(tickfont=dict(size=9), side='top'),
-                            yaxis=dict(autorange='reversed', tickfont=dict(size=8)),
-                            height=common_height, margin=dict(l=70, r=10, t=25, b=10)
+                            xaxis=dict(tickfont=dict(size=11, color='#333'), side='top'),
+                            yaxis=dict(autorange='reversed', tickfont=dict(size=10, color='#333')),
+                            height=common_height, margin=dict(l=80, r=15, t=50, b=10)
                         )
-                        # Enable toolbar with zoom, pan, fullscreen
+                        # Toolbar shows on hover only (doesn't block content)
                         heatmap_config = {
-                            'displayModeBar': True,
+                            'displayModeBar': 'hover',
                             'displaylogo': False,
                             'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
                             'toImageButtonOptions': {
@@ -2470,6 +2474,20 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 'scale': 2
                             }
                         }
+                        # Add "Open in New Tab" button
+                        if st.button("🔗 Open Heatmap in New Tab", key=f"heatmap_newtab_{ww_label}", help="Open full-size heatmap in a new browser tab"):
+                            # Convert figure to HTML and open in new tab
+                            import base64
+                            html_content = fig.to_html(include_plotlyjs='cdn', full_html=True, config={'displayModeBar': True, 'displaylogo': False})
+                            b64 = base64.b64encode(html_content.encode()).decode()
+                            js_code = f'''
+                            <script>
+                                var newTab = window.open();
+                                newTab.document.write(atob("{b64}"));
+                                newTab.document.close();
+                            </script>
+                            '''
+                            components.html(js_code, height=0)
                         st.plotly_chart(fig, use_container_width=True, config=heatmap_config)
 
             with summary_col:
@@ -2479,40 +2497,36 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                         max_issues=5  # Always show max 5 critical sockets per machine
                     )
                     if summary_html:
-                        # Wrap with fullscreen-capable container
-                        fullscreen_html = f'''
-                        <style>
-                            .fs-container {{ position: relative; }}
-                            .fs-btn {{
-                                position: absolute; top: 5px; right: 5px; z-index: 100;
-                                background: rgba(26,35,126,0.9); color: #fff; border: none;
-                                padding: 4px 8px; border-radius: 4px; cursor: pointer;
-                                font-size: 11px; opacity: 0.7; transition: opacity 0.2s;
-                            }}
-                            .fs-btn:hover {{ opacity: 1; }}
-                            .fs-content {{ transition: all 0.3s ease; }}
-                            .fs-content.fullscreen {{
-                                position: fixed !important; top: 0 !important; left: 0 !important;
-                                width: 100vw !important; height: 100vh !important;
-                                z-index: 9999 !important; background: #1a1a2e !important;
-                                padding: 20px !important; overflow: auto !important;
-                            }}
-                        </style>
-                        <div class="fs-container">
-                            <button class="fs-btn" onclick="toggleFullscreen(this)">⛶ Fullscreen</button>
-                            <div class="fs-content" id="summary-content">
+                        # Add "Open in New Tab" button for Site Health Summary
+                        if st.button("🔗 Open Summary in New Tab", key=f"summary_newtab_{ww_label}", help="Open full-size summary in a new browser tab"):
+                            import base64
+                            full_html = f'''
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <title>Site Health Summary - {ww_label}</title>
+                                <style>
+                                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #fff; padding: 20px; }}
+                                    h1 {{ color: #fff; text-align: center; margin-bottom: 20px; }}
+                                </style>
+                            </head>
+                            <body>
+                                <h1>Site Health Summary - {ww_label}</h1>
                                 {summary_html}
-                            </div>
-                        </div>
-                        <script>
-                            function toggleFullscreen(btn) {{
-                                var content = btn.parentElement.querySelector('.fs-content');
-                                content.classList.toggle('fullscreen');
-                                btn.textContent = content.classList.contains('fullscreen') ? '✕ Close' : '⛶ Fullscreen';
-                            }}
-                        </script>
-                        '''
-                        components.html(fullscreen_html, height=common_height + 30, scrolling=True)
+                            </body>
+                            </html>
+                            '''
+                            b64 = base64.b64encode(full_html.encode()).decode()
+                            js_code = f'''
+                            <script>
+                                var newTab = window.open();
+                                newTab.document.write(atob("{b64}"));
+                                newTab.document.close();
+                            </script>
+                            '''
+                            components.html(js_code, height=0)
+                        # Display the summary HTML
+                        components.html(summary_html, height=common_height + 30, scrolling=True)
 
         elif not filtered_site_df.empty:
             st.warning("Select at least one machine.")
