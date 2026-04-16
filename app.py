@@ -2452,7 +2452,20 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                             yaxis=dict(autorange='reversed', tickfont=dict(size=8)),
                             height=common_height, margin=dict(l=70, r=10, t=25, b=10)
                         )
-                        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+                        # Enable toolbar with zoom, pan, fullscreen
+                        heatmap_config = {
+                            'displayModeBar': True,
+                            'displaylogo': False,
+                            'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
+                            'toImageButtonOptions': {
+                                'format': 'png',
+                                'filename': f'site_heatmap_{ww_label}',
+                                'height': 800,
+                                'width': 1200,
+                                'scale': 2
+                            }
+                        }
+                        st.plotly_chart(fig, use_container_width=True, config=heatmap_config)
 
             with summary_col:
                 with st.expander(f"📊 Site Health Summary ({ww_label})", expanded=has_issues):
@@ -2461,7 +2474,40 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                         max_issues=5  # Always show max 5 critical sockets per machine
                     )
                     if summary_html:
-                        components.html(summary_html, height=common_height, scrolling=True)
+                        # Wrap with fullscreen-capable container
+                        fullscreen_html = f'''
+                        <style>
+                            .fs-container {{ position: relative; }}
+                            .fs-btn {{
+                                position: absolute; top: 5px; right: 5px; z-index: 100;
+                                background: rgba(26,35,126,0.9); color: #fff; border: none;
+                                padding: 4px 8px; border-radius: 4px; cursor: pointer;
+                                font-size: 11px; opacity: 0.7; transition: opacity 0.2s;
+                            }}
+                            .fs-btn:hover {{ opacity: 1; }}
+                            .fs-content {{ transition: all 0.3s ease; }}
+                            .fs-content.fullscreen {{
+                                position: fixed !important; top: 0 !important; left: 0 !important;
+                                width: 100vw !important; height: 100vh !important;
+                                z-index: 9999 !important; background: #1a1a2e !important;
+                                padding: 20px !important; overflow: auto !important;
+                            }}
+                        </style>
+                        <div class="fs-container">
+                            <button class="fs-btn" onclick="toggleFullscreen(this)">⛶ Fullscreen</button>
+                            <div class="fs-content" id="summary-content">
+                                {summary_html}
+                            </div>
+                        </div>
+                        <script>
+                            function toggleFullscreen(btn) {{
+                                var content = btn.parentElement.querySelector('.fs-content');
+                                content.classList.toggle('fullscreen');
+                                btn.textContent = content.classList.contains('fullscreen') ? '✕ Close' : '⛶ Fullscreen';
+                            }}
+                        </script>
+                        '''
+                        components.html(fullscreen_html, height=common_height + 30, scrolling=True)
 
         elif not filtered_site_df.empty:
             st.warning("Select at least one machine.")
