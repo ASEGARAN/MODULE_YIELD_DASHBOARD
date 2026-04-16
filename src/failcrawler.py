@@ -1988,16 +1988,20 @@ def create_dpm_metrics_summary_html(
         if workweek is not None and 'MFG_WORKWEEK' in step_df.columns:
             step_df = step_df[step_df['MFG_WORKWEEK'] == workweek]
         if not step_df.empty:
-            # Get FAILCRAWLER category columns (exclude metadata)
+            # Get FAILCRAWLER category columns (exclude ALL metadata and non-FC columns)
             metadata_cols = ['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'FCFM', 'QUERY_STEP',
-                             'UIN', 'UFAIL', 'UPASS', 'ALL', 'UNKNOWN']
+                             'UIN', 'UFAIL', 'UPASS', 'ALL', 'ALL(DPM)', 'UNKNOWN',
+                             'MOD_CUSTOM_TEST_FLOW', 'MSN_STATUS', 'VERIFIED', 'FID_STATUS',
+                             'MUIN', 'MUFAIL']
             fc_cols = [col for col in step_df.columns if col not in metadata_cols]
 
             total_uin_fc = pd.to_numeric(step_df['UIN'], errors='coerce').sum() if 'UIN' in step_df.columns else 0
             if total_uin_fc > 0:
                 total_dpm = 0
-                for fc_col in fc_cols[:10]:  # Top 10 FAILCRAWLERs
-                    fc_dpm = pd.to_numeric(step_df[fc_col], errors='coerce').sum() if fc_col in step_df.columns else 0
+                # Use MEAN to match chart calculation (averages across design IDs)
+                # Chart uses: agg_dict = {col: 'mean' for col in fc_columns}
+                for fc_col in fc_cols:  # All FAILCRAWLER columns
+                    fc_dpm = pd.to_numeric(step_df[fc_col], errors='coerce').mean() if fc_col in step_df.columns else 0
                     if fc_dpm > 0:
                         fcdpm_breakdown.append({
                             'category': fc_col,

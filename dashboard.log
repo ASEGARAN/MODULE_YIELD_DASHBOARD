@@ -13517,3 +13517,549 @@
 2026-04-15 23:35:02,801 - __main__ - INFO - [PDF Export] Fetching GRACE data
 2026-04-15 23:35:02,802 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm,socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N -test_facility=PENANG
 2026-04-15 23:35:21,534 - src.grace_motherboard - INFO - Fetched 3529 NVGRACE FM records
+2026-04-15 23:54:44,575 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y42M,Y62P,Y6CP,Y63N -test_facility=PENANG
+2026-04-15 23:55:03,651 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-15 23:55:22,616 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:22,986 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:23,588 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-15 23:55:23,590 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:23,949 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:24,437 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-15 23:55:24,439 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:24,735 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:25,197 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-15 23:55:25,201 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:25,514 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:26,007 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-15 23:55:26,009 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:26,295 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:26,737 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-15 23:55:26,739 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:27,177 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:27,587 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-15 23:55:27,588 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:27,872 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:28,398 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-15 23:55:28,399 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:28,718 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:29,216 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-15 23:55:29,217 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:29,489 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-15 23:55:29,742 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-15 23:55:30,244 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 00:04:45,434 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N -test_facility=PENANG
+2026-04-16 00:05:04,375 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 00:05:24,892 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:25,326 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:25,884 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 00:05:25,886 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:26,176 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:26,700 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 00:05:26,702 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:27,003 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:27,468 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 00:05:27,471 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:27,804 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:28,337 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 00:05:28,339 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:28,649 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:29,209 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 00:05:29,211 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:29,521 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:30,054 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 00:05:30,054 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:30,321 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:30,875 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 00:05:30,876 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:31,303 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:31,655 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:32,264 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 00:05:32,265 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:05:32,570 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:05:33,108 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 00:10:50,841 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N -test_facility=PENANG
+2026-04-16 00:11:11,054 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 00:12:19,367 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:19,945 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:20,741 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 00:12:20,743 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:21,082 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:21,895 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 00:12:21,897 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:22,218 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:22,770 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 00:12:22,774 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:23,144 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:23,808 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 00:12:23,811 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:24,348 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:25,054 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 00:12:25,056 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:25,517 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:26,236 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 00:12:26,237 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:26,728 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:27,590 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 00:12:27,591 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:27,993 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:28,552 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:29,112 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 00:12:29,113 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:12:29,395 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:12:30,328 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 00:28:26,985 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N -test_facility=PENANG
+2026-04-16 00:28:46,599 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 00:29:10,360 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N -test_facility=PENANG
+2026-04-16 00:29:30,133 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 00:29:39,007 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:39,246 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:39,794 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 00:29:39,796 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:40,029 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:40,406 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 00:29:40,408 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:40,688 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:41,106 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 00:29:41,109 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:41,342 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:41,859 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 00:29:41,861 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:42,359 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:42,783 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 00:29:42,786 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:43,072 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:43,535 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 00:29:43,536 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:43,807 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:44,264 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 00:29:44,264 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:44,832 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:45,238 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 00:29:45,239 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:45,633 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:29:45,868 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:29:46,330 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 00:40:02,102 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N
+2026-04-16 00:40:22,956 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 00:41:05,186 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:05,856 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:06,413 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 00:41:06,417 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:06,674 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:07,057 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 00:41:07,059 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:07,552 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:07,949 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 00:41:07,955 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:08,201 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:08,646 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 00:41:08,648 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:08,870 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:09,236 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 00:41:09,238 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:09,789 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:10,204 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 00:41:10,205 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:10,459 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:10,866 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 00:41:10,868 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:11,089 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:11,318 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:11,753 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 00:41:11,754 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:41:11,996 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:41:12,408 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 00:45:52,141 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N
+2026-04-16 00:46:11,232 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 00:46:24,371 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:24,745 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:25,431 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 00:46:25,436 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:25,812 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:26,524 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 00:46:26,527 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:26,920 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:27,543 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 00:46:27,546 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:27,797 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:28,325 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 00:46:28,327 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:28,607 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:29,185 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 00:46:29,188 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:29,506 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:29,998 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 00:46:29,999 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:30,328 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:30,881 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 00:46:30,882 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:31,215 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:31,483 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:31,987 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 00:46:31,988 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:46:32,315 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:46:32,883 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 00:49:02,124 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N -test_facility=PENANG
+2026-04-16 00:49:21,361 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 00:49:50,423 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:50,836 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:49:51,604 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 00:49:51,606 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:52,221 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:49:53,031 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 00:49:53,033 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:53,477 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:49:54,104 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 00:49:54,111 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:54,590 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:49:55,384 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 00:49:55,386 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:55,770 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:49:56,465 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 00:49:56,468 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:57,106 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:49:57,886 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 00:49:57,887 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:58,158 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:49:58,756 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 00:49:58,757 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:59,169 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:49:59,817 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:50:00,690 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 00:50:00,691 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:50:01,179 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:50:02,314 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 00:51:36,284 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202606,202607,202608,202609,202610,202611,202612,202613,202614,202615 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N -test_facility=PENANG
+2026-04-16 00:51:56,273 - src.grace_motherboard - INFO - Fetched 3742 NVGRACE FM records
+2026-04-16 00:52:15,600 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y62P,Y6CP,Y63N -test_facility=PENANG
+2026-04-16 00:52:34,443 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 00:52:42,343 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:42,581 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:43,125 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 00:52:43,128 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:43,390 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:43,816 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 00:52:43,818 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:44,040 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:44,463 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 00:52:44,467 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:44,726 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:45,228 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 00:52:45,234 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:45,481 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:45,897 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 00:52:45,899 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:46,179 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:46,643 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 00:52:46,643 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:46,907 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:47,410 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 00:52:47,411 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:47,650 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:47,888 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:48,389 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 00:52:48,390 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 00:52:48,635 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 00:52:49,077 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 00:59:10,983 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_4f233b46237f.csv
+2026-04-16 00:59:10,990 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 00:59:12,488 - src.failcrawler - INFO - Fetched 119 MSN_STATUS correlation records
+2026-04-16 00:59:12,488 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 00:59:16,914 - src.failcrawler - INFO - Fetched 62893 records for unique module/FID counting
+2026-04-16 00:59:16,926 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 00:59:17,608 - src.failcrawler - INFO - Fetched UIN for 30 step/workweek combinations
+2026-04-16 01:47:36,757 - src.failcrawler - INFO - Fetching FAILCRAWLER data: 3 DIDs, 3 steps, 10 weeks
+2026-04-16 01:47:38,671 - src.failcrawler - INFO - Fetched 57 FAILCRAWLER records (wide format with 71 columns)
+2026-04-16 01:47:38,695 - src.failcrawler - INFO - FAILCRAWLER data cached to cache/failcrawler_bbbe09334cc3.csv
+2026-04-16 01:47:38,695 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 01:47:40,227 - src.failcrawler - INFO - Fetched 160 MSN_STATUS correlation records
+2026-04-16 01:47:40,227 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 01:47:45,143 - src.failcrawler - INFO - Fetched 78118 records for unique module/FID counting
+2026-04-16 01:47:45,157 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 01:47:45,773 - src.failcrawler - INFO - Fetched UIN for 30 step/workweek combinations
+2026-04-16 01:47:45,773 - src.failcrawler - INFO - Fetching cDPM data for HMFN...
+2026-04-16 01:47:50,139 - src.failcrawler - INFO - Fetched 103 cDPM records for HMFN
+2026-04-16 01:47:50,139 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 01:48:30,114 - src.failcrawler - INFO - Fetched 75 cDPM records for HMB1
+2026-04-16 01:48:30,114 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 01:48:34,068 - src.failcrawler - INFO - Fetched 60 cDPM records for QMON
+2026-04-16 01:48:34,069 - src.failcrawler - INFO - Total cDPM records: 238
+2026-04-16 01:48:34,069 - src.failcrawler - INFO - Fetching MDPM data for HMFN...
+2026-04-16 01:48:37,922 - src.failcrawler - INFO - Fetched 124 MDPM records for HMFN
+2026-04-16 01:48:37,923 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 01:49:00,877 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_4f233b46237f.csv
+2026-04-16 01:49:00,884 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 01:49:02,300 - src.failcrawler - INFO - Fetched 119 MSN_STATUS correlation records
+2026-04-16 01:49:02,300 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 01:49:06,174 - src.failcrawler - INFO - Fetched 62893 records for unique module/FID counting
+2026-04-16 01:49:06,188 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 01:49:06,828 - src.failcrawler - INFO - Fetched UIN for 30 step/workweek combinations
+2026-04-16 01:49:06,829 - src.failcrawler - INFO - Fetching cDPM data for HMFN...
+2026-04-16 01:49:07,403 - src.failcrawler - INFO - Fetched 54 cDPM records for HMFN
+2026-04-16 01:49:07,403 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 01:49:08,030 - src.failcrawler - INFO - Fetched 67 cDPM records for HMB1
+2026-04-16 01:49:08,031 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 01:49:08,516 - src.failcrawler - INFO - Fetched 53 cDPM records for QMON
+2026-04-16 01:49:08,517 - src.failcrawler - INFO - Total cDPM records: 174
+2026-04-16 01:49:08,517 - src.failcrawler - INFO - Fetching MDPM data for HMFN...
+2026-04-16 01:49:09,052 - src.failcrawler - INFO - Fetched 64 MDPM records for HMFN
+2026-04-16 01:49:09,052 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 01:49:09,569 - src.failcrawler - INFO - Fetched 67 MDPM records for HMB1
+2026-04-16 01:49:09,569 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 01:49:10,146 - src.failcrawler - INFO - Fetched 53 MDPM records for QMON
+2026-04-16 01:49:10,147 - src.failcrawler - INFO - Total MDPM records: 184
+2026-04-16 01:49:14,998 - src.failcrawler - INFO - Fetched 75 MDPM records for HMB1
+2026-04-16 01:49:14,998 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 01:49:18,719 - src.failcrawler - INFO - Fetched 60 MDPM records for QMON
+2026-04-16 01:49:18,720 - src.failcrawler - INFO - Total MDPM records: 259
+2026-04-16 01:53:29,815 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_4f233b46237f.csv
+2026-04-16 01:53:29,827 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 01:53:31,318 - src.failcrawler - INFO - Fetched 119 MSN_STATUS correlation records
+2026-04-16 01:53:31,318 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 01:53:35,784 - src.failcrawler - INFO - Fetched 62893 records for unique module/FID counting
+2026-04-16 01:53:35,797 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 01:53:36,575 - src.failcrawler - INFO - Fetched UIN for 30 step/workweek combinations
+2026-04-16 01:53:36,575 - src.failcrawler - INFO - Fetching cDPM data for HMFN...
+2026-04-16 01:53:37,449 - src.failcrawler - INFO - Fetched 54 cDPM records for HMFN
+2026-04-16 01:53:37,450 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 01:53:38,251 - src.failcrawler - INFO - Fetched 67 cDPM records for HMB1
+2026-04-16 01:53:38,251 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 01:53:39,064 - src.failcrawler - INFO - Fetched 53 cDPM records for QMON
+2026-04-16 01:53:39,065 - src.failcrawler - INFO - Total cDPM records: 174
+2026-04-16 01:53:39,066 - src.failcrawler - INFO - Fetching MDPM data for HMFN...
+2026-04-16 01:53:39,736 - src.failcrawler - INFO - Fetched 64 MDPM records for HMFN
+2026-04-16 01:53:39,736 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 01:53:40,392 - src.failcrawler - INFO - Fetched 67 MDPM records for HMB1
+2026-04-16 01:53:40,392 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 01:53:41,072 - src.failcrawler - INFO - Fetched 53 MDPM records for QMON
+2026-04-16 01:53:41,073 - src.failcrawler - INFO - Total MDPM records: 184
+2026-04-16 02:01:59,640 - __main__ - INFO - ============================================================
+2026-04-16 02:01:59,640 - __main__ - INFO - FETCH ELC DATA STARTED (cache=ON)
+2026-04-16 02:01:59,640 - __main__ - INFO - Filters: {'form_factors': ['SOCAMM2'], 'test_steps': ['HMFN', 'HMB1', 'QMON'], 'design_ids': ['Y6CP', 'Y63N'], 'facility': 'all', 'start_ww': '202605', 'end_ww': '202614', 'densities': None, 'speeds': None}
+2026-04-16 02:01:59,645 - __main__ - INFO - Workweeks to fetch: ['202605', '202606', '202607', '202608', '202609', '202610', '202611', '202612', '202613', '202614']
+2026-04-16 02:01:59,646 - __main__ - INFO - Total frpt calls for ELC: 60
+2026-04-16 02:01:59,648 - src.frpt_runner - INFO - Running 60 commands in parallel with 8 workers
+2026-04-16 02:02:06,562 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202606
+2026-04-16 02:02:06,563 - src.frpt_runner - INFO - [1/60] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-16 02:02:09,293 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202612
+2026-04-16 02:02:09,297 - src.frpt_runner - INFO - [2/60] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-16 02:02:15,282 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202608
+2026-04-16 02:02:15,283 - src.frpt_runner - INFO - [3/60] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-16 02:02:18,354 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202609
+2026-04-16 02:02:18,370 - src.frpt_runner - INFO - [4/60] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-16 02:02:28,660 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202605
+2026-04-16 02:02:28,676 - src.frpt_runner - INFO - [5/60] Completed: HMB1/SOCAMM2/WW202605 - success=True
+2026-04-16 02:02:28,786 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202607
+2026-04-16 02:02:28,815 - src.frpt_runner - INFO - [6/60] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-16 02:02:32,712 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202611
+2026-04-16 02:02:32,716 - src.frpt_runner - INFO - [7/60] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-16 02:02:40,360 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202606
+2026-04-16 02:02:40,382 - src.frpt_runner - INFO - [8/60] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-16 02:02:40,984 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202605
+2026-04-16 02:02:41,004 - src.frpt_runner - INFO - [9/60] Completed: HMFN/SOCAMM2/WW202605 - success=True
+2026-04-16 02:02:45,130 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202609
+2026-04-16 02:02:45,139 - src.frpt_runner - INFO - [10/60] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-16 02:02:47,858 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202608
+2026-04-16 02:02:47,868 - src.frpt_runner - INFO - [11/60] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-16 02:02:53,477 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202607
+2026-04-16 02:02:53,482 - src.frpt_runner - INFO - [12/60] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-16 02:03:01,212 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202610
+2026-04-16 02:03:01,215 - src.frpt_runner - INFO - [13/60] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-16 02:03:05,801 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202611
+2026-04-16 02:03:05,807 - src.frpt_runner - INFO - [14/60] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-16 02:03:08,729 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202610
+2026-04-16 02:03:08,779 - src.frpt_runner - INFO - [15/60] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-16 02:03:13,106 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202612
+2026-04-16 02:03:13,111 - src.frpt_runner - INFO - [16/60] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-16 02:03:14,344 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202613
+2026-04-16 02:03:14,347 - src.frpt_runner - INFO - [17/60] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-16 02:03:14,754 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202614
+2026-04-16 02:03:14,759 - src.frpt_runner - INFO - [18/60] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-16 02:03:17,301 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202614
+2026-04-16 02:03:17,302 - src.frpt_runner - INFO - [19/60] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-16 02:03:17,615 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202605
+2026-04-16 02:03:17,617 - src.frpt_runner - INFO - [20/60] Completed: QMON/SOCAMM2/WW202605 - success=True
+2026-04-16 02:03:20,022 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202606
+2026-04-16 02:03:20,023 - src.frpt_runner - INFO - [21/60] Completed: QMON/SOCAMM2/WW202606 - success=True
+2026-04-16 02:03:20,722 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202609
+2026-04-16 02:03:20,725 - src.frpt_runner - INFO - [22/60] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-16 02:03:21,472 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202607
+2026-04-16 02:03:21,480 - src.frpt_runner - INFO - [23/60] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-16 02:03:27,595 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202608
+2026-04-16 02:03:27,599 - src.frpt_runner - INFO - [24/60] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-16 02:03:29,285 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202605
+2026-04-16 02:03:29,294 - src.frpt_runner - INFO - [25/60] Completed: HMFN/SOCAMM2/WW202605 - success=True
+2026-04-16 02:03:31,941 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202610
+2026-04-16 02:03:31,977 - src.frpt_runner - INFO - [26/60] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-16 02:03:32,039 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202611
+2026-04-16 02:03:32,048 - src.frpt_runner - INFO - [27/60] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-16 02:03:32,360 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202612
+2026-04-16 02:03:32,368 - src.frpt_runner - INFO - [28/60] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-16 02:03:34,883 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202606
+2026-04-16 02:03:34,915 - src.frpt_runner - INFO - [29/60] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-16 02:03:36,404 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202614
+2026-04-16 02:03:36,422 - src.frpt_runner - INFO - [30/60] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-16 02:03:36,686 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202613
+2026-04-16 02:03:36,691 - src.frpt_runner - INFO - [31/60] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-16 02:03:36,898 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202608
+2026-04-16 02:03:36,899 - src.frpt_runner - INFO - [32/60] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-16 02:03:36,977 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202609
+2026-04-16 02:03:36,988 - src.frpt_runner - INFO - [33/60] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-16 02:03:37,226 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202607
+2026-04-16 02:03:37,232 - src.frpt_runner - INFO - [34/60] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-16 02:03:38,231 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202610
+2026-04-16 02:03:38,233 - src.frpt_runner - INFO - [35/60] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-16 02:03:38,421 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202611
+2026-04-16 02:03:38,422 - src.frpt_runner - INFO - [36/60] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-16 02:03:38,733 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202613
+2026-04-16 02:03:38,736 - src.frpt_runner - INFO - [37/60] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-16 02:03:39,587 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202606
+2026-04-16 02:03:39,588 - src.frpt_runner - INFO - [38/60] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-16 02:03:39,891 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202612
+2026-04-16 02:03:39,898 - src.frpt_runner - INFO - [39/60] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-16 02:03:40,000 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202605
+2026-04-16 02:03:40,002 - src.frpt_runner - INFO - [40/60] Completed: HMB1/SOCAMM2/WW202605 - success=True
+2026-04-16 02:03:40,987 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202607
+2026-04-16 02:03:40,991 - src.frpt_runner - INFO - [41/60] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-16 02:03:41,298 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202610
+2026-04-16 02:03:41,313 - src.frpt_runner - INFO - [42/60] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-16 02:03:41,424 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202608
+2026-04-16 02:03:41,425 - src.frpt_runner - INFO - [43/60] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-16 02:03:42,252 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202609
+2026-04-16 02:03:42,256 - src.frpt_runner - INFO - [44/60] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-16 02:03:42,635 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202611
+2026-04-16 02:03:42,653 - src.frpt_runner - INFO - [45/60] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-16 02:03:43,986 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202612
+2026-04-16 02:03:43,990 - src.frpt_runner - INFO - [46/60] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-16 02:03:44,726 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202605
+2026-04-16 02:03:44,730 - src.frpt_runner - INFO - [47/60] Completed: QMON/SOCAMM2/WW202605 - success=True
+2026-04-16 02:03:44,924 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202614
+2026-04-16 02:03:44,925 - src.frpt_runner - INFO - [48/60] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-16 02:03:45,017 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202613
+2026-04-16 02:03:45,018 - src.frpt_runner - INFO - [49/60] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-16 02:03:45,121 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202606
+2026-04-16 02:03:45,125 - src.frpt_runner - INFO - [50/60] Completed: QMON/SOCAMM2/WW202606 - success=True
+2026-04-16 02:03:45,167 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202614
+2026-04-16 02:03:45,170 - src.frpt_runner - INFO - [51/60] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-16 02:03:45,593 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202607
+2026-04-16 02:03:45,611 - src.frpt_runner - INFO - [52/60] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-16 02:03:46,237 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202608
+2026-04-16 02:03:46,245 - src.frpt_runner - INFO - [53/60] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-16 02:03:46,457 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202609
+2026-04-16 02:03:46,458 - src.frpt_runner - INFO - [54/60] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-16 02:03:46,757 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202610
+2026-04-16 02:03:46,758 - src.frpt_runner - INFO - [55/60] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-16 02:03:46,969 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202611
+2026-04-16 02:03:46,971 - src.frpt_runner - INFO - [56/60] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-16 02:03:47,055 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202614
+2026-04-16 02:03:47,056 - src.frpt_runner - INFO - [57/60] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-16 02:03:47,294 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202613
+2026-04-16 02:03:47,295 - src.frpt_runner - INFO - [58/60] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-16 02:03:47,614 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202612
+2026-04-16 02:03:47,614 - src.frpt_runner - INFO - [59/60] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-16 02:03:48,112 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202613
+2026-04-16 02:03:48,113 - src.frpt_runner - INFO - [60/60] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-16 02:03:48,116 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-16 02:03:48,116 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-16 02:03:48,119 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-16 02:03:48,122 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=6, lines_without_pipe=40, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-16 02:03:48,126 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,130 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,134 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,137 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=11, bin_cols=['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,139 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,141 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,143 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_56_TRAIN-DQ', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_99_OTHER']
+2026-04-16 02:03:48,149 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=5, lines_without_pipe=17, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_56_TRAIN-DQ', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_99_OTHER']
+2026-04-16 02:03:48,154 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-16 02:03:48,154 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=6, lines_without_pipe=22, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-16 02:03:48,168 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,171 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,185 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,185 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,187 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,187 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,197 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,197 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,203 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,203 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,212 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-16 02:03:48,212 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=15, bin_cols=['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-16 02:03:48,226 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,226 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,231 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,232 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,236 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,236 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,239 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,244 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,255 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_83_CHK-OPT-']
+2026-04-16 02:03:48,255 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=6, lines_without_pipe=17, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_83_CHK-OPT-']
+2026-04-16 02:03:48,261 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,263 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,265 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,265 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,267 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,267 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,285 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,285 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=3, bin_cols=['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,292 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,294 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,296 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,302 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,305 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,306 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,308 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,308 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,313 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,316 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,318 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,322 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,325 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,325 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,327 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-16 02:03:48,328 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-16 02:03:48,332 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,332 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=4, bin_cols=['Bin_1_GOOD', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,336 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-16 02:03:48,340 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-16 02:03:48,345 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-16 02:03:48,347 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-16 02:03:48,352 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,352 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=4, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-16 02:03:48,361 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_16_LEAK-LO-', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,362 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=5, lines_without_pipe=8, bin_cols=['Bin_1_GOOD', 'Bin_16_LEAK-LO-', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-16 02:03:48,372 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-16 02:03:48,375 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-16 02:03:48,377 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_84_GEN-REP-', 'Bin_99_OTHER']
+2026-04-16 02:03:48,378 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=6, lines_without_pipe=22, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_84_GEN-REP-', 'Bin_99_OTHER']
+2026-04-16 02:03:48,421 - __main__ - INFO - ELC data parsed: 51 rows
+2026-04-16 02:03:48,500 - __main__ - INFO - ELC yields calculated: 25 rows
+2026-04-16 05:34:10,177 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_4f233b46237f.csv
+2026-04-16 05:34:10,193 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 05:34:11,784 - src.failcrawler - INFO - Fetched 119 MSN_STATUS correlation records
+2026-04-16 05:34:11,784 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 05:34:15,554 - src.failcrawler - INFO - Fetched 62893 records for unique module/FID counting
+2026-04-16 05:34:15,579 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 05:34:16,104 - src.failcrawler - INFO - Fetched UIN for 30 step/workweek combinations
+2026-04-16 05:34:16,104 - src.failcrawler - INFO - Fetching cDPM data for HMFN...
+2026-04-16 05:34:16,614 - src.failcrawler - INFO - Fetched 54 cDPM records for HMFN
+2026-04-16 05:34:16,614 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 05:34:17,076 - src.failcrawler - INFO - Fetched 67 cDPM records for HMB1
+2026-04-16 05:34:17,076 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 05:34:17,757 - src.failcrawler - INFO - Fetched 53 cDPM records for QMON
+2026-04-16 05:34:17,758 - src.failcrawler - INFO - Total cDPM records: 174
+2026-04-16 05:34:17,758 - src.failcrawler - INFO - Fetching MDPM data for HMFN...
+2026-04-16 05:34:18,394 - src.failcrawler - INFO - Fetched 64 MDPM records for HMFN
+2026-04-16 05:34:18,395 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 05:34:19,000 - src.failcrawler - INFO - Fetched 67 MDPM records for HMB1
+2026-04-16 05:34:19,000 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 05:34:19,851 - src.failcrawler - INFO - Fetched 53 MDPM records for QMON
+2026-04-16 05:34:19,852 - src.failcrawler - INFO - Total MDPM records: 184
+2026-04-16 05:34:19,853 - src.failcrawler - INFO - Fetching FCFM decode quality for HMFN...
+2026-04-16 05:34:20,381 - src.failcrawler - INFO - Fetched 172 FCFM records for HMFN
+2026-04-16 05:34:20,383 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 05:34:21,220 - src.failcrawler - INFO - Fetched 121 FCFM records for HMB1
+2026-04-16 05:34:21,221 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 05:34:22,063 - src.failcrawler - INFO - Fetched 89 FCFM records for QMON
+2026-04-16 05:34:22,065 - src.failcrawler - INFO - Total FCFM records: 382
