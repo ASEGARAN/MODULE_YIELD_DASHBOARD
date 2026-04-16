@@ -1917,7 +1917,8 @@ def create_dpm_metrics_summary_html(
     fcdpm_df: pd.DataFrame,
     step: str,
     workweek: int = None,
-    dark_mode: bool = False
+    dark_mode: bool = False,
+    fcfm_df: pd.DataFrame = None
 ) -> str:
     """
     Create HTML summary table showing cDPM, MDPM, and FCDPM side by side.
@@ -1929,6 +1930,7 @@ def create_dpm_metrics_summary_html(
         step: Test step
         workweek: Optional specific workweek (None = all)
         dark_mode: Theme setting
+        fcfm_df: Optional FCFM DataFrame for UE/UNKNOWN breakdown
 
     Returns:
         HTML string for the DPM summary card
@@ -1947,7 +1949,20 @@ def create_dpm_metrics_summary_html(
     uin = 0
     muin = 0
     fcdpm_total = None
+    fcdpm_decoded = None  # UE only (matches moduledat)
+    fcdpm_undecoded = None  # UNKNOWN only
     fcdpm_breakdown = []
+    unknown_failcrawlers = set()  # FAILCRAWLERs with FCFM=UNKNOWN
+
+    # Get UNKNOWN FAILCRAWLERs from FCFM data if available
+    if fcfm_df is not None and not fcfm_df.empty:
+        step_col = 'QUERY_STEP' if 'QUERY_STEP' in fcfm_df.columns else 'STEP'
+        fcfm_step_df = fcfm_df[fcfm_df[step_col].str.upper() == step.upper()].copy() if step_col in fcfm_df.columns else fcfm_df.copy()
+        if workweek is not None and 'MFG_WORKWEEK' in fcfm_step_df.columns:
+            fcfm_step_df = fcfm_step_df[fcfm_step_df['MFG_WORKWEEK'] == workweek]
+        if not fcfm_step_df.empty and 'FCFM' in fcfm_step_df.columns and 'FAILCRAWLER' in fcfm_step_df.columns:
+            unknown_rows = fcfm_step_df[fcfm_step_df['FCFM'].str.upper() == 'UNKNOWN']
+            unknown_failcrawlers = set(unknown_rows['FAILCRAWLER'].str.upper().unique())
 
     # Helper to filter by step (handles both QUERY_STEP and STEP columns)
     def filter_by_step(df: pd.DataFrame, step_name: str) -> pd.DataFrame:
@@ -1998,17 +2013,27 @@ def create_dpm_metrics_summary_html(
             total_uin_fc = pd.to_numeric(step_df['UIN'], errors='coerce').sum() if 'UIN' in step_df.columns else 0
             if total_uin_fc > 0:
                 total_dpm = 0
+                decoded_dpm = 0
+                undecoded_dpm = 0
                 # Use MEAN to match chart calculation (averages across design IDs)
                 # Chart uses: agg_dict = {col: 'mean' for col in fc_columns}
                 for fc_col in fc_cols:  # All FAILCRAWLER columns
                     fc_dpm = pd.to_numeric(step_df[fc_col], errors='coerce').mean() if fc_col in step_df.columns else 0
                     if fc_dpm > 0:
+                        is_unknown = fc_col.upper() in unknown_failcrawlers
                         fcdpm_breakdown.append({
                             'category': fc_col,
-                            'dpm': round(float(fc_dpm), 2)
+                            'dpm': round(float(fc_dpm), 2),
+                            'is_unknown': is_unknown
                         })
                         total_dpm += fc_dpm
+                        if is_unknown:
+                            undecoded_dpm += fc_dpm
+                        else:
+                            decoded_dpm += fc_dpm
                 fcdpm_total = round(float(total_dpm), 2)
+                fcdpm_decoded = round(float(decoded_dpm), 2)
+                fcdpm_undecoded = round(float(undecoded_dpm), 2)
                 fcdpm_breakdown.sort(key=lambda x: x['dpm'], reverse=True)
 
     # Format workweek display
@@ -2042,14 +2067,24 @@ def create_dpm_metrics_summary_html(
                 <div style="font-size: 10px; color: {subtext_color}; margin-top: 4px;">MUIN: {muin:,}</div>
             </div>
 
-            <!-- FCDPM Card -->
+            <!-- FCDPM Total Card -->
             <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid #F39C12;">
                 <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">FCDPM Total</div>
                 <div style="font-size: 24px; font-weight: bold; color: #F39C12; margin: 4px 0;">
                     {fcdpm_total if fcdpm_total is not None else 'N/A'}
                 </div>
-                <div style="font-size: 10px; color: {subtext_color};">FAILCRAWLER cDPM</div>
+                <div style="font-size: 10px; color: {subtext_color};">All FAILCRAWLERs (UE+UNKNOWN)</div>
                 <div style="font-size: 10px; color: {subtext_color}; margin-top: 4px;">Target: {TARGET_CDPM}</div>
+            </div>
+
+            <!-- FCDPM Decoded Card -->
+            <div style="flex: 1; min-width: 150px; background-color: {card_bg}; border-radius: 8px; padding: 12px; border-left: 4px solid #27AE60;">
+                <div style="font-size: 11px; color: {subtext_color}; text-transform: uppercase; letter-spacing: 0.5px;">FCDPM Decoded</div>
+                <div style="font-size: 24px; font-weight: bold; color: #27AE60; margin: 4px 0;">
+                    {fcdpm_decoded if fcdpm_decoded is not None else 'N/A'}
+                </div>
+                <div style="font-size: 10px; color: {subtext_color};">UE Only (matches moduledat)</div>
+                <div style="font-size: 10px; color: #E74C3C; margin-top: 4px;">Undecoded: {fcdpm_undecoded if fcdpm_undecoded is not None else 'N/A'}</div>
             </div>
         </div>
     '''

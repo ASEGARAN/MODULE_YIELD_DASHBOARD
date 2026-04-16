@@ -3882,7 +3882,8 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
             # Show DPM metrics summary cards for this step
             if not cdpm_df.empty or not mdpm_df.empty:
                 summary_html = create_dpm_metrics_summary_html(
-                    cdpm_df, mdpm_df, fc_df, step, workweek=latest_ww, dark_mode=False
+                    cdpm_df, mdpm_df, fc_df, step, workweek=latest_ww, dark_mode=False,
+                    fcfm_df=fcfm_df
                 )
                 if summary_html:
                     components.html(summary_html, height=200, scrolling=False)
