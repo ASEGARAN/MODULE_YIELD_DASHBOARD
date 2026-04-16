@@ -3846,32 +3846,6 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
             if alert_html:
                 components.html(alert_html, height=50, scrolling=False)
 
-        # Show DPM comparison table for all steps (above individual step charts)
-        if not cdpm_df.empty or not mdpm_df.empty:
-            with st.expander("📊 DPM Metrics Comparison (All Steps)", expanded=True):
-                # Toggle for latest WW or cumulative
-                metrics_col1, metrics_col2 = st.columns([1, 3])
-                with metrics_col1:
-                    metrics_time_range = st.radio(
-                        "View",
-                        options=["Latest WW", "Cumulative"],
-                        horizontal=True,
-                        key="fc_metrics_time_range",
-                        label_visibility="collapsed"
-                    )
-                selected_ww = latest_ww if metrics_time_range == "Latest WW" else None
-                with metrics_col2:
-                    if selected_ww:
-                        st.caption(f"📅 WW{selected_ww}")
-                    else:
-                        st.caption("📅 Cumulative (all weeks)")
-
-                comparison_html = create_dpm_comparison_table_html(
-                    cdpm_df, mdpm_df, steps_to_show, workweek=selected_ww, dark_mode=False
-                )
-                if comparison_html:
-                    components.html(comparison_html, height=250, scrolling=True)
-
         st.divider()
 
         # Get FCFM decode quality data from session state
