@@ -2433,7 +2433,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                                 uin = pivot_uin.iloc[i, j]
                                 ufail = pivot_ufail.iloc[i, j]
                                 if pd.notna(y):
-                                    row_text.append(f"{y:.0f}%<br>U:{int(uin)} F:{int(ufail)}")
+                                    row_text.append(f"{y:.0f}% UIN:{int(uin)} UFAIL:{int(ufail)}")
                                 else:
                                     row_text.append("-")
                             custom_text.append(row_text)
