@@ -3709,10 +3709,7 @@ def fetch_pareto_data(filters: dict[str, Any], use_cache: bool = True) -> pd.Dat
 
 def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
     """Render the FAILCRAWLER DPM sub-tab content."""
-    st.markdown("""
-    **FAILCRAWLER cDPM Analysis** by test step (HMFN, HMB1, QMON, SLT).
-    Shows failure signature patterns breakdown by workweek with volume overlay.
-    """)
+    st.caption("**FAILCRAWLER cDPM Analysis** - Failure signature patterns by workweek with volume overlay")
 
     use_cache = st.session_state.get("use_cache", True)
 
@@ -3819,8 +3816,6 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
         if st.session_state.failcrawler_last_fetch_time:
             st.caption(f"📅 Last fetched: {st.session_state.failcrawler_last_fetch_time}")
 
-        st.divider()
-
         # DID filter for viewing per-DID or cumulative
         # Filter out NaN values before sorting
         available_dids = [d for d in fc_df['DESIGN_ID'].unique().tolist()
@@ -3860,9 +3855,7 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
         if excursions:
             alert_html = create_alert_summary_html(excursions, dark_mode=False)
             if alert_html:
-                components.html(alert_html, height=50, scrolling=False)
-
-        st.divider()
+                components.html(alert_html, height=40, scrolling=False)
 
         # Get FCFM decode quality data from session state
         fcfm_df = st.session_state.get('failcrawler_fcfm_data', pd.DataFrame())
@@ -3872,15 +3865,18 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
             if data is None:
                 continue
 
-            st.subheader(f"📊 {step} FAILCRAWLER cDPM")
-
-            # Show decode quality indicator (UE% vs UNKNOWN%)
-            if not fcfm_df.empty:
-                decode_data = calculate_decode_quality(fcfm_df, step, workweek=latest_ww)
-                if decode_data:
-                    decode_html = create_decode_quality_html(decode_data, dark_mode=False)
-                    if decode_html:
-                        components.html(decode_html, height=40, scrolling=False)
+            # Step header with decode quality inline
+            header_col1, header_col2 = st.columns([2, 3])
+            with header_col1:
+                st.markdown(f"### 📊 {step}")
+            with header_col2:
+                # Show decode quality indicator (UE% vs UNKNOWN%) inline with header
+                if not fcfm_df.empty:
+                    decode_data = calculate_decode_quality(fcfm_df, step, workweek=latest_ww)
+                    if decode_data:
+                        decode_html = create_decode_quality_html(decode_data, dark_mode=False)
+                        if decode_html:
+                            components.html(decode_html, height=32, scrolling=False)
 
             # Show DPM metrics summary cards for this step (with WoW trends and sparklines)
             if not cdpm_df.empty or not mdpm_df.empty:
@@ -3889,14 +3885,14 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     fcfm_df=fcfm_df, show_trends=True
                 )
                 if summary_html:
-                    components.html(summary_html, height=180, scrolling=False)
+                    components.html(summary_html, height=160, scrolling=False)
 
             # Show Top Movers (FAILCRAWLERs with >25% WoW increase)
             fc_changes = calculate_failcrawler_wow_changes(fc_df, step)
             if fc_changes:
                 top_movers_html = create_top_movers_html(fc_changes, step, threshold=25.0, dark_mode=False)
                 if top_movers_html:
-                    components.html(top_movers_html, height=80, scrolling=False)
+                    components.html(top_movers_html, height=60, scrolling=False)
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(
@@ -3929,10 +3925,10 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
             with st.expander(f"📋 {step} Pareto Summary (80/20 Analysis)", expanded=False):
                 pareto_html = create_pareto_summary_html(data, dark_mode=False)
                 if pareto_html:
-                    components.html(pareto_html, height=400, scrolling=True)
+                    components.html(pareto_html, height=350, scrolling=True)
 
             # MSN_STATUS Correlation (FAILCRAWLER × MSN_STATUS contribution analysis)
-            st.subheader(f"🔗 {step} MSN_STATUS Correlation")
+            st.markdown(f"#### 🔗 {step} MSN_STATUS Correlation")
 
             # Use separate MSN_STATUS correlation data from session state
             msn_corr_df = st.session_state.get('failcrawler_msn_corr_data', pd.DataFrame())
@@ -4031,12 +4027,10 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                         # Ranked table: MSN_STATUS by CDPM contribution
                         ranked_html = create_msn_status_ranked_table_html(correlation_data, dark_mode=False)
                         if ranked_html:
-                            components.html(ranked_html, height=450, scrolling=True)
+                            components.html(ranked_html, height=380, scrolling=True)
 
                 else:
                     st.info(f"No MSN_STATUS correlation data for {step}. All failures may be 'Pass' status.")
-
-            st.divider()
 
     else:
         st.info("👆 Click 'Fetch Live Data' to load FAILCRAWLER cDPM data using current dashboard filters.")
