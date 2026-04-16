@@ -2435,29 +2435,6 @@ def create_dpm_metrics_summary_html(
                 <div style="font-size: 10px; color: #E74C3C; margin-top: 4px;">Undecoded: {fcdpm_undecoded if fcdpm_undecoded is not None else 'N/A'}</div>
             </div>
         </div>
-    '''
-
-    # Add top FAILCRAWLER breakdown if available
-    if fcdpm_breakdown:
-        html += f'''
-        <div style="margin-top: 16px;">
-            <div style="font-size: 12px; font-weight: bold; color: {text_color}; margin-bottom: 8px;">Top FAILCRAWLERs:</div>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-        '''
-        for fc in fcdpm_breakdown[:5]:
-            fc_color = FAILCRAWLER_COLORS.get(fc['category'], '#888888')
-            html += f'''
-                <div style="background-color: {fc_color}20; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 4px;">
-                    <span style="color: {fc_color}; font-weight: bold;">■</span>
-                    <span style="font-size: 11px; color: {text_color};">{fc['category']}: {fc['dpm']}</span>
-                </div>
-            '''
-        html += '''
-            </div>
-        </div>
-        '''
-
-    html += '''
     </div>
     '''
 

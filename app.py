@@ -3896,7 +3896,7 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     fcfm_df=fcfm_df, show_trends=True
                 )
                 if summary_html:
-                    components.html(summary_html, height=280, scrolling=False)
+                    components.html(summary_html, height=180, scrolling=False)
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(
@@ -3930,12 +3930,6 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 pareto_html = create_pareto_summary_html(data, dark_mode=False)
                 if pareto_html:
                     components.html(pareto_html, height=400, scrolling=True)
-
-            # Weekly cDPM table with WoW and anomalies
-            with st.expander(f"📈 {step} Weekly cDPM Data", expanded=False):
-                weekly_html = create_weekly_cdpm_table_html(data, dark_mode=False)
-                if weekly_html:
-                    components.html(weekly_html, height=600, scrolling=True)
 
             # MSN_STATUS Correlation (FAILCRAWLER × MSN_STATUS contribution analysis)
             st.subheader(f"🔗 {step} MSN_STATUS Correlation")
