@@ -2360,9 +2360,8 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     new_machines = sorted(filtered_site_df['machine_id'].unique())
                     st.session_state.smt6_available_machines = new_machines
 
-                    # Clear machine filter so it defaults to ALL new machines on rerun
-                    if 'smt6_machine_filter' in st.session_state:
-                        del st.session_state['smt6_machine_filter']
+                    # Set machine filter to ALL new machines (not just delete - explicitly set)
+                    st.session_state['smt6_machine_filter'] = new_machines
 
             st.session_state.smt6_fetching = False
             # Rerun to refresh machine filter with new machines
