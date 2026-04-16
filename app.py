@@ -2306,13 +2306,6 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 key="smt6_site_mode", horizontal=True, label_visibility="collapsed"
             )
 
-        # Detect mode change BEFORE creating multiselect - reset to all machines
-        prev_mode = st.session_state.get('smt6_last_fetch_mode')
-        mode_just_changed = prev_mode is not None and prev_mode != site_fetch_mode
-        if mode_just_changed and 'smt6_machine_filter' in st.session_state:
-            # Clear the filter so multiselect will use default (all machines)
-            del st.session_state['smt6_machine_filter']
-
         with site_col3:
             if all_machines:
                 selected_machines = st.multiselect(
@@ -2366,6 +2359,10 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                         filtered_site_df = site_df
                     new_machines = sorted(filtered_site_df['machine_id'].unique())
                     st.session_state.smt6_available_machines = new_machines
+
+                    # Clear machine filter so it defaults to ALL new machines on rerun
+                    if 'smt6_machine_filter' in st.session_state:
+                        del st.session_state['smt6_machine_filter']
 
             st.session_state.smt6_fetching = False
             # Rerun to refresh machine filter with new machines
