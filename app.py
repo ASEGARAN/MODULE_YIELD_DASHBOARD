@@ -2413,16 +2413,38 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
 
             with heatmap_col:
                 with st.expander(f"🗺️ Site Heatmap ({ww_label})", expanded=has_issues):
-                    pivot = site_summary.pivot_table(index='site', columns='machine_id', values='yield_pct', aggfunc='mean')
-                    if not pivot.empty:
-                        pivot = pivot.sort_index()
+                    # Create pivot tables for yield, UIN, and UFAIL
+                    pivot_yield = site_summary.pivot_table(index='site', columns='machine_id', values='yield_pct', aggfunc='mean')
+                    pivot_uin = site_summary.pivot_table(index='site', columns='machine_id', values='uin_adj', aggfunc='sum')
+                    pivot_upass = site_summary.pivot_table(index='site', columns='machine_id', values='upass_adj', aggfunc='sum')
+
+                    if not pivot_yield.empty:
+                        pivot_yield = pivot_yield.sort_index()
+                        pivot_uin = pivot_uin.reindex(pivot_yield.index)
+                        pivot_upass = pivot_upass.reindex(pivot_yield.index)
+                        pivot_ufail = pivot_uin - pivot_upass
+
+                        # Create custom text with yield%, UIN, UFAIL
+                        custom_text = []
+                        for i, row_idx in enumerate(pivot_yield.index):
+                            row_text = []
+                            for j, col_idx in enumerate(pivot_yield.columns):
+                                y = pivot_yield.iloc[i, j]
+                                uin = pivot_uin.iloc[i, j]
+                                ufail = pivot_ufail.iloc[i, j]
+                                if pd.notna(y):
+                                    row_text.append(f"{y:.0f}%<br>U:{int(uin)} F:{int(ufail)}")
+                                else:
+                                    row_text.append("-")
+                            custom_text.append(row_text)
+
                         fig = go.Figure(data=go.Heatmap(
-                            z=pivot.values, x=[m.upper() for m in pivot.columns], y=pivot.index.tolist(),
+                            z=pivot_yield.values, x=[m.upper() for m in pivot_yield.columns], y=pivot_yield.index.tolist(),
                             colorscale=[[0, '#dc3545'], [0.3, '#ffc107'], [0.7, '#17a2b8'], [1, '#28a745']],
                             zmin=90, zmax=100,
-                            text=[[f"{v:.0f}" if pd.notna(v) else "-" for v in row] for row in pivot.values],
-                            texttemplate="%{text}", textfont={"size": 8},
-                            hovertemplate="<b>%{y}</b> @ %{x}: %{z:.1f}%<extra></extra>",
+                            text=custom_text,
+                            texttemplate="%{text}", textfont={"size": 7},
+                            hovertemplate="<b>%{y}</b> @ %{x}<br>Yield: %{z:.1f}%<extra></extra>",
                             colorbar=dict(title="", ticksuffix="%", len=0.6, thickness=10)
                         ))
                         fig.update_layout(
@@ -2434,13 +2456,9 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
 
             # =========== SITE HEALTH SUMMARY (full width, auto-expand if issues) ===========
             with st.expander("📊 Site Health Summary", expanded=has_issues):
-                # Count issues to determine max display and height
-                num_failing = len(site_summary[site_summary['yield_pct'] < 95])
-                max_display = min(8, max(4, num_failing))  # Show up to 8 issues per column
-
                 summary_html = create_site_channel_summary_html(
                     latest_data,
-                    max_issues=max_display
+                    max_issues=5  # Always show max 5 critical sockets per machine
                 )
                 if summary_html:
                     # Dynamic height: ~28px per row + 70px for header/legend

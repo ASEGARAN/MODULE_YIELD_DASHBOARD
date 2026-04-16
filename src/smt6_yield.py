@@ -3051,24 +3051,28 @@ def create_site_channel_summary_html(
         for _, row in critical_sockets.iterrows():
             site = row['site']
             y = row['yield_pct']
+            uin = int(row['uin_adj'])
+            ufail = uin - int(row['upass_adj'])
             bg, text = get_yield_color(y)
 
-            # Get trend info
+            # Get trend info for multi-week data
             trend_detail = ""
             if has_multi_weeks:
                 info = get_deterioration_info(machine_id, site)
                 if info['start_ww']:
                     trajectory = f"{info['first_yield']:.0f}→{info['last_yield']:.0f}%" if info['first_yield'] is not None else ""
-                    trend_detail = f"{info['trend']} {trajectory} (WW{info['start_ww']})"
+                    weeks_info = f"{info['weeks_bad']}/{info['total_weeks']}wks" if info['total_weeks'] > 1 else ""
+                    trend_detail = f"{info['trend']} {trajectory} | {weeks_info} bad from WW{info['start_ww']}"
 
             html += f'''<div style="background:{bg};border-radius:3px;padding:3px 6px;margin-bottom:2px;">
 <div style="display:flex;justify-content:space-between;align-items:center;">
 <span style="font-size:8px;color:{text};font-weight:500;">{site}</span>
 <span style="font-size:9px;font-weight:700;color:{text};">{y:.0f}%</span>
-</div>'''
+</div>
+<div style="font-size:7px;color:{text};opacity:0.8;">UIN:{uin} | Fail:{ufail}</div>'''
             if trend_detail:
-                detail_color = 'rgba(255,255,255,0.8)' if text == '#fff' else 'rgba(0,0,0,0.7)'
-                html += f'<div style="font-size:7px;color:{detail_color};">{trend_detail}</div>'
+                detail_color = 'rgba(255,255,255,0.9)' if text == '#fff' else 'rgba(0,0,0,0.8)'
+                html += f'<div style="font-size:7px;color:{detail_color};font-style:italic;">{trend_detail}</div>'
             html += '</div>'
 
         html += '</div></div>'
