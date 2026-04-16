@@ -3896,7 +3896,7 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     fcfm_df=fcfm_df, show_trends=True
                 )
                 if summary_html:
-                    components.html(summary_html, height=220, scrolling=False)
+                    components.html(summary_html, height=280, scrolling=False)
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(
