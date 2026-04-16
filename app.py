@@ -5246,12 +5246,27 @@ def main() -> None:
                         logger.warning(f"Failed to fetch ELC data for PDF: {e}")
                         elc_data = None
 
-                # Get SMT6 data if available (not auto-fetched - requires specific machine selection)
+                # Get SMT6 data - auto-fetch if not available
                 smt6_data = st.session_state.get('smt6_site_data', None)
                 if smt6_data is None or (hasattr(smt6_data, 'empty') and smt6_data.empty):
                     smt6_data = st.session_state.get('smt6_data', None)
-                if smt6_data is not None and hasattr(smt6_data, 'empty') and smt6_data.empty:
-                    smt6_data = None
+                if smt6_data is None or (hasattr(smt6_data, 'empty') and smt6_data.empty):
+                    status.update(label="Fetching SMT6 site data...")
+                    try:
+                        from src.smt6_yield import fetch_smt6_site_data
+                        wws = [str(ww) for ww in Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])]
+                        smt6_data = fetch_smt6_site_data(
+                            design_ids=filters.get("design_ids", ["Y6CP"]),
+                            workweeks=wws,
+                            form_factor=filters.get("form_factor", "socamm2").lower()
+                        )
+                        if smt6_data is not None and not smt6_data.empty:
+                            st.session_state.smt6_site_data = smt6_data
+                        else:
+                            smt6_data = None
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch SMT6 data for PDF: {e}")
+                        smt6_data = None
 
                 # Get GRACE data if available (not auto-fetched - requires specific setup)
                 grace_data = st.session_state.get('grace_fm_data', None)
@@ -5332,6 +5347,22 @@ def main() -> None:
                         </div>
                         """
                         sections.append({'title': 'Yield Summary', 'content': summary_stats, 'type': 'html'})
+
+                # Auto-fetch SMT6 site data if not available
+                if 'smt6_site_data' not in st.session_state or st.session_state.smt6_site_data.empty:
+                    status.update(label="Fetching SMT6 site data...")
+                    try:
+                        from src.smt6_yield import fetch_smt6_site_data
+                        wws = [str(ww) for ww in Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])]
+                        smt6_data = fetch_smt6_site_data(
+                            design_ids=filters.get("design_ids", ["Y6CP"]),
+                            workweeks=wws,
+                            form_factor=filters.get("form_factor", "socamm2").lower()
+                        )
+                        if smt6_data is not None and not smt6_data.empty:
+                            st.session_state.smt6_site_data = smt6_data
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch SMT6 data for HTML: {e}")
 
                 # Add SMT6 site data if available
                 if 'smt6_site_data' in st.session_state and not st.session_state.smt6_site_data.empty:
