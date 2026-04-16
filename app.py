@@ -2306,18 +2306,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 key="smt6_site_mode", horizontal=True, label_visibility="collapsed"
             )
 
-        with site_col3:
-            if all_machines:
-                selected_machines = st.multiselect(
-                    "Machines", options=all_machines, default=all_machines,
-                    format_func=lambda x: x.upper(), key="smt6_machine_filter",
-                    label_visibility="collapsed", placeholder="Select machines..."
-                )
-            else:
-                st.caption("Loading machines...")
-                selected_machines = []
-
-        # Auto-fetch: Check if we need to load data
+        # Auto-fetch: Check if we need to load data (BEFORE creating multiselect)
         def should_auto_fetch():
             """Check if auto-fetch is needed based on current state."""
             if 'smt6_site_data' not in st.session_state:
@@ -2328,7 +2317,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                 return True
             return False
 
-        # Auto-fetch on first load or mode change
+        # Auto-fetch on first load or mode change (BEFORE multiselect widget)
         if should_auto_fetch() and not st.session_state.get('smt6_fetching', False):
             st.session_state.smt6_fetching = True
             if site_fetch_mode == "Latest Week":
@@ -2360,12 +2349,28 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     new_machines = sorted(filtered_site_df['machine_id'].unique())
                     st.session_state.smt6_available_machines = new_machines
 
-                    # Set machine filter to ALL new machines (not just delete - explicitly set)
-                    st.session_state['smt6_machine_filter'] = new_machines
+                    # Clear machine filter key so multiselect will use default (all machines)
+                    # Must be done BEFORE widget is created - delete key triggers default on next run
+                    if 'smt6_machine_filter' in st.session_state:
+                        del st.session_state['smt6_machine_filter']
 
             st.session_state.smt6_fetching = False
-            # Rerun to refresh machine filter with new machines
+            # Rerun to refresh - multiselect will recreate with new machines as default
             st.rerun()
+
+        # Update all_machines from session state (may have been updated by auto-fetch)
+        all_machines = st.session_state.get('smt6_available_machines', all_machines)
+
+        with site_col3:
+            if all_machines:
+                selected_machines = st.multiselect(
+                    "Machines", options=all_machines, default=all_machines,
+                    format_func=lambda x: x.upper(), key="smt6_machine_filter",
+                    label_visibility="collapsed", placeholder="Select machines..."
+                )
+            else:
+                st.caption("Loading machines...")
+                selected_machines = []
 
         # Apply machine filter
         if not filtered_site_df.empty and selected_machines:
