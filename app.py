@@ -2392,35 +2392,27 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
             site_summary['yield_pct'] = (site_summary['upass_adj'] / site_summary['uin_adj'] * 100).round(2)
             has_issues = (site_summary['yield_pct'] < 95).any()
 
-            # =========== SIDE-BY-SIDE LAYOUT: Socket Grid | Heatmap ===========
+            # =========== SIDE-BY-SIDE LAYOUT: Site Heatmap | Site Health Summary ===========
             # Calculate adaptive heights based on actual data
             num_sites = len(site_summary['site'].unique())
 
-            # Socket Health height: based on machines and sockets per machine
-            # Each machine card ~200px base + ~50px per row of sockets (4 sockets per row)
-            unique_sockets = site_summary.groupby('machine_id')['site'].nunique().max()
-            socket_rows = (unique_sockets + 3) // 4  # 4 sockets per row
-            socket_grid_height = min(400, max(180, 100 + num_machines * 60 + socket_rows * 40))
+            # Heatmap height: based on sites (rows)
+            heatmap_height = min(450, max(200, num_sites * 24 + 80))
 
-            # Heatmap height: based on sites (rows) and machines (columns)
-            heatmap_height = min(400, max(180, num_sites * 22 + 60))
+            # Summary height: based on machines with issues
+            machines_with_issues = [m for m in machine_list if (site_summary[site_summary['machine_id'] == m]['yield_pct'] < 95).any()]
+            num_issues = len(machines_with_issues)
 
-            # Use the larger of the two for consistent layout
-            common_height = max(socket_grid_height, heatmap_height)
+            if num_issues == 0:
+                summary_height = 80  # Compact "all healthy" message
+            else:
+                # Each machine card: header + 5 sockets, cards stack vertically in narrow column
+                summary_height = min(450, 80 + num_issues * 220)
 
-            grid_col, heatmap_col = st.columns([1, 1])
+            # Use common height for consistent side-by-side display
+            common_height = max(heatmap_height, summary_height)
 
-            with grid_col:
-                with st.expander(f"🔌 Socket Health ({ww_label})", expanded=has_issues):
-                    if num_machines > 1:
-                        combined_html = create_multi_machine_socket_grid(latest_data, machine_ids=machine_list, title="")
-                        if combined_html:
-                            components.html(combined_html, height=socket_grid_height, scrolling=True)
-                    else:
-                        single_machine = machine_list[0]
-                        grid_html = create_site_grid_html(latest_data, machine_id=single_machine, title=single_machine.upper(), view_mode="socket")
-                        if grid_html:
-                            components.html(grid_html, height=socket_grid_height, scrolling=True)
+            heatmap_col, summary_col = st.columns([1, 1])
 
             with heatmap_col:
                 with st.expander(f"🗺️ Site Heatmap ({ww_label})", expanded=has_issues):
@@ -2461,32 +2453,18 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                         fig.update_layout(
                             xaxis=dict(tickfont=dict(size=9), side='top'),
                             yaxis=dict(autorange='reversed', tickfont=dict(size=8)),
-                            height=heatmap_height, margin=dict(l=70, r=10, t=25, b=10)
+                            height=common_height, margin=dict(l=70, r=10, t=25, b=10)
                         )
                         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-            # =========== SITE HEALTH SUMMARY (full width, auto-expand if issues) ===========
-            with st.expander("📊 Site Health Summary", expanded=has_issues):
-                summary_html = create_site_channel_summary_html(
-                    latest_data,
-                    max_issues=5  # Always show max 5 critical sockets per machine
-                )
-                if summary_html:
-                    # Adaptive height: count machines with issues and estimate content
-                    machines_with_issues = [m for m in machine_list if (site_summary[site_summary['machine_id'] == m]['yield_pct'] < 95).any()]
-                    num_issues = len(machines_with_issues)
-
-                    if num_issues == 0:
-                        # "All healthy" compact message
-                        summary_height = 60
-                    else:
-                        # Each machine card: ~25px header + 5 sockets * ~35px each + margins
-                        # Cards wrap based on width, estimate ~2 cards per row for most screens
-                        cards_per_row = max(1, min(4, num_issues))
-                        rows_of_cards = (num_issues + cards_per_row - 1) // cards_per_row
-                        summary_height = min(350, 70 + rows_of_cards * 200)
-
-                    components.html(summary_html, height=summary_height, scrolling=True)
+            with summary_col:
+                with st.expander(f"📊 Site Health Summary ({ww_label})", expanded=has_issues):
+                    summary_html = create_site_channel_summary_html(
+                        latest_data,
+                        max_issues=5  # Always show max 5 critical sockets per machine
+                    )
+                    if summary_html:
+                        components.html(summary_html, height=common_height, scrolling=True)
 
         elif not filtered_site_df.empty:
             st.warning("Select at least one machine.")
