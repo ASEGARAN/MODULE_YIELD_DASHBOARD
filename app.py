@@ -2054,12 +2054,24 @@ def render_density_speed_heatmap(processor: DataProcessor) -> None:
 def render_smt6_yield_section(filters: dict[str, Any]) -> None:
     """Render the SMT6 Machine Yield Trend section."""
     st.subheader("SMT6 Yield Trend")
+
+    import streamlit.components.v1 as components
+
+    # Check if HMFN is selected - SMT6 testers only perform HMFN testing
+    selected_steps = filters.get("test_steps", [])
+    hmfn_selected = "HMFN" in [s.upper() for s in selected_steps]
+
+    if not hmfn_selected:
+        st.warning(
+            "⚠️ **HMFN step not selected.** SMT6 testers only perform HMFN testing. "
+            "Please add **HMFN** to your test step selection in the sidebar to view SMT6 tester data."
+        )
+        return  # Exit early - no point showing the rest
+
     st.markdown("""
     **Machine-level yield tracking** for SMT6 testers at HMFN step.
     Shows yield trend by machine and site-level breakdown.
     """)
-
-    import streamlit.components.v1 as components
 
     # Fetch button and info
     col1, col2 = st.columns([1, 3])
