@@ -4558,9 +4558,9 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
 
 **100% Fail:** `UIN=4` and `UPASS=0`
 
-**Status:**
-- 🔄 **Chronic** - 100% fail in both WW{selected_ww} and WW{prev_ww}
-- 🆕 **New** - Only in WW{selected_ww}
+**Status:** (aligned with WoW Hang)
+- 🔄 **Chronic** - 100% fail in both weeks AND Recurring Hang
+- 🆕 **New** - Only in current week OR New Hang Issue
 - ✅ **Resolved** - Only in WW{prev_ww}
 
 **Recovery (WW{next_ww}):** Checks if machine passed next week
@@ -4622,6 +4622,19 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                                 problematic_display['Hang Status']
                             ))
                             drill_df['wow_status'] = drill_df['machine_id'].map(wow_status_map).fillna('—')
+
+                            # Cross-reference: Align 100% Fail status with WoW Hang status
+                            # If WoW Hang = "New Issue" but 100% Fail = "Chronic", change to "New"
+                            # Reason: Previous week's 100% fails weren't HUNG-related (no Hang cDPM last week)
+                            def align_fail_status(row):
+                                wow = str(row.get('wow_status', ''))
+                                fail_status = str(row.get('status', ''))
+                                # If WoW shows "New Issue" (no hang last week), 100% Fail can't be "Chronic"
+                                if 'New Issue' in wow and 'Chronic' in fail_status:
+                                    return '🆕 New 100% Fail (Hang)'
+                                return fail_status
+
+                            drill_df['status'] = drill_df.apply(align_fail_status, axis=1)
 
                             # Build display table with WoW Status for context
                             fail_display = drill_df[['machine_id', 'wow_status', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
