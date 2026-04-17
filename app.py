@@ -3892,7 +3892,7 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
             if fc_changes:
                 top_movers_html = create_top_movers_html(fc_changes, step, threshold=25.0, dark_mode=False)
                 if top_movers_html:
-                    components.html(top_movers_html, height=60, scrolling=False)
+                    components.html(top_movers_html, height=75, scrolling=False)
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(
