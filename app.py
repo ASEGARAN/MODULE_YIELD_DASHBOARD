@@ -3885,14 +3885,14 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     fcfm_df=fcfm_df, show_trends=True
                 )
                 if summary_html:
-                    components.html(summary_html, height=160, scrolling=False)
+                    components.html(summary_html, height=170, scrolling=False)
 
             # Show Top Movers (FAILCRAWLERs with >25% WoW increase)
             fc_changes = calculate_failcrawler_wow_changes(fc_df, step)
             if fc_changes:
                 top_movers_html = create_top_movers_html(fc_changes, step, threshold=25.0, dark_mode=False)
                 if top_movers_html:
-                    components.html(top_movers_html, height=75, scrolling=False)
+                    components.html(top_movers_html, height=80, scrolling=False)
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(
