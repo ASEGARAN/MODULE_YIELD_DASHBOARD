@@ -15128,3 +15128,35 @@
 2026-04-16 23:32:30,019 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
 2026-04-16 23:32:30,304 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
 2026-04-16 23:32:30,871 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 23:40:38,466 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP
+2026-04-16 23:41:02,127 - src.grace_motherboard - INFO - Fetched 3456 NVGRACE FM records
+2026-04-16 23:41:08,248 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:08,385 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:08,385 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:08,587 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:08,587 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:08,707 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:08,708 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:08,817 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:08,817 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:08,922 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:08,922 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:09,062 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:09,062 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:09,160 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:09,160 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:09,279 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:09,279 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:09,406 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+
+2026-04-16 23:41:09,406 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version,sbin +echo
+2026-04-16 23:41:09,530 - src.grace_motherboard - ERROR - tsums failed: tsums: InvalidArgumentException: Invalid value     [sbin] in -format=slash_lot,pos,current_qty,uin,upass,probe_ship_part_type,version,end,start,total_sites,standard_flow,package_type,handler_type,speed,machine_id,design_id,step,mfg_workweek,bios_version,sbin
+

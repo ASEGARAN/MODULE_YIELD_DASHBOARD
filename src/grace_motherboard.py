@@ -494,23 +494,38 @@ def fetch_machine_tsums(
     days: int = 30
 ) -> Optional[pd.DataFrame]:
     """
-    Fetch detailed tsums data for a specific machine.
+    Fetch MSN-level data for a specific machine using mtsums.
 
-    Uses: tsums -machine_id=NVGRACE-XXXXXX -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+    Uses: mtsums -machine_id=NVGRACE-XXXXXX -step=hmb1,qmon -ww=START,END -format=msn,mfg_workweek,step,uin,upass,sbin,lot +quiet +csv
 
     Args:
         machine_id: Machine ID (e.g., 'NVGRACE-099562')
         steps: Test steps to query
-        days: Number of days to look back
+        days: Number of days to look back (converted to workweek range)
 
     Returns:
-        DataFrame with lot-level details including UIN, UPASS, MFG_WORKWEEK, BIOS_VERSION, SBIN
+        DataFrame with MSN-level details including UIN, UPASS, MFG_WORKWEEK, SBIN, LOT
     """
+    from datetime import datetime, timedelta
+
     step_list = ','.join(steps)
 
-    cmd = f"/u/summary/bin/tsums -machine_id={machine_id} -step={step_list} -standard_flow=yes -{days} -ta -format+=mfg_workweek,bios_version,sbin +echo"
+    # Calculate workweek range from days
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
 
-    logger.info(f"Running tsums command: {cmd}")
+    # Convert to workweek (YYYYWW format)
+    def date_to_workweek(dt):
+        year = dt.year
+        week = dt.isocalendar()[1]
+        return f"{year}{week:02d}"
+
+    start_ww = date_to_workweek(start_date)
+    end_ww = date_to_workweek(end_date)
+
+    cmd = f"/u/dramsoft/bin/mtsums -machine_id={machine_id} -step={step_list} -ww={start_ww},{end_ww} -format=msn,mfg_workweek,step,uin,upass,sbin,lot +quiet +csv"
+
+    logger.info(f"Running mtsums command: {cmd}")
 
     try:
         result = subprocess.run(
@@ -522,39 +537,38 @@ def fetch_machine_tsums(
         )
 
         if result.returncode != 0:
-            logger.error(f"tsums failed: {result.stderr}")
+            logger.error(f"mtsums failed: {result.stderr}")
             return None
 
         output = result.stdout
-        if not output.strip() or 'Command Echo' not in output:
-            logger.warning("tsums returned no data")
+        if not output.strip():
+            logger.warning("mtsums returned no data")
             return None
 
-        # Parse the output (space-separated, skip the Command Echo line)
+        # Parse CSV output
         lines = output.strip().split('\n')
-        data_lines = [l for l in lines if not l.startswith('Command Echo') and l.strip()]
-
-        if not data_lines:
+        if len(lines) < 2:
             return None
 
-        # Parse each line into structured data
+        # Parse header and data
+        header = lines[0].split(',')
         records = []
-        for line in data_lines:
-            parts = line.split()
-            if len(parts) >= 20:  # Ensure we have enough columns
-                try:
-                    records.append({
-                        'lot': parts[0],
-                        'uin': int(parts[3]),
-                        'upass': int(parts[4]),
-                        'step': parts[-4],
-                        'mfg_workweek': parts[-3],
-                        'bios_version': parts[-2],
-                        'sbin': parts[-1]
-                    })
-                except (ValueError, IndexError) as e:
-                    logger.debug(f"Skipping line due to parse error: {e}")
-                    continue
+        for line in lines[1:]:
+            if line.strip() and not line.startswith('Total'):
+                parts = line.split(',')
+                if len(parts) >= len(header):
+                    try:
+                        record = {}
+                        for i, col in enumerate(header):
+                            col_lower = col.lower()
+                            if col_lower in ['uin', 'upass']:
+                                record[col_lower] = int(parts[i]) if parts[i].isdigit() else 0
+                            else:
+                                record[col_lower] = parts[i]
+                        records.append(record)
+                    except (ValueError, IndexError) as e:
+                        logger.debug(f"Skipping line due to parse error: {e}")
+                        continue
 
         if not records:
             return None
@@ -562,10 +576,10 @@ def fetch_machine_tsums(
         return pd.DataFrame(records)
 
     except subprocess.TimeoutExpired:
-        logger.error("tsums command timed out")
+        logger.error("mtsums command timed out")
         return None
     except Exception as e:
-        logger.error(f"Error fetching machine tsums: {e}")
+        logger.error(f"Error fetching machine mtsums: {e}")
         return None
 
 
@@ -892,15 +906,19 @@ def analyze_machines_100pct_fails(
 
             # Filter for 100% HANG fail cases (UIN=4, UPASS=0, SBIN in HUNG/HUNG1/HUNG2)
             hang_sbins = ['HUNG', 'HUNG1', 'HUNG2']
+
+            # Ensure mfg_workweek is string for comparison
+            tsums_df['mfg_workweek'] = tsums_df['mfg_workweek'].astype(str)
+
             fail_100pct = tsums_df[
                 (tsums_df['uin'] == 4) &
                 (tsums_df['upass'] == 0) &
                 (tsums_df['sbin'].isin(hang_sbins))
             ]
 
-            current_fails = fail_100pct[fail_100pct['mfg_workweek'] == current_ww]
-            prev_fails = fail_100pct[fail_100pct['mfg_workweek'] == previous_ww]
-            next_fails = fail_100pct[fail_100pct['mfg_workweek'] == next_ww]
+            current_fails = fail_100pct[fail_100pct['mfg_workweek'] == str(current_ww)]
+            prev_fails = fail_100pct[fail_100pct['mfg_workweek'] == str(previous_ww)]
+            next_fails = fail_100pct[fail_100pct['mfg_workweek'] == str(next_ww)]
 
             count_current = len(current_fails)
             count_prev = len(prev_fails)
