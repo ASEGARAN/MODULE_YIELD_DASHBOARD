@@ -860,13 +860,13 @@ def analyze_machines_100pct_fails(
     days: int = 30
 ) -> pd.DataFrame:
     """
-    Analyze 100% HANG fail cases (UIN=4, UPASS=0, SBIN=HUNG/HUNG1/HUNG2) for multiple machines.
+    Analyze HANG fail cases (UPASS=0, SBIN=HUNG/HUNG1/HUNG2) for multiple machines.
 
-    Categorizes each machine based on when 100% HANG fails were observed:
-    - New 100% Hang: Only in current week
-    - Chronic 100% Hang: In both weeks
+    Categorizes each machine based on when HANG fails were observed:
+    - New Hang: Only in current week
+    - Chronic Hang: In both weeks
     - Resolved: Only in previous week (no longer failing)
-    - No 100% Hang: No 100% hang fail cases detected
+    - No Hang: No hang fail cases detected
 
     Also checks recovery status in the upcoming week (current_ww + 1).
 
@@ -904,14 +904,14 @@ def analyze_machines_100pct_fails(
                 })
                 continue
 
-            # Filter for 100% HANG fail cases (UIN=4, UPASS=0, SBIN in HUNG/HUNG1/HUNG2)
+            # Filter for HANG fail cases (UPASS=0, SBIN in HUNG/HUNG1/HUNG2)
+            # Note: mtsums shows per-MSN data where UIN=1, not lot-level UIN=4
             hang_sbins = ['HUNG', 'HUNG1', 'HUNG2']
 
             # Ensure mfg_workweek is string for comparison
             tsums_df['mfg_workweek'] = tsums_df['mfg_workweek'].astype(str)
 
             fail_100pct = tsums_df[
-                (tsums_df['uin'] == 4) &
                 (tsums_df['upass'] == 0) &
                 (tsums_df['sbin'].isin(hang_sbins))
             ]
@@ -930,13 +930,13 @@ def analyze_machines_100pct_fails(
 
             # Determine status (specifically for HANG failures)
             if count_current > 0 and count_prev > 0:
-                status = '🔄 Chronic 100% Hang'
+                status = '🔄 Chronic Hang'
             elif count_current > 0 and count_prev == 0:
-                status = '🆕 New 100% Hang'
+                status = '🆕 New Hang'
             elif count_current == 0 and count_prev > 0:
                 status = '✅ Resolved'
             else:
-                status = '✅ No 100% Hang'
+                status = '✅ No Hang'
 
             # Check recovery status in next week
             # Only relevant for machines with 100% fails in current week
