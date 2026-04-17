@@ -4640,18 +4640,58 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                             fail_display = drill_df[['machine_id', 'wow_status', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
                             fail_display.columns = ['Machine ID', 'WoW Hang', '100% Fail', f'Lots (WW{selected_ww})', f'WW{next_ww} Status', 'Remarks']
 
-                            # Simplified highlighting: SOP violations or Bad MOBO
-                            def highlight_row(row):
+                            # Build HTML table with text wrapping (no horizontal scroll)
+                            def get_row_bg(row):
                                 remarks = str(row.get('Remarks', ''))
                                 if '🔴 Bad MOBO' in remarks:
-                                    return ['background-color: #FFCDD2'] * len(row)  # Light red for Bad MOBO
+                                    return '#FFCDD2'  # Light red
                                 elif '⚠️ SOP' in remarks:
-                                    return ['background-color: #FFF3E0'] * len(row)  # Light orange for SOP
-                                return [''] * len(row)
+                                    return '#FFF3E0'  # Light orange
+                                return ''
 
-                            styled_fail = fail_display.style.apply(highlight_row, axis=1)
-                            # Auto-fit height based on row count (no scrolling)
-                            st.dataframe(styled_fail, use_container_width=True, hide_index=True)
+                            # Generate HTML table with wrapping CSS
+                            html_rows = []
+                            for _, row in fail_display.iterrows():
+                                bg = get_row_bg(row)
+                                style = f'background-color: {bg};' if bg else ''
+                                cells = ''.join([f'<td style="{style}">{val}</td>' for val in row])
+                                html_rows.append(f'<tr>{cells}</tr>')
+
+                            html_table = f"""
+                            <style>
+                            .wrap-table {{
+                                width: 100%;
+                                border-collapse: collapse;
+                                font-size: 14px;
+                            }}
+                            .wrap-table th {{
+                                background-color: #1a237e;
+                                color: white;
+                                padding: 8px;
+                                text-align: left;
+                                white-space: nowrap;
+                            }}
+                            .wrap-table td {{
+                                padding: 8px;
+                                border-bottom: 1px solid #ddd;
+                                word-wrap: break-word;
+                                white-space: normal;
+                                max-width: 150px;
+                            }}
+                            .wrap-table tr:hover {{
+                                background-color: #f5f5f5;
+                            }}
+                            </style>
+                            <table class="wrap-table">
+                                <thead>
+                                    <tr>{''.join([f'<th>{col}</th>' for col in fail_display.columns])}</tr>
+                                </thead>
+                                <tbody>
+                                    {''.join(html_rows)}
+                                </tbody>
+                            </table>
+                            """
+                            st.markdown(html_table, unsafe_allow_html=True)
 
                             # Combined Details expander (Lot Details + SOP Rules in parallel grid)
                             with st.expander("📋 Details (Lots & SOP Rules)", expanded=False):
