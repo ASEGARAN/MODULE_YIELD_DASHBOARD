@@ -504,11 +504,11 @@ def fetch_machine_tsums(
         days: Number of days to look back
 
     Returns:
-        DataFrame with lot-level details including UIN, UPASS, MFG_WORKWEEK, BIOS_VERSION
+        DataFrame with lot-level details including UIN, UPASS, MFG_WORKWEEK, BIOS_VERSION, SBIN
     """
     step_list = ','.join(steps)
 
-    cmd = f"/u/summary/bin/tsums -machine_id={machine_id} -step={step_list} -standard_flow=yes -{days} -ta -format+=mfg_workweek,bios_version +echo"
+    cmd = f"/u/summary/bin/tsums -machine_id={machine_id} -step={step_list} -standard_flow=yes -{days} -ta -format+=mfg_workweek,bios_version,sbin +echo"
 
     logger.info(f"Running tsums command: {cmd}")
 
@@ -547,9 +547,10 @@ def fetch_machine_tsums(
                         'lot': parts[0],
                         'uin': int(parts[3]),
                         'upass': int(parts[4]),
-                        'step': parts[-3],
-                        'mfg_workweek': parts[-2],
-                        'bios_version': parts[-1]
+                        'step': parts[-4],
+                        'mfg_workweek': parts[-3],
+                        'bios_version': parts[-2],
+                        'sbin': parts[-1]
                     })
                 except (ValueError, IndexError) as e:
                     logger.debug(f"Skipping line due to parse error: {e}")
@@ -845,13 +846,13 @@ def analyze_machines_100pct_fails(
     days: int = 30
 ) -> pd.DataFrame:
     """
-    Analyze 100% fail cases (UIN=4, UPASS=0) for multiple machines.
+    Analyze 100% HANG fail cases (UIN=4, UPASS=0, SBIN=HUNG/HUNG1/HUNG2) for multiple machines.
 
-    Categorizes each machine based on when 100% fails were observed:
-    - New 100% Fail: Only in current week
-    - Chronic 100% Fail: In both weeks
+    Categorizes each machine based on when 100% HANG fails were observed:
+    - New 100% Hang: Only in current week
+    - Chronic 100% Hang: In both weeks
     - Resolved: Only in previous week (no longer failing)
-    - No 100% Fail: No 100% fail cases detected
+    - No 100% Hang: No 100% hang fail cases detected
 
     Also checks recovery status in the upcoming week (current_ww + 1).
 
@@ -889,8 +890,13 @@ def analyze_machines_100pct_fails(
                 })
                 continue
 
-            # Filter for 100% fail cases (UIN=4, UPASS=0)
-            fail_100pct = tsums_df[(tsums_df['uin'] == 4) & (tsums_df['upass'] == 0)]
+            # Filter for 100% HANG fail cases (UIN=4, UPASS=0, SBIN in HUNG/HUNG1/HUNG2)
+            hang_sbins = ['HUNG', 'HUNG1', 'HUNG2']
+            fail_100pct = tsums_df[
+                (tsums_df['uin'] == 4) &
+                (tsums_df['upass'] == 0) &
+                (tsums_df['sbin'].isin(hang_sbins))
+            ]
 
             current_fails = fail_100pct[fail_100pct['mfg_workweek'] == current_ww]
             prev_fails = fail_100pct[fail_100pct['mfg_workweek'] == previous_ww]
@@ -904,15 +910,15 @@ def analyze_machines_100pct_fails(
             lots_current = ', '.join(current_fails['lot'].unique().tolist()) if count_current > 0 else ''
             lots_prev = ', '.join(prev_fails['lot'].unique().tolist()) if count_prev > 0 else ''
 
-            # Determine status
+            # Determine status (specifically for HANG failures)
             if count_current > 0 and count_prev > 0:
-                status = '🔄 Chronic 100% Fail'
+                status = '🔄 Chronic 100% Hang'
             elif count_current > 0 and count_prev == 0:
-                status = '🆕 New 100% Fail'
+                status = '🆕 New 100% Hang'
             elif count_current == 0 and count_prev > 0:
                 status = '✅ Resolved'
             else:
-                status = '✅ No 100% Fail'
+                status = '✅ No 100% Hang'
 
             # Check recovery status in next week
             # Only relevant for machines with 100% fails in current week

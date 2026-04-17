@@ -14445,3 +14445,686 @@
 2026-04-16 07:35:36,353 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
 2026-04-16 07:35:36,761 - src.failcrawler - INFO - Fetched 89 FCFM records for QMON
 2026-04-16 07:35:36,762 - src.failcrawler - INFO - Total FCFM records: 382
+2026-04-16 07:47:35,862 - src.failcrawler - INFO - Fetching FAILCRAWLER data: 1 DIDs, 3 steps, 10 weeks
+2026-04-16 07:47:36,731 - src.failcrawler - INFO - Fetched 20 FAILCRAWLER records (wide format with 11 columns)
+2026-04-16 07:47:36,746 - src.failcrawler - INFO - FAILCRAWLER data cached to cache/failcrawler_9e75eebfb06d.csv
+2026-04-16 07:47:36,747 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 07:47:37,192 - src.failcrawler - INFO - Fetched 4 MSN_STATUS correlation records
+2026-04-16 07:47:37,193 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 07:47:37,638 - src.failcrawler - INFO - Fetched 833 records for unique module/FID counting
+2026-04-16 07:47:37,642 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 07:47:38,011 - src.failcrawler - INFO - Fetched UIN for 19 step/workweek combinations
+2026-04-16 07:47:38,011 - src.failcrawler - INFO - Fetching cDPM data for HMFN...
+2026-04-16 07:47:38,388 - src.failcrawler - INFO - Fetched 4 cDPM records for HMFN
+2026-04-16 07:47:38,389 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 07:47:38,754 - src.failcrawler - INFO - Fetched 9 cDPM records for HMB1
+2026-04-16 07:47:38,754 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 07:47:39,156 - src.failcrawler - INFO - Fetched 9 cDPM records for QMON
+2026-04-16 07:47:39,157 - src.failcrawler - INFO - Total cDPM records: 22
+2026-04-16 07:47:39,157 - src.failcrawler - INFO - Fetching MDPM data for HMFN...
+2026-04-16 07:47:39,508 - src.failcrawler - INFO - Fetched 5 MDPM records for HMFN
+2026-04-16 07:47:39,514 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 07:47:39,942 - src.failcrawler - INFO - Fetched 9 MDPM records for HMB1
+2026-04-16 07:47:39,942 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 07:47:40,294 - src.failcrawler - INFO - Fetched 9 MDPM records for QMON
+2026-04-16 07:47:40,294 - src.failcrawler - INFO - Total MDPM records: 23
+2026-04-16 07:47:40,295 - src.failcrawler - INFO - Fetching FCFM decode quality for HMFN...
+2026-04-16 07:47:40,720 - src.failcrawler - INFO - Fetched 4 FCFM records for HMFN
+2026-04-16 07:47:40,720 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 07:47:41,099 - src.failcrawler - INFO - Fetched 9 FCFM records for HMB1
+2026-04-16 07:47:41,100 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 07:47:41,465 - src.failcrawler - INFO - Fetched 9 FCFM records for QMON
+2026-04-16 07:47:41,466 - src.failcrawler - INFO - Total FCFM records: 22
+2026-04-16 07:48:57,015 - src.failcrawler - INFO - Fetching FAILCRAWLER data: 1 DIDs, 2 steps, 10 weeks
+2026-04-16 07:48:57,937 - src.failcrawler - INFO - Fetched 5 FAILCRAWLER records (wide format with 11 columns)
+2026-04-16 07:48:57,941 - src.failcrawler - INFO - FAILCRAWLER data cached to cache/failcrawler_5ee54c783e47.csv
+2026-04-16 07:48:57,941 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 07:48:58,403 - src.failcrawler - INFO - Fetched 2 MSN_STATUS correlation records
+2026-04-16 07:48:58,403 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 07:48:58,756 - src.failcrawler - INFO - Fetched 2 records for unique module/FID counting
+2026-04-16 07:48:58,756 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 07:48:59,112 - src.failcrawler - INFO - Fetched UIN for 4 step/workweek combinations
+2026-04-16 07:48:59,113 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 07:48:59,452 - src.failcrawler - INFO - Fetched 3 cDPM records for HMB1
+2026-04-16 07:48:59,452 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 07:48:59,808 - src.failcrawler - INFO - Fetched 2 cDPM records for QMON
+2026-04-16 07:48:59,808 - src.failcrawler - INFO - Total cDPM records: 5
+2026-04-16 07:48:59,809 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 07:49:00,185 - src.failcrawler - INFO - Fetched 3 MDPM records for HMB1
+2026-04-16 07:49:00,185 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 07:49:00,560 - src.failcrawler - INFO - Fetched 2 MDPM records for QMON
+2026-04-16 07:49:00,561 - src.failcrawler - INFO - Total MDPM records: 5
+2026-04-16 07:49:00,561 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 07:49:00,913 - src.failcrawler - INFO - Fetched 4 FCFM records for HMB1
+2026-04-16 07:49:00,913 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 07:49:01,275 - src.failcrawler - INFO - Fetched 2 FCFM records for QMON
+2026-04-16 07:49:01,276 - src.failcrawler - INFO - Total FCFM records: 6
+2026-04-16 07:57:58,597 - src.failcrawler - INFO - Fetching FAILCRAWLER data: 1 DIDs, 2 steps, 10 weeks
+2026-04-16 07:57:59,339 - src.failcrawler - INFO - Fetched 21 FAILCRAWLER records (wide format with 40 columns)
+2026-04-16 07:57:59,346 - src.failcrawler - INFO - FAILCRAWLER data cached to cache/failcrawler_5bafa4a27cc6.csv
+2026-04-16 07:57:59,346 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 07:58:00,246 - src.failcrawler - INFO - Fetched 75 MSN_STATUS correlation records
+2026-04-16 07:58:00,246 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 07:58:02,437 - src.failcrawler - INFO - Fetched 29302 records for unique module/FID counting
+2026-04-16 07:58:02,439 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 07:58:02,888 - src.failcrawler - INFO - Fetched UIN for 20 step/workweek combinations
+2026-04-16 07:58:02,888 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 07:58:03,304 - src.failcrawler - INFO - Fetched 67 cDPM records for HMB1
+2026-04-16 07:58:03,304 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 07:58:03,699 - src.failcrawler - INFO - Fetched 53 cDPM records for QMON
+2026-04-16 07:58:03,700 - src.failcrawler - INFO - Total cDPM records: 120
+2026-04-16 07:58:03,700 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 07:58:04,109 - src.failcrawler - INFO - Fetched 67 MDPM records for HMB1
+2026-04-16 07:58:04,109 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 07:58:04,504 - src.failcrawler - INFO - Fetched 53 MDPM records for QMON
+2026-04-16 07:58:04,505 - src.failcrawler - INFO - Total MDPM records: 120
+2026-04-16 07:58:04,505 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 07:58:04,915 - src.failcrawler - INFO - Fetched 121 FCFM records for HMB1
+2026-04-16 07:58:04,915 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 07:58:05,306 - src.failcrawler - INFO - Fetched 89 FCFM records for QMON
+2026-04-16 07:58:05,306 - src.failcrawler - INFO - Total FCFM records: 210
+2026-04-16 08:20:21,089 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_5ee54c783e47.csv
+2026-04-16 08:20:21,093 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 08:20:22,200 - src.failcrawler - INFO - Fetched 2 MSN_STATUS correlation records
+2026-04-16 08:20:22,201 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 08:20:22,540 - src.failcrawler - INFO - Fetched 2 records for unique module/FID counting
+2026-04-16 08:20:22,541 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 08:20:22,865 - src.failcrawler - INFO - Fetched UIN for 4 step/workweek combinations
+2026-04-16 08:20:22,865 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 08:20:23,214 - src.failcrawler - INFO - Fetched 3 cDPM records for HMB1
+2026-04-16 08:20:23,215 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 08:20:23,562 - src.failcrawler - INFO - Fetched 2 cDPM records for QMON
+2026-04-16 08:20:23,562 - src.failcrawler - INFO - Total cDPM records: 5
+2026-04-16 08:20:23,564 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 08:20:23,909 - src.failcrawler - INFO - Fetched 3 MDPM records for HMB1
+2026-04-16 08:20:23,910 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 08:20:24,245 - src.failcrawler - INFO - Fetched 2 MDPM records for QMON
+2026-04-16 08:20:24,246 - src.failcrawler - INFO - Total MDPM records: 5
+2026-04-16 08:20:24,246 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 08:20:24,575 - src.failcrawler - INFO - Fetched 4 FCFM records for HMB1
+2026-04-16 08:20:24,575 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 08:20:24,910 - src.failcrawler - INFO - Fetched 2 FCFM records for QMON
+2026-04-16 08:20:24,911 - src.failcrawler - INFO - Total FCFM records: 6
+2026-04-16 08:20:34,823 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_5ee54c783e47.csv
+2026-04-16 08:20:34,826 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 08:20:35,293 - src.failcrawler - INFO - Fetched 2 MSN_STATUS correlation records
+2026-04-16 08:20:35,294 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 08:20:35,622 - src.failcrawler - INFO - Fetched 2 records for unique module/FID counting
+2026-04-16 08:20:35,623 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 08:20:35,975 - src.failcrawler - INFO - Fetched UIN for 4 step/workweek combinations
+2026-04-16 08:20:35,975 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 08:20:36,307 - src.failcrawler - INFO - Fetched 3 cDPM records for HMB1
+2026-04-16 08:20:36,307 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 08:20:36,646 - src.failcrawler - INFO - Fetched 2 cDPM records for QMON
+2026-04-16 08:20:36,647 - src.failcrawler - INFO - Total cDPM records: 5
+2026-04-16 08:20:36,647 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 08:20:36,982 - src.failcrawler - INFO - Fetched 3 MDPM records for HMB1
+2026-04-16 08:20:36,982 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 08:20:37,318 - src.failcrawler - INFO - Fetched 2 MDPM records for QMON
+2026-04-16 08:20:37,319 - src.failcrawler - INFO - Total MDPM records: 5
+2026-04-16 08:20:37,319 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 08:20:37,660 - src.failcrawler - INFO - Fetched 4 FCFM records for HMB1
+2026-04-16 08:20:37,660 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 08:20:38,005 - src.failcrawler - INFO - Fetched 2 FCFM records for QMON
+2026-04-16 08:20:38,005 - src.failcrawler - INFO - Total FCFM records: 6
+2026-04-16 08:20:55,514 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_5ee54c783e47.csv
+2026-04-16 08:20:55,518 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 08:20:56,049 - src.failcrawler - INFO - Fetched 2 MSN_STATUS correlation records
+2026-04-16 08:20:56,049 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 08:20:56,373 - src.failcrawler - INFO - Fetched 2 records for unique module/FID counting
+2026-04-16 08:20:56,374 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 08:20:56,712 - src.failcrawler - INFO - Fetched UIN for 4 step/workweek combinations
+2026-04-16 08:20:56,712 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 08:20:57,039 - src.failcrawler - INFO - Fetched 3 cDPM records for HMB1
+2026-04-16 08:20:57,039 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 08:20:57,374 - src.failcrawler - INFO - Fetched 2 cDPM records for QMON
+2026-04-16 08:20:57,374 - src.failcrawler - INFO - Total cDPM records: 5
+2026-04-16 08:20:57,375 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 08:20:57,694 - src.failcrawler - INFO - Fetched 3 MDPM records for HMB1
+2026-04-16 08:20:57,694 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 08:20:58,013 - src.failcrawler - INFO - Fetched 2 MDPM records for QMON
+2026-04-16 08:20:58,014 - src.failcrawler - INFO - Total MDPM records: 5
+2026-04-16 08:20:58,015 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 08:20:58,367 - src.failcrawler - INFO - Fetched 4 FCFM records for HMB1
+2026-04-16 08:20:58,367 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 08:20:58,686 - src.failcrawler - INFO - Fetched 2 FCFM records for QMON
+2026-04-16 08:20:58,686 - src.failcrawler - INFO - Total FCFM records: 6
+2026-04-16 08:29:09,900 - __main__ - INFO - ============================================================
+2026-04-16 08:29:09,900 - __main__ - INFO - FETCH PARETO DATA STARTED (cache=ON)
+2026-04-16 08:29:09,901 - __main__ - INFO - Total frpt calls for Pareto: 30
+2026-04-16 08:29:09,901 - src.frpt_runner - INFO - Running 30 commands in parallel with 8 workers
+2026-04-16 08:29:09,903 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202605
+2026-04-16 08:29:09,904 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202605
+2026-04-16 08:29:09,904 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202606
+2026-04-16 08:29:09,905 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202607
+2026-04-16 08:29:09,905 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202609
+2026-04-16 08:29:09,905 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202606
+2026-04-16 08:29:09,906 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202607
+2026-04-16 08:29:09,906 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202611
+2026-04-16 08:29:09,906 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202609
+2026-04-16 08:29:09,907 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202611
+2026-04-16 08:29:09,907 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202608
+2026-04-16 08:29:09,908 - src.frpt_runner - INFO - [1/30] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-16 08:29:09,908 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202610
+2026-04-16 08:29:09,908 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202605
+2026-04-16 08:29:09,909 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202608
+2026-04-16 08:29:09,909 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202612
+2026-04-16 08:29:09,909 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202613
+2026-04-16 08:29:09,910 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202606
+2026-04-16 08:29:09,910 - src.frpt_runner - INFO - [2/30] Completed: HMFN/SOCAMM2/WW202605 - success=True
+2026-04-16 08:29:09,911 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202607
+2026-04-16 08:29:09,911 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202614
+2026-04-16 08:29:09,911 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202610
+2026-04-16 08:29:09,913 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202605
+2026-04-16 08:29:09,913 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202612
+2026-04-16 08:29:09,914 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202613
+2026-04-16 08:29:09,914 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202608
+2026-04-16 08:29:09,914 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202606
+2026-04-16 08:29:09,915 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202607
+2026-04-16 08:29:09,915 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202614
+2026-04-16 08:29:09,915 - src.frpt_runner - INFO - [3/30] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-16 08:29:09,917 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202609
+2026-04-16 08:29:09,917 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202610
+2026-04-16 08:29:09,918 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202608
+2026-04-16 08:29:09,919 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202611
+2026-04-16 08:29:09,919 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202612
+2026-04-16 08:29:09,920 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202613
+2026-04-16 08:29:09,920 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202614
+2026-04-16 08:29:09,920 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202605
+2026-04-16 08:29:09,921 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202609
+2026-04-16 08:29:09,922 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202610
+2026-04-16 08:29:09,922 - src.frpt_runner - INFO - [4/30] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-16 08:29:09,923 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202611
+2026-04-16 08:29:09,923 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202612
+2026-04-16 08:29:09,923 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202613
+2026-04-16 08:29:09,923 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202606
+2026-04-16 08:29:09,924 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202614
+2026-04-16 08:29:09,924 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202605
+2026-04-16 08:29:09,925 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202607
+2026-04-16 08:29:09,925 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202608
+2026-04-16 08:29:09,926 - src.frpt_runner - INFO - [5/30] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-16 08:29:09,927 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202609
+2026-04-16 08:29:09,927 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202610
+2026-04-16 08:29:09,928 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202606
+2026-04-16 08:29:09,928 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202611
+2026-04-16 08:29:09,928 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202607
+2026-04-16 08:29:09,929 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202613
+2026-04-16 08:29:09,929 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202612
+2026-04-16 08:29:09,929 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202608
+2026-04-16 08:29:09,930 - src.frpt_runner - INFO - [6/30] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-16 08:29:09,930 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202609
+2026-04-16 08:29:09,930 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202610
+2026-04-16 08:29:09,930 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202611
+2026-04-16 08:29:09,931 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202613
+2026-04-16 08:29:09,931 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202614
+2026-04-16 08:29:09,931 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202612
+2026-04-16 08:29:09,932 - src.frpt_runner - INFO - [7/30] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-16 08:29:09,933 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202614
+2026-04-16 08:29:09,935 - src.frpt_runner - INFO - [8/30] Completed: HMB1/SOCAMM2/WW202605 - success=True
+2026-04-16 08:29:09,936 - src.frpt_runner - INFO - [9/30] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-16 08:29:09,937 - src.frpt_runner - INFO - [10/30] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-16 08:29:09,937 - src.frpt_runner - INFO - [11/30] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-16 08:29:09,938 - src.frpt_runner - INFO - [12/30] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-16 08:29:09,939 - src.frpt_runner - INFO - [13/30] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-16 08:29:09,940 - src.frpt_runner - INFO - [14/30] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-16 08:29:09,941 - src.frpt_runner - INFO - [15/30] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-16 08:29:09,941 - src.frpt_runner - INFO - [16/30] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-16 08:29:09,942 - src.frpt_runner - INFO - [17/30] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-16 08:29:09,943 - src.frpt_runner - INFO - [18/30] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-16 08:29:09,943 - src.frpt_runner - INFO - [19/30] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-16 08:29:09,944 - src.frpt_runner - INFO - [20/30] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-16 08:29:09,946 - src.frpt_runner - INFO - [21/30] Completed: QMON/SOCAMM2/WW202605 - success=True
+2026-04-16 08:29:09,946 - src.frpt_runner - INFO - [22/30] Completed: QMON/SOCAMM2/WW202606 - success=True
+2026-04-16 08:29:09,947 - src.frpt_runner - INFO - [23/30] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-16 08:29:09,948 - src.frpt_runner - INFO - [24/30] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-16 08:29:09,948 - src.frpt_runner - INFO - [25/30] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-16 08:29:09,949 - src.frpt_runner - INFO - [26/30] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-16 08:29:09,949 - src.frpt_runner - INFO - [27/30] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-16 08:29:09,950 - src.frpt_runner - INFO - [28/30] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-16 08:29:09,950 - src.frpt_runner - INFO - [29/30] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-16 08:29:09,951 - src.frpt_runner - INFO - [30/30] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-16 08:29:09,953 - __main__ - INFO - Pareto data: 10 register failures parsed
+2026-04-16 19:33:27,498 - src.smt6_yield - INFO - Fetching SMT6 data for 20 combinations (density=None, speed=None)...
+2026-04-16 19:33:27,500 - src.smt6_yield - INFO - SMT6 cache expired for key dda87ccb1d756586
+2026-04-16 19:33:27,500 - src.smt6_yield - INFO - SMT6 cache expired for key 49dbd7d400015f44
+2026-04-16 19:33:27,501 - src.smt6_yield - INFO - SMT6 cache expired for key 85b7a97770bce910
+2026-04-16 19:33:27,502 - src.smt6_yield - INFO - SMT6 cache expired for key a56580ad7f4acde4
+2026-04-16 19:33:27,502 - src.smt6_yield - INFO - SMT6 cache expired for key 527b1fcbca81c2b5
+2026-04-16 19:33:27,502 - src.smt6_yield - INFO - SMT6 cache expired for key b4bafff4f8e4e9ce
+2026-04-16 19:33:27,502 - src.smt6_yield - INFO - SMT6 cache expired for key 3a042039e4d33b7e
+2026-04-16 19:33:27,503 - src.smt6_yield - INFO - SMT6 cache expired for key 6f6cf02c9667664a
+2026-04-16 19:33:31,379 - src.smt6_yield - INFO - SMT6 cached result for key dda87ccb1d756586
+2026-04-16 19:33:31,381 - src.smt6_yield - INFO - SMT6 cache expired for key 15d2cee40161e0cc
+2026-04-16 19:33:31,441 - src.smt6_yield - INFO - SMT6 cached result for key a56580ad7f4acde4
+2026-04-16 19:33:31,442 - src.smt6_yield - INFO - SMT6 cache expired for key 6786feb775d62ff4
+2026-04-16 19:33:33,129 - src.smt6_yield - INFO - SMT6 cached result for key 6f6cf02c9667664a
+2026-04-16 19:33:33,139 - src.smt6_yield - INFO - SMT6 cache expired for key a4e001f5fc3cdbed
+2026-04-16 19:33:38,808 - src.smt6_yield - INFO - SMT6 cached result for key a4e001f5fc3cdbed
+2026-04-16 19:33:38,810 - src.smt6_yield - INFO - SMT6 cache expired for key de1d617f98c3190e
+2026-04-16 19:33:39,969 - src.smt6_yield - INFO - SMT6 cached result for key 527b1fcbca81c2b5
+2026-04-16 19:33:39,970 - src.smt6_yield - INFO - SMT6 cache expired for key c1395fb3723eba21
+2026-04-16 19:33:41,927 - src.smt6_yield - INFO - SMT6 cached result for key b4bafff4f8e4e9ce
+2026-04-16 19:33:41,930 - src.smt6_yield - INFO - SMT6 cache expired for key babf2f352afd62c8
+2026-04-16 19:33:43,763 - src.smt6_yield - INFO - SMT6 cached result for key de1d617f98c3190e
+2026-04-16 19:33:43,765 - src.smt6_yield - INFO - SMT6 cache expired for key ef39bbcd94a4c201
+2026-04-16 19:33:44,861 - src.smt6_yield - INFO - SMT6 cached result for key 85b7a97770bce910
+2026-04-16 19:33:44,865 - src.smt6_yield - INFO - SMT6 cache expired for key e5b93797ff974980
+2026-04-16 19:33:47,132 - src.smt6_yield - INFO - SMT6 cached result for key c1395fb3723eba21
+2026-04-16 19:33:47,144 - src.smt6_yield - INFO - SMT6 cache expired for key 450c81a2ae854c22
+2026-04-16 19:33:47,544 - src.smt6_yield - INFO - SMT6 cached result for key babf2f352afd62c8
+2026-04-16 19:33:47,545 - src.smt6_yield - INFO - SMT6 cache expired for key bf72439c7016ff7f
+2026-04-16 19:33:48,050 - src.smt6_yield - INFO - SMT6 cached result for key ef39bbcd94a4c201
+2026-04-16 19:33:48,052 - src.smt6_yield - INFO - SMT6 cache expired for key be4e84976a187dba
+2026-04-16 19:33:49,411 - src.smt6_yield - INFO - SMT6 cached result for key 49dbd7d400015f44
+2026-04-16 19:33:49,420 - src.smt6_yield - INFO - SMT6 cache expired for key 20d56173f6a37af0
+2026-04-16 19:33:50,753 - src.smt6_yield - INFO - SMT6 cached result for key be4e84976a187dba
+2026-04-16 19:33:51,708 - src.smt6_yield - INFO - SMT6 cached result for key 450c81a2ae854c22
+2026-04-16 19:33:51,887 - src.smt6_yield - INFO - SMT6 cached result for key e5b93797ff974980
+2026-04-16 19:33:52,454 - src.smt6_yield - INFO - SMT6 cached result for key bf72439c7016ff7f
+2026-04-16 19:33:54,871 - src.smt6_yield - INFO - SMT6 cached result for key 3a042039e4d33b7e
+2026-04-16 19:33:55,207 - src.smt6_yield - INFO - SMT6 cached result for key 20d56173f6a37af0
+2026-04-16 19:33:55,464 - src.smt6_yield - INFO - SMT6 cached result for key 6786feb775d62ff4
+2026-04-16 19:33:59,455 - src.smt6_yield - INFO - SMT6 cached result for key 15d2cee40161e0cc
+2026-04-16 19:33:59,457 - src.smt6_yield - INFO - SMT6 fetch complete: 32 total records from 20 queries
+2026-04-16 19:33:59,748 - src.smt6_yield - INFO - Fetching SMT6 site data for 2 combinations (density=None, speed=None)...
+2026-04-16 19:33:59,751 - src.smt6_yield - INFO - SMT6 cache expired for key 9362b001455caf6f
+2026-04-16 19:33:59,751 - src.smt6_yield - INFO - SMT6 cache expired for key b3cac499a66f3039
+2026-04-16 19:34:02,519 - src.smt6_yield - INFO - SMT6 cached result for key b3cac499a66f3039
+2026-04-16 19:34:06,079 - src.smt6_yield - INFO - SMT6 cached result for key 9362b001455caf6f
+2026-04-16 19:34:06,083 - src.smt6_yield - INFO - SMT6 site fetch complete: 64 total records from 2 queries
+2026-04-16 19:34:06,086 - __main__ - INFO - [SMT6 Filter] Mode='Latest Week', DIDs=['Y6CP', 'Y63N'], machines=2
+2026-04-16 19:40:54,716 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm,socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP,Y63N
+2026-04-16 19:41:20,521 - src.grace_motherboard - INFO - Fetched 3471 NVGRACE FM records
+2026-04-16 19:41:30,620 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:30,836 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:31,290 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 19:41:31,293 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:31,514 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:31,952 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 19:41:31,955 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:32,177 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:32,558 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 19:41:32,561 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:32,778 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:33,158 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 19:41:33,160 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:33,377 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:33,922 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 19:41:33,924 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:34,192 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:34,590 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 19:41:34,591 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:34,874 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:35,308 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 19:41:35,312 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:35,561 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:35,787 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:36,180 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 19:41:36,180 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 19:41:36,397 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 19:41:36,809 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 19:53:56,325 - src.failcrawler - INFO - Fetching FAILCRAWLER data: 1 DIDs, 1 steps, 10 weeks
+2026-04-16 19:53:57,144 - src.failcrawler - INFO - Fetched 11 FAILCRAWLER records (wide format with 55 columns)
+2026-04-16 19:53:57,157 - src.failcrawler - INFO - FAILCRAWLER data cached to cache/failcrawler_c2ab10dc1750.csv
+2026-04-16 19:53:57,157 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 19:53:57,859 - src.failcrawler - INFO - Fetched 45 MSN_STATUS correlation records
+2026-04-16 19:53:57,859 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 19:53:59,942 - src.failcrawler - INFO - Fetched 33591 records for unique module/FID counting
+2026-04-16 19:53:59,945 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 19:54:00,485 - src.failcrawler - INFO - Fetched UIN for 10 step/workweek combinations
+2026-04-16 19:54:00,486 - src.failcrawler - INFO - Fetching cDPM data for HMFN...
+2026-04-16 19:54:00,931 - src.failcrawler - INFO - Fetched 54 cDPM records for HMFN
+2026-04-16 19:54:00,932 - src.failcrawler - INFO - Total cDPM records: 54
+2026-04-16 19:54:00,932 - src.failcrawler - INFO - Fetching MDPM data for HMFN...
+2026-04-16 19:54:01,408 - src.failcrawler - INFO - Fetched 64 MDPM records for HMFN
+2026-04-16 19:54:01,408 - src.failcrawler - INFO - Total MDPM records: 64
+2026-04-16 19:54:01,408 - src.failcrawler - INFO - Fetching FCFM decode quality for HMFN...
+2026-04-16 19:54:01,930 - src.failcrawler - INFO - Fetched 172 FCFM records for HMFN
+2026-04-16 19:54:01,930 - src.failcrawler - INFO - Total FCFM records: 172
+2026-04-16 19:54:20,077 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_5bafa4a27cc6.csv
+2026-04-16 19:54:20,083 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 19:54:21,149 - src.failcrawler - INFO - Fetched 75 MSN_STATUS correlation records
+2026-04-16 19:54:21,149 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 19:54:23,140 - src.failcrawler - INFO - Fetched 29302 records for unique module/FID counting
+2026-04-16 19:54:23,142 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 19:54:23,675 - src.failcrawler - INFO - Fetched UIN for 20 step/workweek combinations
+2026-04-16 19:54:23,675 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 19:54:24,167 - src.failcrawler - INFO - Fetched 66 cDPM records for HMB1
+2026-04-16 19:54:24,167 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 19:54:24,685 - src.failcrawler - INFO - Fetched 53 cDPM records for QMON
+2026-04-16 19:54:24,686 - src.failcrawler - INFO - Total cDPM records: 119
+2026-04-16 19:54:24,686 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 19:54:25,146 - src.failcrawler - INFO - Fetched 66 MDPM records for HMB1
+2026-04-16 19:54:25,146 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 19:54:25,680 - src.failcrawler - INFO - Fetched 53 MDPM records for QMON
+2026-04-16 19:54:25,681 - src.failcrawler - INFO - Total MDPM records: 119
+2026-04-16 19:54:25,681 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 19:54:26,225 - src.failcrawler - INFO - Fetched 120 FCFM records for HMB1
+2026-04-16 19:54:26,225 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 19:54:26,982 - src.failcrawler - INFO - Fetched 89 FCFM records for QMON
+2026-04-16 19:54:26,983 - src.failcrawler - INFO - Total FCFM records: 209
+2026-04-16 20:16:15,015 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm,socamm2 -ww=202606,202607,202608,202609,202610,202611,202612,202613,202614,202615 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP
+2026-04-16 20:16:34,514 - src.grace_motherboard - INFO - Fetched 3533 NVGRACE FM records
+2026-04-16 20:21:20,859 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm,socamm2 -ww=202606,202607,202608,202609,202610,202611,202612,202613,202614,202615 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP,Y63N
+2026-04-16 20:21:38,582 - src.grace_motherboard - INFO - Fetched 3748 NVGRACE FM records
+2026-04-16 20:22:52,648 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm,socamm2 -ww=202604,202605,202606,202607,202608,202609,202610,202611,202612,202613 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP,Y63N
+2026-04-16 20:23:08,513 - src.grace_motherboard - INFO - Fetched 2997 NVGRACE FM records
+2026-04-16 20:24:07,230 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm,socamm2 -ww=202606,202607,202608,202609,202610,202611,202612,202613,202614,202615 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP,Y63N
+2026-04-16 20:24:25,837 - src.grace_motherboard - INFO - Fetched 3748 NVGRACE FM records
+2026-04-16 21:22:30,292 - src.failcrawler - INFO - FAILCRAWLER drilldown command: /u/dramsoft/bin/mtsums -dbase=Y6CP -step=HMB1 -ww=202606,202607,202608,202609,202610,202611,202612,202613,202614,202615 -failcrawler=SYS_EVEN_BURST_BIT -msn_status=DQ +msnag +fc -format+=msn,mfg_workweek,step,failcrawler,msn_status =islatest =isvalid +stdf +quiet +csv
+2026-04-16 21:22:32,024 - src.failcrawler - INFO - FAILCRAWLER drilldown returned 18 rows
+2026-04-16 21:22:36,527 - src.failcrawler - INFO - FAILCRAWLER drilldown command: /u/dramsoft/bin/mtsums -dbase=Y6CP -step=HMB1 -ww=202606,202607,202608,202609,202610,202611,202612,202613,202614,202615 -failcrawler=SYS_EVEN_BURST_BIT -msn_status=DQ +msnag +fc -format+=msn,mfg_workweek,step,failcrawler,msn_status =islatest =isvalid +stdf +quiet +csv
+2026-04-16 21:22:37,052 - src.failcrawler - INFO - FAILCRAWLER drilldown returned 18 rows
+2026-04-16 21:56:01,009 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_35fb0204eb5a.csv
+2026-04-16 21:56:01,035 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 21:56:02,242 - src.failcrawler - INFO - Fetched 125 MSN_STATUS correlation records
+2026-04-16 21:56:02,242 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 21:56:06,292 - src.failcrawler - INFO - Fetched 64341 records for unique module/FID counting
+2026-04-16 21:56:06,325 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 21:56:06,968 - src.failcrawler - INFO - Fetched UIN for 30 step/workweek combinations
+2026-04-16 21:56:06,969 - src.failcrawler - INFO - Fetching cDPM data for HMFN...
+2026-04-16 21:56:07,532 - src.failcrawler - INFO - Fetched 54 cDPM records for HMFN
+2026-04-16 21:56:07,533 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 21:56:08,189 - src.failcrawler - INFO - Fetched 72 cDPM records for HMB1
+2026-04-16 21:56:08,189 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 21:56:08,828 - src.failcrawler - INFO - Fetched 56 cDPM records for QMON
+2026-04-16 21:56:08,830 - src.failcrawler - INFO - Total cDPM records: 182
+2026-04-16 21:56:08,830 - src.failcrawler - INFO - Fetching MDPM data for HMFN...
+2026-04-16 21:56:09,391 - src.failcrawler - INFO - Fetched 63 MDPM records for HMFN
+2026-04-16 21:56:09,391 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 21:56:09,994 - src.failcrawler - INFO - Fetched 72 MDPM records for HMB1
+2026-04-16 21:56:09,994 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 21:56:10,616 - src.failcrawler - INFO - Fetched 56 MDPM records for QMON
+2026-04-16 21:56:10,616 - src.failcrawler - INFO - Total MDPM records: 191
+2026-04-16 21:56:10,617 - src.failcrawler - INFO - Fetching FCFM decode quality for HMFN...
+2026-04-16 21:56:11,118 - src.failcrawler - INFO - Fetched 162 FCFM records for HMFN
+2026-04-16 21:56:11,118 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 21:56:11,625 - src.failcrawler - INFO - Fetched 123 FCFM records for HMB1
+2026-04-16 21:56:11,628 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 21:56:12,153 - src.failcrawler - INFO - Fetched 94 FCFM records for QMON
+2026-04-16 21:56:12,154 - src.failcrawler - INFO - Total FCFM records: 379
+2026-04-16 22:07:40,232 - src.failcrawler - INFO - Fetching FAILCRAWLER data: 1 DIDs, 3 steps, 10 weeks
+2026-04-16 22:07:41,041 - src.failcrawler - INFO - Fetched 31 FAILCRAWLER records (wide format with 67 columns)
+2026-04-16 22:07:41,062 - src.failcrawler - INFO - FAILCRAWLER data cached to cache/failcrawler_4f233b46237f.csv
+2026-04-16 22:07:41,062 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-16 22:07:42,950 - src.failcrawler - INFO - Fetched 119 MSN_STATUS correlation records
+2026-04-16 22:07:42,950 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-16 22:07:48,746 - src.failcrawler - INFO - Fetched 62893 records for unique module/FID counting
+2026-04-16 22:07:48,750 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-16 22:07:49,347 - src.failcrawler - INFO - Fetched UIN for 30 step/workweek combinations
+2026-04-16 22:07:49,350 - src.failcrawler - INFO - Fetching cDPM data for HMFN...
+2026-04-16 22:07:49,808 - src.failcrawler - INFO - Fetched 54 cDPM records for HMFN
+2026-04-16 22:07:49,808 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-16 22:07:50,376 - src.failcrawler - INFO - Fetched 66 cDPM records for HMB1
+2026-04-16 22:07:50,376 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-16 22:07:50,900 - src.failcrawler - INFO - Fetched 53 cDPM records for QMON
+2026-04-16 22:07:50,901 - src.failcrawler - INFO - Total cDPM records: 173
+2026-04-16 22:07:50,901 - src.failcrawler - INFO - Fetching MDPM data for HMFN...
+2026-04-16 22:07:51,401 - src.failcrawler - INFO - Fetched 64 MDPM records for HMFN
+2026-04-16 22:07:51,401 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-16 22:07:52,024 - src.failcrawler - INFO - Fetched 66 MDPM records for HMB1
+2026-04-16 22:07:52,024 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-16 22:07:52,553 - src.failcrawler - INFO - Fetched 53 MDPM records for QMON
+2026-04-16 22:07:52,556 - src.failcrawler - INFO - Total MDPM records: 183
+2026-04-16 22:07:52,557 - src.failcrawler - INFO - Fetching FCFM decode quality for HMFN...
+2026-04-16 22:07:52,981 - src.failcrawler - INFO - Fetched 172 FCFM records for HMFN
+2026-04-16 22:07:52,982 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-16 22:07:53,509 - src.failcrawler - INFO - Fetched 120 FCFM records for HMB1
+2026-04-16 22:07:53,509 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-16 22:07:54,012 - src.failcrawler - INFO - Fetched 89 FCFM records for QMON
+2026-04-16 22:07:54,013 - src.failcrawler - INFO - Total FCFM records: 381
+2026-04-16 23:28:18,546 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm,socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP
+2026-04-16 23:28:35,851 - src.grace_motherboard - INFO - Fetched 3456 NVGRACE FM records
+2026-04-16 23:28:42,775 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:43,115 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:43,615 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 23:28:43,617 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:43,916 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:44,734 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 23:28:44,738 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:45,337 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:46,037 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 23:28:46,041 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:46,396 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:46,862 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 23:28:46,864 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:47,174 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:47,950 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 23:28:47,954 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:48,447 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:49,594 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 23:28:49,595 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:49,973 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:50,606 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 23:28:50,607 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:50,910 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:51,321 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:51,905 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 23:28:51,911 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:28:52,179 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:28:52,730 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
+2026-04-16 23:31:08,650 - __main__ - INFO - ============================================================
+2026-04-16 23:31:08,651 - __main__ - INFO - FETCH PARETO DATA STARTED (cache=ON)
+2026-04-16 23:31:08,654 - __main__ - INFO - Total frpt calls for Pareto: 60
+2026-04-16 23:31:08,655 - src.frpt_runner - INFO - Running 60 commands in parallel with 8 workers
+2026-04-16 23:31:10,083 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202612
+2026-04-16 23:31:10,090 - src.frpt_runner - INFO - [1/60] Completed: HMFN/SOCAMM/WW202612 - success=True
+2026-04-16 23:31:10,200 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202607
+2026-04-16 23:31:10,212 - src.frpt_runner - INFO - [2/60] Completed: HMFN/SOCAMM/WW202607 - success=True
+2026-04-16 23:31:10,256 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202610
+2026-04-16 23:31:10,257 - src.frpt_runner - INFO - [3/60] Completed: HMFN/SOCAMM/WW202610 - success=True
+2026-04-16 23:31:10,257 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202605
+2026-04-16 23:31:10,258 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202605
+2026-04-16 23:31:10,258 - src.frpt_runner - INFO - [4/60] Completed: HMFN/SOCAMM2/WW202605 - success=True
+2026-04-16 23:31:10,259 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202606
+2026-04-16 23:31:10,259 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202606
+2026-04-16 23:31:10,260 - src.frpt_runner - INFO - [5/60] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-16 23:31:10,260 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202607
+2026-04-16 23:31:10,260 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202607
+2026-04-16 23:31:10,265 - src.frpt_runner - INFO - [6/60] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-16 23:31:10,266 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202608
+2026-04-16 23:31:10,266 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202608
+2026-04-16 23:31:10,267 - src.frpt_runner - INFO - [7/60] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-16 23:31:10,267 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202609
+2026-04-16 23:31:10,268 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202609
+2026-04-16 23:31:10,277 - src.frpt_runner - INFO - [8/60] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-16 23:31:10,278 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202610
+2026-04-16 23:31:10,279 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202610
+2026-04-16 23:31:10,287 - src.frpt_runner - INFO - [9/60] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-16 23:31:10,295 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202611
+2026-04-16 23:31:10,295 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202611
+2026-04-16 23:31:10,295 - src.frpt_runner - INFO - [10/60] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-16 23:31:10,296 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202612
+2026-04-16 23:31:10,296 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202612
+2026-04-16 23:31:10,297 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202611
+2026-04-16 23:31:10,305 - src.frpt_runner - INFO - [11/60] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-16 23:31:10,307 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202614
+2026-04-16 23:31:10,317 - src.frpt_runner - INFO - [12/60] Completed: HMFN/SOCAMM/WW202611 - success=True
+2026-04-16 23:31:10,317 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202614
+2026-04-16 23:31:10,318 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202613
+2026-04-16 23:31:10,319 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202613
+2026-04-16 23:31:10,320 - src.frpt_runner - INFO - [13/60] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-16 23:31:10,320 - src.frpt_runner - INFO - [14/60] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-16 23:31:10,345 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202605
+2026-04-16 23:31:10,358 - src.frpt_runner - INFO - [15/60] Completed: HMFN/SOCAMM/WW202605 - success=True
+2026-04-16 23:31:10,383 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202606
+2026-04-16 23:31:10,385 - src.frpt_runner - INFO - [16/60] Completed: HMFN/SOCAMM/WW202606 - success=True
+2026-04-16 23:31:10,425 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202608
+2026-04-16 23:31:10,427 - src.frpt_runner - INFO - [17/60] Completed: HMFN/SOCAMM/WW202608 - success=True
+2026-04-16 23:31:10,438 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202609
+2026-04-16 23:31:10,440 - src.frpt_runner - INFO - [18/60] Completed: HMFN/SOCAMM/WW202609 - success=True
+2026-04-16 23:31:11,299 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202613
+2026-04-16 23:31:11,301 - src.frpt_runner - INFO - [19/60] Completed: HMFN/SOCAMM/WW202613 - success=True
+2026-04-16 23:31:11,389 - src.cache - INFO - Cached result for HMFN/SOCAMM/WW202614
+2026-04-16 23:31:11,391 - src.frpt_runner - INFO - [20/60] Completed: HMFN/SOCAMM/WW202614 - success=True
+2026-04-16 23:31:11,813 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202607
+2026-04-16 23:31:11,814 - src.frpt_runner - INFO - [21/60] Completed: HMB1/SOCAMM/WW202607 - success=True
+2026-04-16 23:31:11,918 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202610
+2026-04-16 23:31:11,918 - src.frpt_runner - INFO - [22/60] Completed: HMB1/SOCAMM/WW202610 - success=True
+2026-04-16 23:31:12,105 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202606
+2026-04-16 23:31:12,106 - src.frpt_runner - INFO - [23/60] Completed: HMB1/SOCAMM/WW202606 - success=True
+2026-04-16 23:31:12,107 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202605
+2026-04-16 23:31:12,107 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202605
+2026-04-16 23:31:12,111 - src.frpt_runner - INFO - [24/60] Completed: HMB1/SOCAMM2/WW202605 - success=True
+2026-04-16 23:31:12,115 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202606
+2026-04-16 23:31:12,119 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202606
+2026-04-16 23:31:12,124 - src.frpt_runner - INFO - [25/60] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-16 23:31:12,125 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202607
+2026-04-16 23:31:12,125 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202607
+2026-04-16 23:31:12,125 - src.frpt_runner - INFO - [26/60] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-16 23:31:12,133 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202608
+2026-04-16 23:31:12,133 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202608
+2026-04-16 23:31:12,134 - src.frpt_runner - INFO - [27/60] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-16 23:31:12,134 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202609
+2026-04-16 23:31:12,134 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202609
+2026-04-16 23:31:12,138 - src.frpt_runner - INFO - [28/60] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-16 23:31:12,139 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202610
+2026-04-16 23:31:12,139 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202610
+2026-04-16 23:31:12,140 - src.frpt_runner - INFO - [29/60] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-16 23:31:12,141 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202611
+2026-04-16 23:31:12,142 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202611
+2026-04-16 23:31:12,142 - src.frpt_runner - INFO - [30/60] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-16 23:31:12,143 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202612
+2026-04-16 23:31:12,143 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202612
+2026-04-16 23:31:12,144 - src.frpt_runner - INFO - [31/60] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-16 23:31:12,146 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202609
+2026-04-16 23:31:12,144 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202613
+2026-04-16 23:31:12,148 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202613
+2026-04-16 23:31:12,154 - src.frpt_runner - INFO - [32/60] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-16 23:31:12,155 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202614
+2026-04-16 23:31:12,160 - src.frpt_runner - INFO - [33/60] Completed: HMB1/SOCAMM/WW202609 - success=True
+2026-04-16 23:31:12,161 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202614
+2026-04-16 23:31:12,161 - src.frpt_runner - INFO - [34/60] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-16 23:31:12,398 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202611
+2026-04-16 23:31:12,398 - src.frpt_runner - INFO - [35/60] Completed: HMB1/SOCAMM/WW202611 - success=True
+2026-04-16 23:31:12,479 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202605
+2026-04-16 23:31:12,482 - src.frpt_runner - INFO - [36/60] Completed: HMB1/SOCAMM/WW202605 - success=True
+2026-04-16 23:31:12,910 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202608
+2026-04-16 23:31:13,272 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202612
+2026-04-16 23:31:13,371 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202613
+2026-04-16 23:31:13,884 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202606
+2026-04-16 23:31:13,984 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202607
+2026-04-16 23:31:14,125 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202608
+2026-04-16 23:31:14,188 - src.cache - INFO - Cached result for HMB1/SOCAMM/WW202614
+2026-04-16 23:31:14,189 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202605
+2026-04-16 23:31:14,189 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202605
+2026-04-16 23:31:14,191 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202606
+2026-04-16 23:31:14,191 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202606
+2026-04-16 23:31:14,194 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202607
+2026-04-16 23:31:14,194 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202607
+2026-04-16 23:31:14,195 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202608
+2026-04-16 23:31:14,196 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202608
+2026-04-16 23:31:14,200 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202609
+2026-04-16 23:31:14,201 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202609
+2026-04-16 23:31:14,203 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202610
+2026-04-16 23:31:14,203 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202610
+2026-04-16 23:31:14,208 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202611
+2026-04-16 23:31:14,208 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202611
+2026-04-16 23:31:14,210 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202612
+2026-04-16 23:31:14,210 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202612
+2026-04-16 23:31:14,213 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202613
+2026-04-16 23:31:14,215 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202613
+2026-04-16 23:31:14,220 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202614
+2026-04-16 23:31:14,222 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202614
+2026-04-16 23:31:14,780 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202609
+2026-04-16 23:31:14,975 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202611
+2026-04-16 23:31:15,076 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202613
+2026-04-16 23:31:15,135 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202605
+2026-04-16 23:31:15,175 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202610
+2026-04-16 23:31:15,317 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202612
+2026-04-16 23:31:15,473 - src.cache - INFO - Cached result for QMON/SOCAMM/WW202614
+2026-04-16 23:31:19,556 - __main__ - INFO - ============================================================
+2026-04-16 23:31:19,557 - __main__ - INFO - FETCH PARETO DATA STARTED (cache=ON)
+2026-04-16 23:31:19,558 - __main__ - INFO - Total frpt calls for Pareto: 20
+2026-04-16 23:31:19,559 - src.frpt_runner - INFO - Running 20 commands in parallel with 8 workers
+2026-04-16 23:31:19,561 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202605
+2026-04-16 23:31:19,561 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202605
+2026-04-16 23:31:19,562 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202606
+2026-04-16 23:31:19,562 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202606
+2026-04-16 23:31:19,565 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202607
+2026-04-16 23:31:19,565 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202608
+2026-04-16 23:31:19,565 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202607
+2026-04-16 23:31:19,565 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202608
+2026-04-16 23:31:19,566 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202609
+2026-04-16 23:31:19,568 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202610
+2026-04-16 23:31:19,568 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202609
+2026-04-16 23:31:19,569 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202610
+2026-04-16 23:31:19,570 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202612
+2026-04-16 23:31:19,570 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202612
+2026-04-16 23:31:19,571 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202611
+2026-04-16 23:31:19,571 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202611
+2026-04-16 23:31:19,573 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202613
+2026-04-16 23:31:19,573 - src.cache - INFO - Cache HIT for HMFN/SOCAMM/WW202614
+2026-04-16 23:31:19,573 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202613
+2026-04-16 23:31:19,573 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM/WW202614
+2026-04-16 23:31:19,575 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202607
+2026-04-16 23:31:19,575 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202607
+2026-04-16 23:31:19,575 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202606
+2026-04-16 23:31:19,575 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202606
+2026-04-16 23:31:19,575 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202605
+2026-04-16 23:31:19,575 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202605
+2026-04-16 23:31:19,579 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202608
+2026-04-16 23:31:19,579 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202608
+2026-04-16 23:31:19,579 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202609
+2026-04-16 23:31:19,580 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202611
+2026-04-16 23:31:19,580 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202609
+2026-04-16 23:31:19,580 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202611
+2026-04-16 23:31:19,581 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202612
+2026-04-16 23:31:19,584 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202613
+2026-04-16 23:31:19,584 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202612
+2026-04-16 23:31:19,584 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202613
+2026-04-16 23:31:19,588 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202610
+2026-04-16 23:31:19,588 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202610
+2026-04-16 23:31:19,589 - src.frpt_runner - INFO - [1/20] Completed: HMFN/SOCAMM/WW202606 - success=True
+2026-04-16 23:31:19,597 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202614
+2026-04-16 23:31:19,601 - src.frpt_runner - INFO - [2/20] Completed: HMFN/SOCAMM/WW202605 - success=True
+2026-04-16 23:31:19,601 - src.frpt_runner - INFO - [3/20] Completed: HMFN/SOCAMM2/WW202605 - success=True
+2026-04-16 23:31:19,602 - src.frpt_runner - INFO - [4/20] Completed: HMFN/SOCAMM/WW202608 - success=True
+2026-04-16 23:31:19,603 - src.frpt_runner - INFO - [5/20] Completed: HMFN/SOCAMM/WW202613 - success=True
+2026-04-16 23:31:19,607 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202614
+2026-04-16 23:31:19,607 - src.frpt_runner - INFO - [6/20] Completed: HMFN/SOCAMM/WW202607 - success=True
+2026-04-16 23:31:19,613 - src.frpt_runner - INFO - [7/20] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-16 23:31:19,614 - src.frpt_runner - INFO - [8/20] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-16 23:31:19,614 - src.frpt_runner - INFO - [9/20] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-16 23:31:19,615 - src.frpt_runner - INFO - [10/20] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-16 23:31:19,615 - src.frpt_runner - INFO - [11/20] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-16 23:31:19,615 - src.frpt_runner - INFO - [12/20] Completed: HMFN/SOCAMM/WW202609 - success=True
+2026-04-16 23:31:19,615 - src.frpt_runner - INFO - [13/20] Completed: HMFN/SOCAMM/WW202614 - success=True
+2026-04-16 23:31:19,615 - src.frpt_runner - INFO - [14/20] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-16 23:31:19,616 - src.frpt_runner - INFO - [15/20] Completed: HMFN/SOCAMM/WW202612 - success=True
+2026-04-16 23:31:19,617 - src.frpt_runner - INFO - [16/20] Completed: HMFN/SOCAMM/WW202610 - success=True
+2026-04-16 23:31:19,617 - src.frpt_runner - INFO - [17/20] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-16 23:31:19,617 - src.frpt_runner - INFO - [18/20] Completed: HMFN/SOCAMM/WW202611 - success=True
+2026-04-16 23:31:19,617 - src.frpt_runner - INFO - [19/20] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-16 23:31:19,618 - src.frpt_runner - INFO - [20/20] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-16 23:31:19,631 - __main__ - INFO - Pareto data: 147 register failures parsed
+2026-04-16 23:31:59,812 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm,socamm2 -ww=202605,202606,202607,202608,202609,202610,202611,202612,202613,202614 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP
+2026-04-16 23:32:17,375 - src.grace_motherboard - INFO - Fetched 3456 NVGRACE FM records
+2026-04-16 23:32:22,411 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099653 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:22,816 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099653 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:23,386 - src.grace_motherboard - INFO - Fetched 16 MSN records for NVGRACE-099653
+2026-04-16 23:32:23,419 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099720 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:23,782 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099720 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:24,344 - src.grace_motherboard - INFO - Fetched 20 MSN records for NVGRACE-099720
+2026-04-16 23:32:24,351 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099748 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:24,954 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099748 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:25,579 - src.grace_motherboard - INFO - Fetched 32 MSN records for NVGRACE-099748
+2026-04-16 23:32:25,583 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099655 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:25,972 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099655 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:26,473 - src.grace_motherboard - INFO - Fetched 12 MSN records for NVGRACE-099655
+2026-04-16 23:32:26,478 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099650 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:26,822 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099650 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:27,328 - src.grace_motherboard - INFO - Fetched 36 MSN records for NVGRACE-099650
+2026-04-16 23:32:27,331 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099541 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:27,588 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099541 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:28,113 - src.grace_motherboard - INFO - Fetched 8 MSN records for NVGRACE-099541
+2026-04-16 23:32:28,114 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-097719 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:28,407 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-097719 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:28,945 - src.grace_motherboard - INFO - Fetched 24 MSN records for NVGRACE-097719
+2026-04-16 23:32:28,945 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-098278 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:29,262 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099649 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:29,564 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099649 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:30,019 - src.grace_motherboard - INFO - Fetched 28 MSN records for NVGRACE-099649
+2026-04-16 23:32:30,019 - src.grace_motherboard - INFO - Running tsums command: /u/summary/bin/tsums -machine_id=NVGRACE-099747 -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
+2026-04-16 23:32:30,304 - src.grace_motherboard - INFO - Running mtsums MSN command: /u/dramsoft/bin/mtsums -machine_id=NVGRACE-099747 -ww=202614 -step=hmb1,qmon -msn -format=lot,msn,sbin,step,mfg_workweek,site +csv +quiet
+2026-04-16 23:32:30,871 - src.grace_motherboard - INFO - Fetched 40 MSN records for NVGRACE-099747
