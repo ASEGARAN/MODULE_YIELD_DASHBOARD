@@ -4546,20 +4546,20 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                         })
                         st.dataframe(styled_wow, use_container_width=True, hide_index=True, height=450)
 
-                    # ========== RIGHT COLUMN: Hang SBIN Analysis ==========
+                    # ========== RIGHT COLUMN: 100% Fail Analysis ==========
                     with right_col:
-                        st.markdown("### 🔬 Hang SBIN Analysis")
-                        st.caption("Deep-dive: UPASS=0, SBIN=HUNG/HUNG1/HUNG2")
+                        st.markdown("### 🔬 100% Fail Analysis")
+                        st.caption("Deep-dive: UIN=4, UPASS=0 (all modules failed)")
 
                         # Methodology expander
                         with st.expander("ℹ️ Methodology", expanded=False):
                             st.markdown(f"""
-**Data Source:** `mtsums` (MSN-level with SBIN)
+**Data Source:** `tsums` (lot-level) + `mtsums -msn` (module-level)
 
-**Hang Criteria:** `UPASS=0`, `SBIN` in (HUNG, HUNG1, HUNG2)
+**100% Fail:** `UIN=4` and `UPASS=0`
 
 **Status:**
-- 🔄 **Chronic** - Hang in both WW{selected_ww} and WW{prev_ww}
+- 🔄 **Chronic** - 100% fail in both WW{selected_ww} and WW{prev_ww}
 - 🆕 **New** - Only in WW{selected_ww}
 - ✅ **Resolved** - Only in WW{prev_ww}
 
@@ -4625,7 +4625,7 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
 
                             # Build display table with WoW Status for context
                             fail_display = drill_df[['machine_id', 'wow_status', 'status', 'count_current', 'recovery_status', 'remarks']].copy()
-                            fail_display.columns = ['Machine ID', 'WoW Hang', 'Hang SBIN', f'Lots (WW{selected_ww})', f'WW{next_ww} Status', 'Remarks']
+                            fail_display.columns = ['Machine ID', 'WoW Hang', '100% Fail', f'Lots (WW{selected_ww})', f'WW{next_ww} Status', 'Remarks']
 
                             # Simplified highlighting: SOP violations or Bad MOBO
                             def highlight_row(row):
@@ -4646,7 +4646,7 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
 
                                 # Left: Lot Details
                                 with detail_col1:
-                                    st.markdown("**Lot Details (Hang SBIN)**")
+                                    st.markdown("**Lot Details (100% Fail)**")
                                     fail_machines = drill_df[drill_df['status'].str.contains('Chronic|New', regex=True)]
                                     if not fail_machines.empty:
                                         for _, row in fail_machines.iterrows():

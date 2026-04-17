@@ -494,38 +494,23 @@ def fetch_machine_tsums(
     days: int = 30
 ) -> Optional[pd.DataFrame]:
     """
-    Fetch MSN-level data for a specific machine using mtsums.
+    Fetch detailed tsums data for a specific machine.
 
-    Uses: mtsums -machine_id=NVGRACE-XXXXXX -step=hmb1,qmon -ww=START,END -format=msn,mfg_workweek,step,uin,upass,sbin,lot +quiet +csv
+    Uses: tsums -machine_id=NVGRACE-XXXXXX -step=hmb1,qmon -standard_flow=yes -30 -ta -format+=mfg_workweek,bios_version +echo
 
     Args:
         machine_id: Machine ID (e.g., 'NVGRACE-099562')
         steps: Test steps to query
-        days: Number of days to look back (converted to workweek range)
+        days: Number of days to look back
 
     Returns:
-        DataFrame with MSN-level details including UIN, UPASS, MFG_WORKWEEK, SBIN, LOT
+        DataFrame with lot-level details including UIN, UPASS, MFG_WORKWEEK, BIOS_VERSION
     """
-    from datetime import datetime, timedelta
-
     step_list = ','.join(steps)
 
-    # Calculate workweek range from days
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
+    cmd = f"/u/summary/bin/tsums -machine_id={machine_id} -step={step_list} -standard_flow=yes -{days} -ta -format+=mfg_workweek,bios_version +echo"
 
-    # Convert to workweek (YYYYWW format)
-    def date_to_workweek(dt):
-        year = dt.year
-        week = dt.isocalendar()[1]
-        return f"{year}{week:02d}"
-
-    start_ww = date_to_workweek(start_date)
-    end_ww = date_to_workweek(end_date)
-
-    cmd = f"/u/dramsoft/bin/mtsums -machine_id={machine_id} -step={step_list} -ww={start_ww},{end_ww} -format=msn,mfg_workweek,step,uin,upass,sbin,lot +quiet +csv"
-
-    logger.info(f"Running mtsums command: {cmd}")
+    logger.info(f"Running tsums command: {cmd}")
 
     try:
         result = subprocess.run(
@@ -537,38 +522,38 @@ def fetch_machine_tsums(
         )
 
         if result.returncode != 0:
-            logger.error(f"mtsums failed: {result.stderr}")
+            logger.error(f"tsums failed: {result.stderr}")
             return None
 
         output = result.stdout
-        if not output.strip():
-            logger.warning("mtsums returned no data")
+        if not output.strip() or 'Command Echo' not in output:
+            logger.warning("tsums returned no data")
             return None
 
-        # Parse CSV output
+        # Parse the output (space-separated, skip the Command Echo line)
         lines = output.strip().split('\n')
-        if len(lines) < 2:
+        data_lines = [l for l in lines if not l.startswith('Command Echo') and l.strip()]
+
+        if not data_lines:
             return None
 
-        # Parse header and data
-        header = lines[0].split(',')
+        # Parse each line into structured data
         records = []
-        for line in lines[1:]:
-            if line.strip() and not line.startswith('Total'):
-                parts = line.split(',')
-                if len(parts) >= len(header):
-                    try:
-                        record = {}
-                        for i, col in enumerate(header):
-                            col_lower = col.lower()
-                            if col_lower in ['uin', 'upass']:
-                                record[col_lower] = int(parts[i]) if parts[i].isdigit() else 0
-                            else:
-                                record[col_lower] = parts[i]
-                        records.append(record)
-                    except (ValueError, IndexError) as e:
-                        logger.debug(f"Skipping line due to parse error: {e}")
-                        continue
+        for line in data_lines:
+            parts = line.split()
+            if len(parts) >= 20:  # Ensure we have enough columns
+                try:
+                    records.append({
+                        'lot': parts[0],
+                        'uin': int(parts[3]),
+                        'upass': int(parts[4]),
+                        'step': parts[-3],
+                        'mfg_workweek': parts[-2],
+                        'bios_version': parts[-1]
+                    })
+                except (ValueError, IndexError) as e:
+                    logger.debug(f"Skipping line due to parse error: {e}")
+                    continue
 
         if not records:
             return None
@@ -576,10 +561,10 @@ def fetch_machine_tsums(
         return pd.DataFrame(records)
 
     except subprocess.TimeoutExpired:
-        logger.error("mtsums command timed out")
+        logger.error("tsums command timed out")
         return None
     except Exception as e:
-        logger.error(f"Error fetching machine mtsums: {e}")
+        logger.error(f"Error fetching machine tsums: {e}")
         return None
 
 
@@ -860,13 +845,13 @@ def analyze_machines_100pct_fails(
     days: int = 30
 ) -> pd.DataFrame:
     """
-    Analyze HANG fail cases (UPASS=0, SBIN=HUNG/HUNG1/HUNG2) for multiple machines.
+    Analyze 100% fail cases (UIN=4, UPASS=0) for multiple machines.
 
-    Categorizes each machine based on when HANG fails were observed:
-    - New Hang: Only in current week
-    - Chronic Hang: In both weeks
+    Categorizes each machine based on when 100% fails were observed:
+    - New 100% Fail: Only in current week
+    - Chronic 100% Fail: In both weeks
     - Resolved: Only in previous week (no longer failing)
-    - No Hang: No hang fail cases detected
+    - No 100% Fail: No 100% fail cases detected
 
     Also checks recovery status in the upcoming week (current_ww + 1).
 
@@ -904,21 +889,12 @@ def analyze_machines_100pct_fails(
                 })
                 continue
 
-            # Filter for HANG fail cases (UPASS=0, SBIN in HUNG/HUNG1/HUNG2)
-            # Note: mtsums shows per-MSN data where UIN=1, not lot-level UIN=4
-            hang_sbins = ['HUNG', 'HUNG1', 'HUNG2']
+            # Filter for 100% fail cases (UIN=4, UPASS=0)
+            fail_100pct = tsums_df[(tsums_df['uin'] == 4) & (tsums_df['upass'] == 0)]
 
-            # Ensure mfg_workweek is string for comparison
-            tsums_df['mfg_workweek'] = tsums_df['mfg_workweek'].astype(str)
-
-            fail_100pct = tsums_df[
-                (tsums_df['upass'] == 0) &
-                (tsums_df['sbin'].isin(hang_sbins))
-            ]
-
-            current_fails = fail_100pct[fail_100pct['mfg_workweek'] == str(current_ww)]
-            prev_fails = fail_100pct[fail_100pct['mfg_workweek'] == str(previous_ww)]
-            next_fails = fail_100pct[fail_100pct['mfg_workweek'] == str(next_ww)]
+            current_fails = fail_100pct[fail_100pct['mfg_workweek'] == current_ww]
+            prev_fails = fail_100pct[fail_100pct['mfg_workweek'] == previous_ww]
+            next_fails = fail_100pct[fail_100pct['mfg_workweek'] == next_ww]
 
             count_current = len(current_fails)
             count_prev = len(prev_fails)
@@ -928,15 +904,15 @@ def analyze_machines_100pct_fails(
             lots_current = ', '.join(current_fails['lot'].unique().tolist()) if count_current > 0 else ''
             lots_prev = ', '.join(prev_fails['lot'].unique().tolist()) if count_prev > 0 else ''
 
-            # Determine status (specifically for HANG failures)
+            # Determine status
             if count_current > 0 and count_prev > 0:
-                status = '🔄 Chronic Hang'
+                status = '🔄 Chronic 100% Fail'
             elif count_current > 0 and count_prev == 0:
-                status = '🆕 New Hang'
+                status = '🆕 New 100% Fail'
             elif count_current == 0 and count_prev > 0:
                 status = '✅ Resolved'
             else:
-                status = '✅ No Hang'
+                status = '✅ No 100% Fail'
 
             # Check recovery status in next week
             # Only relevant for machines with 100% fails in current week
