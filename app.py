@@ -909,34 +909,44 @@ def setup_page() -> None:
 
 
 def render_primary_filters() -> dict[str, Any]:
-    """Render primary filter widgets (form factor, step, design_id, facility)."""
-    form_factors = st.sidebar.multiselect(
-        "Module Form Factor",
-        options=Settings.FORM_FACTORS,
-        default=Settings.FORM_FACTORS,
-        help="Select one or more module form factors",
-    )
+    """Render primary filter widgets in compact 2-column layout."""
+    # Row 1: Form Factor | Test Step
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        form_factors = st.multiselect(
+            "Form Factor",
+            options=Settings.FORM_FACTORS,
+            default=[],
+            help="Module form factors",
+            key="ff_filter",
+        )
+    with col2:
+        test_steps = st.multiselect(
+            "Test Step",
+            options=Settings.TEST_STEPS,
+            default=[],
+            help="Test steps",
+            key="step_filter",
+        )
 
-    test_steps = st.sidebar.multiselect(
-        "Test Step",
-        options=Settings.TEST_STEPS,
-        default=Settings.TEST_STEPS,
-        help="Select one or more test steps",
-    )
-
-    design_ids = st.sidebar.multiselect(
-        "Design ID",
-        options=Settings.DESIGN_IDS,
-        default=[Settings.DESIGN_IDS[0]],
-        help="Select one or more design IDs (DBASE parameter)",
-    )
-
-    facility = st.sidebar.selectbox(
-        "Test Facility",
-        options=Settings.FACILITIES,
-        index=0,
-        help="Select test facility. For GRACE Motherboard analysis, select PENANG or BOISE (not 'all').",
-    )
+    # Row 2: Design ID | Facility
+    col3, col4 = st.sidebar.columns(2)
+    with col3:
+        design_ids = st.multiselect(
+            "Design ID",
+            options=Settings.DESIGN_IDS,
+            default=[],
+            help="Design IDs (DBASE)",
+            key="did_filter",
+        )
+    with col4:
+        facility = st.selectbox(
+            "Facility",
+            options=Settings.FACILITIES,
+            index=0,
+            help="Test facility",
+            key="facility_filter",
+        )
 
     return {
         "form_factors": form_factors,
@@ -972,15 +982,13 @@ def get_previous_workweeks(end_ww: str, count: int = 10) -> tuple[str, str]:
 
 
 def render_workweek_filters() -> dict[str, str]:
-    """Render work week filter widget (single workweek input)."""
+    """Render work week filter widget (compact layout)."""
     st.sidebar.divider()
-    st.sidebar.subheader("Work Week")
+    st.sidebar.caption("Work Week (shows 10 weeks of data)")
 
     current_ww = get_current_workweek()
     current_year = int(current_ww[:4])
     current_week = min(int(current_ww[4:]), MAX_WEEKS_PER_YEAR)
-
-    st.sidebar.caption("Select target workweek (will show 10 weeks of data)")
 
     col1, col2 = st.sidebar.columns(2)
     with col1:
@@ -989,6 +997,7 @@ def render_workweek_filters() -> dict[str, str]:
             min_value=MIN_YEAR,
             max_value=MAX_YEAR,
             value=current_year,
+            key="ww_year",
         )
     with col2:
         selected_week = st.number_input(
@@ -996,12 +1005,13 @@ def render_workweek_filters() -> dict[str, str]:
             min_value=1,
             max_value=MAX_WEEKS_PER_YEAR,
             value=current_week,
+            key="ww_week",
         )
 
     selected_ww = f"{selected_year}{selected_week:02d}"
     start_ww, end_ww = get_previous_workweeks(selected_ww, count=10)
 
-    st.sidebar.caption(f"Range: WW{start_ww} to WW{end_ww}")
+    st.sidebar.caption(f"WW{start_ww} → WW{end_ww}")
 
     return {
         "start_ww": start_ww,
@@ -1010,27 +1020,31 @@ def render_workweek_filters() -> dict[str, str]:
 
 
 def render_optional_filters() -> dict[str, Optional[list[str]]]:
-    """Render optional filter widgets (density, speed)."""
+    """Render optional filter widgets (density, speed) in compact layout."""
     st.sidebar.divider()
-    st.sidebar.subheader("Optional Filters")
+    st.sidebar.caption("Optional Filters")
 
     # Hardcoded speed options with MTPS suffix
     SPEED_OPTIONS = ["6400MTPS", "7500MTPS", "8533MTPS", "9600MTPS"]
 
-    densities = st.sidebar.multiselect(
-        "Density",
-        options=Settings.DENSITIES,
-        default=[],
-        help="Filter by module density (optional)",
-    )
-
-    speeds = st.sidebar.multiselect(
-        "Speed",
-        options=SPEED_OPTIONS,  # Use hardcoded values
-        default=[],
-        help="Filter by module speed (optional)",
-        key="speed_filter_v5",  # Force widget refresh
-    )
+    # Density | Speed in same row
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        densities = st.multiselect(
+            "Density",
+            options=Settings.DENSITIES,
+            default=[],
+            help="Module density",
+            key="density_filter",
+        )
+    with col2:
+        speeds = st.multiselect(
+            "Speed",
+            options=SPEED_OPTIONS,
+            default=[],
+            help="Module speed",
+            key="speed_filter_v5",
+        )
 
     return {
         "densities": densities if densities else None,
