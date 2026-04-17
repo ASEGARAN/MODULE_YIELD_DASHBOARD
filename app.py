@@ -3649,8 +3649,8 @@ def fetch_pareto_data(filters: dict[str, Any], use_cache: bool = True) -> pd.Dat
     except Exception as e:
         raise RuntimeError(f"Invalid workweek range: {e}") from e
 
-    # Build commands for HMFN, HMB1, QMON
-    pareto_steps = ["HMFN", "HMB1", "QMON"]
+    # Build commands for user-selected test steps (default to HMFN, HMB1, QMON if not specified)
+    pareto_steps = filters.get("test_steps", ["HMFN", "HMB1", "QMON"])
     commands = []
     for design_id in filters["design_ids"]:
         for step in pareto_steps:
@@ -4038,8 +4038,12 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
 
 def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
     """Render the Register Fallout sub-tab content (original Pareto content)."""
-    st.markdown("""
-    **Top 5 Failed Registers** by test step (HMFN, HMB1, QMON).
+    # Get user-selected test steps
+    pareto_steps = filters.get("test_steps", ["HMFN", "HMB1", "QMON"])
+    steps_display = ", ".join(pareto_steps)
+
+    st.markdown(f"""
+    **Top 5 Failed Registers** by test step ({steps_display}).
     Shows register fallout breakdown by design_id, form_factor, speed, density, and workweek.
     """)
 
@@ -4048,7 +4052,7 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
     # Calculate estimated queries
     try:
         workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
-        total_queries = len(filters["design_ids"]) * 3 * len(filters["form_factors"]) * len(workweeks)
+        total_queries = len(filters["design_ids"]) * len(pareto_steps) * len(filters["form_factors"]) * len(workweeks)
     except Exception:
         total_queries = 0
 
@@ -4063,7 +4067,7 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
         )
     with col2:
         if total_queries > 0:
-            st.caption(f"Will fetch {total_queries} queries (3 steps × {len(workweeks)} weeks).")
+            st.caption(f"Will fetch {total_queries} queries ({len(pareto_steps)} steps × {len(workweeks)} weeks).")
 
     if fetch_pareto:
         try:
