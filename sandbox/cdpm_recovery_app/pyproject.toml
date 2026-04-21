@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdpm-recovery-sim"
+version = "1.0.3"
+description = "SOCAMM2 cDPM Recovery Simulation with hybrid DPM analysis"
+readme = "README.md"
+requires-python = ">=3.6"
+authors = [
+    {name = "Manufacturing Engineering Team"}
+]
+dependencies = [
+    "pandas>=1.0.0",
+    "plotly>=5.0.0",
+]
+
+[project.scripts]
+cdpm-recovery-sim = "cdpm_recovery_sim:main"
+
+[tool.setuptools]
+packages = ["cdpm_recovery_sim"]
