@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cdpm-recovery-sim"
-version = "1.0.3"
+version = "1.0.4"
 description = "SOCAMM2 cDPM Recovery Simulation with hybrid DPM analysis"
 readme = "README.md"
 requires-python = ">=3.6"
 authors = [
-    {name = "Manufacturing Engineering Team"}
+    {name = "Abbiramavali Segaran"}
 ]
 dependencies = [
     "pandas>=1.0.0",
