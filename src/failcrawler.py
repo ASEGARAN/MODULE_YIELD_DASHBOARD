@@ -4250,6 +4250,10 @@ def create_failcrawler_breakdown_html(
         agg_df['DPM'] = (agg_df['UFAIL'] / total_uin) * 1_000_000
         step_df = agg_df
 
+    # Ensure YIELD_LOSS column exists (needed for recovery calculations)
+    if 'YIELD_LOSS' not in step_df.columns and 'DPM' in step_df.columns:
+        step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
+
     # Get verified RPx recovery rate if available
     rpx_recovery_rate = 0.0
     if verified_rpx_data:
