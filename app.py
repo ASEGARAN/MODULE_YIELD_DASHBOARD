@@ -84,6 +84,9 @@ from src.failcrawler import (
     create_failcrawler_breakdown_html,
     calculate_slt_combined_recovery,
     create_slt_combined_html,
+    # Verified RPx Recovery
+    fetch_slash_for_failures,
+    calculate_verified_rpx_recovery,
 )
 
 # AI Assistant module
@@ -4321,9 +4324,9 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
         )
     with col2:
         if fc_data_loaded:
-            st.caption("✅ Using data from FAILCRAWLER DPM tab")
+            st.caption("✅ Data loaded (includes verified RPx from false miscompare script)")
         else:
-            st.caption("Will fetch FAILCRAWLER × MSN_STATUS correlation data")
+            st.caption("Will fetch FAILCRAWLER × MSN_STATUS data and run RPx verification")
 
     if fetch_btn:
         try:
@@ -4354,6 +4357,18 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
                 st.session_state.failcrawler_fid_counts = fid_counts_df
                 st.session_state.failcrawler_total_uin = total_uin_df
                 st.session_state.recovery_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                # Fetch SLASH paths for RPx verification (excludes Hang/Boot - no fail addresses)
+                with st.spinner("Fetching SLASH paths for RPx false miscompare verification..."):
+                    slash_df = fetch_slash_for_failures(
+                        design_ids=filters['design_ids'],
+                        steps=slt_steps,
+                        workweeks=workweeks
+                    )
+                    st.session_state.rpx_slash_data = slash_df
+                    st.session_state.verified_rpx_by_step = {}  # Clear cached verification
+                    if not slash_df.empty:
+                        st.info(f"Fetched {len(slash_df):,} module failures for RPx verification")
 
                 st.success(f"Loaded {len(msn_corr_df):,} correlation records!")
                 st.rerun()
@@ -4464,11 +4479,33 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
             st.info(f"No DPM data for {step}")
             continue
 
+        # Calculate verified RPx recovery from false miscompare script
+        verified_rpx_data = None
+        rpx_slash_df = st.session_state.get('rpx_slash_data', pd.DataFrame())
+
+        # Check if we have cached verification for this step
+        if 'verified_rpx_by_step' in st.session_state and step.upper() in st.session_state.verified_rpx_by_step:
+            verified_rpx_data = st.session_state.verified_rpx_by_step[step.upper()]
+        elif not rpx_slash_df.empty:
+            # Run verification if SLASH data available but not yet verified
+            with st.spinner(f"Running RPx false miscompare verification for {step}..."):
+                verified_rpx_data = calculate_verified_rpx_recovery(
+                    slash_df=rpx_slash_df,
+                    hybrid_dpm_df=hybrid_dpm_df,
+                    msn_corr_df=filtered_msn_corr,
+                    step=step
+                )
+                # Cache for this step
+                if 'verified_rpx_by_step' not in st.session_state:
+                    st.session_state.verified_rpx_by_step = {}
+                st.session_state.verified_rpx_by_step[step.upper()] = verified_rpx_data
+
         # Calculate recovery projection
         recovery_data = calculate_recovery_projection(
             hybrid_dpm_df=hybrid_dpm_df,
             msn_corr_df=filtered_msn_corr,
-            step=step
+            step=step,
+            verified_rpx_data=verified_rpx_data
         )
 
         # Create correlation heatmap data
@@ -4514,7 +4551,8 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
                 msn_corr_df=filtered_msn_corr,
                 step=step,
                 total_uin=step_total_uin,
-                dark_mode=False
+                dark_mode=False,
+                verified_rpx_data=verified_rpx_data
             )
             if breakdown_html:
                 components.html(breakdown_html, height=450, scrolling=True)

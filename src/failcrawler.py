@@ -3092,7 +3092,9 @@ FID_LEVEL_FAILURES = {'DQ', 'Row', 'SB_Int', 'Multi-DQ', 'SB', 'Col', 'Column'}
 
 # Recovery Configuration
 # New RPx Fix (VERIFIED) - False miscompare detection via signature analysis
-RPX_TARGET_FAILCRAWLERS = {'SINGLE_BURST_SINGLE_ROW', 'SB'}  # Common false miscompare patterns
+# RPx runs actual script to verify false miscompares - not hardcoded FAILCRAWLERs
+RPX_SCRIPT_PATH = '/home/nmewes/Y6CP_FA/socamm_false_miscompare.py'
+RPX_EXCLUDE_MSN_STATUS = {'Hang', 'Boot'}  # No fail addresses to screen
 
 # New BIOS Fix (PROJECTED) - Timing/speed fix
 # - MULTI_BANK_MULTI_DQ: 100% recovery
@@ -3108,6 +3110,210 @@ HW_SOP_MSN_STATUS = {'Hang'}
 EXCLUDE_MSN_STATUS = {'Pass', 'Boot'}
 
 
+def fetch_slash_for_failures(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str],
+    exclude_msn_status: set = None
+) -> pd.DataFrame:
+    """
+    Fetch SLASH (summary paths) for failed modules to run false miscompare script.
+
+    Args:
+        design_ids: List of Design IDs
+        steps: List of test steps (HMB1, QMON)
+        workweeks: List of workweeks
+        exclude_msn_status: MSN_STATUS values to exclude (default: Hang, Boot)
+
+    Returns:
+        DataFrame with MSN, SLASH, MSN_STATUS, FAILCRAWLER columns
+    """
+    if exclude_msn_status is None:
+        exclude_msn_status = RPX_EXCLUDE_MSN_STATUS
+
+    all_data = []
+
+    for step in steps:
+        for ww in workweeks:
+            # Build mtsums command to get SLASH for failures
+            cmd = (
+                f"mtsums -dbase=y6cp -step={step} "
+                f"-module_form_factor=socamm,socamm2 "
+                f"-mfg_workweek={ww} "
+                f"-design_id={','.join(design_ids)} "
+                f"-format=msn,slash,msn_status,failcrawler "
+                f"-header +quiet +module 2>/dev/null"
+            )
+
+            try:
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=120)
+                if result.returncode == 0 and result.stdout.strip():
+                    for line in result.stdout.strip().split('\n'):
+                        parts = line.split(',')
+                        if len(parts) >= 4:
+                            msn, slash, msn_status, failcrawler = parts[0], parts[1], parts[2], parts[3]
+                            # Exclude specified MSN_STATUS (Hang, Boot - no fail addresses)
+                            if msn_status not in exclude_msn_status and msn_status != 'Pass':
+                                all_data.append({
+                                    'MSN': msn,
+                                    'SLASH': slash,
+                                    'MSN_STATUS': msn_status,
+                                    'FAILCRAWLER': failcrawler,
+                                    'STEP': step.upper(),
+                                    'MFG_WORKWEEK': ww
+                                })
+            except Exception as e:
+                logger.warning(f"Failed to fetch SLASH for {step} WW{ww}: {e}")
+
+    return pd.DataFrame(all_data)
+
+
+def run_false_miscompare_script(slashes: list[str], batch_size: int = 50) -> pd.DataFrame:
+    """
+    Run the false miscompare script against summary paths.
+
+    Args:
+        slashes: List of SLASH (summary) paths
+        batch_size: Number of summaries to process per batch
+
+    Returns:
+        DataFrame with false miscompare results
+    """
+    if not slashes:
+        return pd.DataFrame()
+
+    # Deduplicate slashes
+    unique_slashes = list(set(slashes))
+
+    all_results = []
+
+    # Process in batches to avoid command line length limits
+    for i in range(0, len(unique_slashes), batch_size):
+        batch = unique_slashes[i:i + batch_size]
+
+        # Build command
+        sums_arg = ' '.join(batch)
+        cmd = f"{RPX_SCRIPT_PATH} --sums {sums_arg}"
+
+        try:
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=300)
+            if result.returncode == 0 and result.stdout.strip():
+                lines = result.stdout.strip().split('\n')
+                if len(lines) > 1:  # Has header + data
+                    header = lines[0].split(',')
+                    for line in lines[1:]:
+                        parts = line.split(',')
+                        if len(parts) >= len(header):
+                            row_data = dict(zip(header, parts))
+                            all_results.append(row_data)
+        except subprocess.TimeoutExpired:
+            logger.warning(f"False miscompare script timed out for batch {i//batch_size + 1}")
+        except Exception as e:
+            logger.warning(f"Failed to run false miscompare script: {e}")
+
+    return pd.DataFrame(all_results)
+
+
+def calculate_verified_rpx_recovery(
+    slash_df: pd.DataFrame,
+    hybrid_dpm_df: pd.DataFrame,
+    msn_corr_df: pd.DataFrame,
+    step: str
+) -> dict:
+    """
+    Calculate VERIFIED RPx recovery by running the false miscompare script.
+
+    This is based on actual verified data, not projected estimates.
+
+    Args:
+        slash_df: DataFrame with SLASH paths for failed modules
+        hybrid_dpm_df: Hybrid DPM data (MSN_STATUS level)
+        msn_corr_df: FAILCRAWLER × MSN_STATUS correlation
+        step: Test step
+
+    Returns:
+        Dictionary with verified RPx recovery data
+    """
+    if slash_df.empty:
+        return {
+            'verified_false_fails': 0,
+            'total_fails_screened': 0,
+            'rpx_recovery_rate': 0.0,
+            'rpx_dpm': 0.0,
+            'details': []
+        }
+
+    # Filter for this step
+    step_slash_df = slash_df[slash_df['STEP'].str.upper() == step.upper()].copy()
+
+    if step_slash_df.empty:
+        return {
+            'verified_false_fails': 0,
+            'total_fails_screened': 0,
+            'rpx_recovery_rate': 0.0,
+            'rpx_dpm': 0.0,
+            'details': []
+        }
+
+    # Get unique SLASHes
+    slashes = step_slash_df['SLASH'].unique().tolist()
+    total_fails_screened = len(step_slash_df)
+
+    # Run false miscompare script
+    rpx_results = run_false_miscompare_script(slashes)
+
+    if rpx_results.empty:
+        return {
+            'verified_false_fails': 0,
+            'total_fails_screened': total_fails_screened,
+            'rpx_recovery_rate': 0.0,
+            'rpx_dpm': 0.0,
+            'details': []
+        }
+
+    # Count verified false fails (where "False Fail?" == "True")
+    if 'False Fail?' in rpx_results.columns:
+        verified_false_fails = (rpx_results['False Fail?'] == 'True').sum()
+    else:
+        verified_false_fails = 0
+
+    # Calculate recovery rate
+    rpx_recovery_rate = verified_false_fails / total_fails_screened if total_fails_screened > 0 else 0.0
+
+    # Calculate RPx DPM based on verified recovery rate
+    # Apply to non-Hang, non-Boot DPM
+    msn_dpm_lookup = dict(zip(hybrid_dpm_df['MSN_STATUS'], hybrid_dpm_df['DPM']))
+
+    rpx_eligible_dpm = sum(
+        dpm for msn, dpm in msn_dpm_lookup.items()
+        if msn not in RPX_EXCLUDE_MSN_STATUS and msn != 'Pass'
+    )
+
+    rpx_dpm = rpx_eligible_dpm * rpx_recovery_rate
+
+    # Get details by MSN_STATUS
+    details = []
+    if 'MSN_STATUS' in rpx_results.columns and 'False Fail?' in rpx_results.columns:
+        for msn_status in rpx_results['MSN_STATUS'].unique():
+            msn_results = rpx_results[rpx_results['MSN_STATUS'] == msn_status]
+            msn_verified = (msn_results['False Fail?'] == 'True').sum()
+            msn_total = len(msn_results)
+            details.append({
+                'msn_status': msn_status,
+                'verified': msn_verified,
+                'total': msn_total,
+                'rate': msn_verified / msn_total if msn_total > 0 else 0
+            })
+
+    return {
+        'verified_false_fails': verified_false_fails,
+        'total_fails_screened': total_fails_screened,
+        'rpx_recovery_rate': round(rpx_recovery_rate, 4),
+        'rpx_dpm': round(rpx_dpm, 2),
+        'details': details
+    }
+
+
 def calculate_hybrid_dpm(
     msn_corr_df: pd.DataFrame,
     fid_counts_df: pd.DataFrame,
@@ -3117,15 +3323,18 @@ def calculate_hybrid_dpm(
     design_id: str = None
 ) -> pd.DataFrame:
     """
-    Calculate DPM using Hybrid DPM approach:
-    - MODULE-level (Mod-Sys, Hang, Multi-Mod, Boot): Unique MSNs / Total UIN × 1M
-    - FID-level (DQ, Row, SB_Int, etc.): UFAILs / Total UIN × 1M
+    Calculate DPM using Kevin Roos's approach:
+    - ALL failure types: Unique failing MSNs / Total FIDs × 1M
+    - Each MSN is counted ONCE per MSN_STATUS (no double-counting)
+
+    This aligns with Kevin's DPM table generator methodology where
+    DPM = (num_failing_msns / total_fids) * 1_000_000
 
     Args:
         msn_corr_df: FAILCRAWLER × MSN_STATUS correlation data
         fid_counts_df: FID-level data with unique module/FID counts
         step: Test step (HMFN, HMB1, QMON)
-        total_muin: Total modules tested
+        total_muin: Total modules tested (not used in Kevin's approach)
         total_uin: Total FIDs tested (denominator)
         design_id: Optional design ID filter
 
@@ -3170,28 +3379,22 @@ def calculate_hybrid_dpm(
         msn_df = df[df['MSN_STATUS'] == msn_status]
         is_module_level = msn_status in MODULE_LEVEL_FAILURES
 
-        # Get counts
+        # Get unique module count - Kevin's approach uses unique MSNs for ALL failure types
         unique_modules = 0
         if not step_fid_counts.empty and 'MSN_STATUS' in step_fid_counts.columns:
             status_counts = step_fid_counts[step_fid_counts['MSN_STATUS'] == msn_status]
             if not status_counts.empty and 'UNIQUE_MODULES' in status_counts.columns:
                 unique_modules = int(status_counts['UNIQUE_MODULES'].sum())
 
+        # Fallback to UFAIL if unique_modules not available
         ufail = int(pd.to_numeric(msn_df['UFAIL'], errors='coerce').sum()) if 'UFAIL' in msn_df.columns else 0
 
-        # Calculate DPM based on level
-        if is_module_level:
-            # Module-level: unique modules / total UIN
-            count = unique_modules if unique_modules > 0 else ufail
-            dpm = (count / total_uin) * 1_000_000
-            level = 'MODULE'
-            count_label = f'{count} MSNs'
-        else:
-            # FID-level: UFAILs / total UIN
-            count = ufail
-            dpm = (ufail / total_uin) * 1_000_000
-            level = 'FID'
-            count_label = f'{ufail} FIDs'
+        # Kevin's approach: Always use unique MSNs / total FIDs × 1M
+        # Each MSN is counted ONCE regardless of how many FIDs failed
+        count = unique_modules if unique_modules > 0 else ufail
+        dpm = (count / total_uin) * 1_000_000
+        level = 'MODULE' if is_module_level else 'FID'
+        count_label = f'{count} MSNs'
 
         results.append({
             'MSN_STATUS': msn_status,
@@ -3213,20 +3416,22 @@ def calculate_hybrid_dpm(
 def calculate_recovery_projection(
     hybrid_dpm_df: pd.DataFrame,
     msn_corr_df: pd.DataFrame,
-    step: str
+    step: str,
+    verified_rpx_data: dict = None
 ) -> dict:
     """
     Calculate recovery projections based on hybrid DPM data.
 
     Recovery Types:
-    - New RPx (VERIFIED): False miscompare detection - targets SB, SINGLE_BURST patterns
-    - New BIOS (PROJECTED): Targets MULTI_BANK_MULTI_DQ FAILCRAWLER
+    - New RPx (VERIFIED): False miscompare detection via script - actual verified data
+    - New BIOS (PROJECTED): Targets MULTI_BANK_MULTI_DQ FAILCRAWLER (100%) and BANK/BURST/PERIPH (50%)
     - HW+SOP (PROJECTED): Targets Hang MSN_STATUS
 
     Args:
         hybrid_dpm_df: Output from calculate_hybrid_dpm()
         msn_corr_df: FAILCRAWLER × MSN_STATUS correlation data
         step: Test step
+        verified_rpx_data: Optional verified RPx recovery from false miscompare script
 
     Returns:
         Dictionary with recovery projections
@@ -3244,11 +3449,23 @@ def calculate_recovery_projection(
     # This respects the hybrid approach (MODULE-level vs FID-level denominator)
     msn_dpm_lookup = dict(zip(hybrid_dpm_df['MSN_STATUS'], hybrid_dpm_df['DPM']))
 
-    # Calculate BIOS and RPx recovery from FAILCRAWLER data
+    # RPx Recovery (VERIFIED) - from false miscompare script
+    # This is actual verified data, not projected
+    rpx_dpm = 0
+    rpx_verified_count = 0
+    rpx_screened_count = 0
+    rpx_recovery_rate = 0.0
+
+    if verified_rpx_data:
+        rpx_dpm = verified_rpx_data.get('rpx_dpm', 0)
+        rpx_verified_count = verified_rpx_data.get('verified_false_fails', 0)
+        rpx_screened_count = verified_rpx_data.get('total_fails_screened', 0)
+        rpx_recovery_rate = verified_rpx_data.get('rpx_recovery_rate', 0.0)
+
+    # Calculate BIOS recovery from FAILCRAWLER data (PROJECTED)
     # Recovery is calculated PER MSN_STATUS to respect hybrid DPM levels
     bios_dpm = 0
     bios_partial_dpm = 0  # 50% recovery for BANK/BURST/PERIPH patterns
-    rpx_dpm = 0
 
     if not msn_corr_df.empty and 'FAILCRAWLER' in msn_corr_df.columns:
         step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
@@ -3258,13 +3475,10 @@ def calculate_recovery_projection(
         def matches_bios_50_pattern_inner(fc):
             if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
                 return False  # Already counted at 100%
-            if fc in RPX_TARGET_FAILCRAWLERS:
-                return False  # RPx takes priority (exact match over substring)
             fc_upper = str(fc).upper()
             return any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT)
 
-        # Calculate recovery per MSN_STATUS (respects hybrid DPM approach)
-        # For each MSN_STATUS, calculate FAILCRAWLER proportions within that MSN_STATUS
+        # Calculate BIOS recovery per MSN_STATUS (respects hybrid DPM approach)
         for msn_status in step_df['MSN_STATUS'].unique():
             if msn_status == 'Pass' or msn_status in HW_SOP_MSN_STATUS:
                 continue  # Skip Pass and Hang (Hang handled separately above)
@@ -3280,7 +3494,7 @@ def calculate_recovery_projection(
             if msn_total_ufail == 0:
                 continue
 
-            # Calculate each recovery type's share within this MSN_STATUS
+            # Calculate BIOS recovery within this MSN_STATUS
             for _, row in msn_fc_df.iterrows():
                 fc = row['FAILCRAWLER']
                 ufail = row.get('UFAIL', 0)
@@ -3290,11 +3504,9 @@ def calculate_recovery_projection(
                 # FAILCRAWLER's share of this MSN_STATUS's DPM
                 fc_dpm = (ufail / msn_total_ufail) * msn_dpm
 
-                # Classify recovery type (mutually exclusive)
+                # Classify BIOS recovery type (RPx is verified separately)
                 if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
                     bios_dpm += fc_dpm  # 100% recovery
-                elif fc in RPX_TARGET_FAILCRAWLERS:
-                    rpx_dpm += fc_dpm  # 100% recovery
                 elif matches_bios_50_pattern_inner(fc):
                     bios_partial_dpm += fc_dpm * BIOS_PARTIAL_RECOVERY_RATE  # 50% recovery
 
@@ -3307,8 +3519,6 @@ def calculate_recovery_projection(
     def matches_bios_50_pattern(fc):
         if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
             return False  # Already counted at 100%
-        if fc in RPX_TARGET_FAILCRAWLERS:
-            return False  # RPx takes priority (exact match over substring)
         fc_upper = str(fc).upper()
         return any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT)
 
@@ -3320,8 +3530,14 @@ def calculate_recovery_projection(
         is_bios_100 = False
         is_bios_50 = False
         is_hw_sop = msn_status in HW_SOP_MSN_STATUS
+        is_rpx_eligible = msn_status not in RPX_EXCLUDE_MSN_STATUS and msn_status != 'Pass'
 
-        # Check FAILCRAWLERs for this MSN_STATUS
+        # RPx is verified - applies to all eligible MSN_STATUS based on verified rate
+        # Show RPx as verified if we have verified data and this MSN_STATUS is eligible
+        if is_rpx_eligible and verified_rpx_data and rpx_recovery_rate > 0:
+            is_rpx = True
+
+        # Check FAILCRAWLERs for BIOS recovery (PROJECTED)
         if not msn_corr_df.empty and 'FAILCRAWLER' in msn_corr_df.columns and not is_hw_sop:
             step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
             step_df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()] if step_col in msn_corr_df.columns else msn_corr_df
@@ -3329,11 +3545,10 @@ def calculate_recovery_projection(
             if not status_df.empty:
                 fcs = set(status_df['FAILCRAWLER'].unique())
                 is_bios_100 = bool(fcs & BIOS_FIX_FAILCRAWLERS_100PCT)
-                # RPx has priority over BIOS 50% (exact match vs substring)
-                is_rpx = bool(fcs & RPX_TARGET_FAILCRAWLERS) and not is_bios_100
-                is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100 and not is_rpx
+                is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
 
         # Determine recovery type and calculate recovered DPM
+        # Priority: HW+SOP > BIOS 100% > BIOS 50% (RPx is separate/verified)
         if is_hw_sop:
             recovery_type = 'HW+SOP'
             recovered_dpm = row['DPM']
@@ -3344,8 +3559,8 @@ def calculate_recovery_projection(
             recovery_type = 'BIOS*'  # Asterisk indicates 50% recovery
             recovered_dpm = row['DPM'] * BIOS_PARTIAL_RECOVERY_RATE
         elif is_rpx:
-            recovery_type = 'RPx'
-            recovered_dpm = row['DPM']
+            recovery_type = 'RPx✓'  # Checkmark indicates verified
+            recovered_dpm = row['DPM'] * rpx_recovery_rate
         else:
             recovery_type = None
             recovered_dpm = 0
@@ -3357,6 +3572,7 @@ def calculate_recovery_projection(
             'dpm': row['DPM'],
             'percent': row.get('Percent', 0),
             'is_rpx_target': is_rpx,
+            'is_rpx_eligible': is_rpx_eligible,
             'is_bios_target': is_bios_100 or is_bios_50,
             'is_bios_partial': is_bios_50,
             'is_hw_sop_target': is_hw_sop,
@@ -3368,6 +3584,10 @@ def calculate_recovery_projection(
         'step': step,
         'total_dpm': round(total_dpm, 2),
         'rpx_dpm': round(rpx_dpm, 2),
+        'rpx_verified': True if verified_rpx_data else False,
+        'rpx_verified_count': rpx_verified_count,
+        'rpx_screened_count': rpx_screened_count,
+        'rpx_recovery_rate': rpx_recovery_rate,
         'bios_dpm': round(total_bios_dpm, 2),  # Total BIOS = 100% + 50%
         'bios_100_dpm': round(bios_dpm, 2),
         'bios_50_dpm': round(bios_partial_dpm, 2),
@@ -3463,7 +3683,9 @@ def create_hybrid_dpm_table_html(
         </tbody>
     </table>
     <div style="margin-top: 6px; font-size: 9px; color: #888;">
-        <b>Level:</b> <span style="background: #9c27b0; color: white; padding: 0 3px; border-radius: 2px;">M</span> Module (MSNs/UIN) | <span style="background: #00897b; color: white; padding: 0 3px; border-radius: 2px;">F</span> FID (UFAILs/UIN)
+        <b>DPM = Unique MSNs / Total FIDs × 1M</b> (Kevin Roos method) |
+        <span style="background: #9c27b0; color: white; padding: 0 3px; border-radius: 2px;">M</span> Module-level |
+        <span style="background: #00897b; color: white; padding: 0 3px; border-radius: 2px;">F</span> FID-level
     </div>
     </div>
     '''
@@ -3723,7 +3945,8 @@ def create_failcrawler_breakdown_html(
     msn_corr_df: pd.DataFrame,
     step: str,
     total_uin: int,
-    dark_mode: bool = False
+    dark_mode: bool = False,
+    verified_rpx_data: dict = None
 ) -> str:
     """
     Create detailed MSN_STATUS → FAILCRAWLER breakdown with recovery mapping.
@@ -3733,6 +3956,7 @@ def create_failcrawler_breakdown_html(
         step: Test step (HMB1, QMON)
         total_uin: Total UIN for DPM calculation
         dark_mode: Whether to use dark mode styling
+        verified_rpx_data: Optional verified RPx recovery data from false miscompare script
 
     Returns:
         HTML string with detailed breakdown table
@@ -3769,20 +3993,29 @@ def create_failcrawler_breakdown_html(
     step_df['DPM'] = (step_df['UFAIL'] / total_uin) * 1_000_000
     step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
 
+    # Get verified RPx recovery rate if available
+    rpx_recovery_rate = 0.0
+    if verified_rpx_data:
+        rpx_recovery_rate = verified_rpx_data.get('rpx_recovery_rate', 0.0)
+
     # Determine recovery type for each FAILCRAWLER
     def get_recovery_info(row):
         fc = row['FAILCRAWLER']
         msn = row['MSN_STATUS']
 
+        # HW+SOP: Hang MSN_STATUS (100% projected)
         if msn in HW_SOP_MSN_STATUS:
             return ('HW+SOP', 1.0, '#ff9800')
+        # BIOS 100%: MULTI_BANK_MULTI_DQ (projected)
         if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
             return ('BIOS', 1.0, '#2196f3')
-        if fc in RPX_TARGET_FAILCRAWLERS:
-            return ('RPx', 1.0, '#9c27b0')
+        # BIOS 50%: BANK/BURST/PERIPH patterns (projected)
         fc_upper = str(fc).upper()
         if any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT):
             return ('BIOS*', 0.5, '#03a9f4')
+        # RPx: All other failures (not Hang/Boot) - verified via script
+        if msn not in RPX_EXCLUDE_MSN_STATUS and rpx_recovery_rate > 0:
+            return ('RPx✓', rpx_recovery_rate, '#9c27b0')  # Checkmark = verified
         return (None, 0.0, '#888')
 
     step_df['recovery_info'] = step_df.apply(get_recovery_info, axis=1)
