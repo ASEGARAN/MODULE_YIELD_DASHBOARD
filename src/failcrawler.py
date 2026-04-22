@@ -3265,6 +3265,8 @@ def calculate_recovery_projection(
         def matches_pattern(fc):
             if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
                 return False  # Already counted at 100%
+            if fc in RPX_TARGET_FAILCRAWLERS:
+                return False  # RPx takes priority (exact match over substring)
             fc_upper = str(fc).upper()
             return any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT)
 
@@ -3281,11 +3283,10 @@ def calculate_recovery_projection(
                 bios_partial_dpm = (bios_50_ufail / total_ufail) * total_dpm * BIOS_PARTIAL_RECOVERY_RATE
 
         # RPx recovery (SB, SINGLE_BURST patterns - common false miscompare signatures)
+        # Note: RPx targets are excluded from BIOS 50% via matches_pattern(), so no overlap
         rpx_df = step_df[
             (step_df['FAILCRAWLER'].isin(RPX_TARGET_FAILCRAWLERS)) &
             (~step_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)) &
-            (~step_df['FAILCRAWLER'].isin(BIOS_FIX_FAILCRAWLERS_100PCT)) &  # Don't double count
-            (~step_df['FAILCRAWLER'].apply(matches_pattern)) &  # Don't double count 50% BIOS
             (step_df['MSN_STATUS'] != 'Pass')
         ]
         if not rpx_df.empty and 'UFAIL' in rpx_df.columns:
@@ -3301,7 +3302,9 @@ def calculate_recovery_projection(
     # Helper to check if FAILCRAWLER matches 50% BIOS patterns
     def matches_bios_50_pattern(fc):
         if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
-            return False
+            return False  # Already counted at 100%
+        if fc in RPX_TARGET_FAILCRAWLERS:
+            return False  # RPx takes priority (exact match over substring)
         fc_upper = str(fc).upper()
         return any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT)
 
@@ -3322,8 +3325,9 @@ def calculate_recovery_projection(
             if not status_df.empty:
                 fcs = set(status_df['FAILCRAWLER'].unique())
                 is_bios_100 = bool(fcs & BIOS_FIX_FAILCRAWLERS_100PCT)
-                is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
-                is_rpx = bool(fcs & RPX_TARGET_FAILCRAWLERS) and not is_bios_100 and not is_bios_50
+                # RPx has priority over BIOS 50% (exact match vs substring)
+                is_rpx = bool(fcs & RPX_TARGET_FAILCRAWLERS) and not is_bios_100
+                is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100 and not is_rpx
 
         # Determine recovery type and calculate recovered DPM
         if is_hw_sop:
@@ -3622,7 +3626,7 @@ def create_recovery_projection_html(
                     <td style="padding: 5px 6px; text-align: center; border-bottom: 1px solid {border_color};">{level_badge}</td>
                     <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{item['dpm']:.2f}</td>
                     <td style="padding: 5px 6px; text-align: center; border-bottom: 1px solid {border_color};">{recovery_badge}</td>
-                    <td style="padding: 5px 6px; text-align: right; color: {'#4caf50' if recovered_dpm > 0 else '#888'}; font-weight: {'bold' if recovered_dpm > 0 else 'normal'}; border-bottom: 1px solid {border_color};">{recovered_dpm:.2f if recovered_dpm > 0 else '-'}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: {'#4caf50' if recovered_dpm > 0 else '#888'}; font-weight: {'bold' if recovered_dpm > 0 else 'normal'}; border-bottom: 1px solid {border_color};">{f'{recovered_dpm:.2f}' if recovered_dpm > 0 else '-'}</td>
                 </tr>
             '''
 
