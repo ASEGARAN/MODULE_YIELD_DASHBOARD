@@ -3132,17 +3132,20 @@ def fetch_slash_for_failures(
         exclude_msn_status = RPX_EXCLUDE_MSN_STATUS
 
     all_data = []
+    seen_msn_step = set()  # Track MSN+STEP to ensure 1 summary per MSN per step
 
     for step in steps:
         for ww in workweeks:
             # Build mtsums command to get SLASH for failures
+            # Use =islatest =isvalid -standard_flow=yes for proper summary selection
             cmd = (
                 f"mtsums -dbase=y6cp -step={step} "
                 f"-module_form_factor=socamm,socamm2 "
                 f"-mfg_workweek={ww} "
                 f"-design_id={','.join(design_ids)} "
+                f"-standard_flow=yes "
                 f"-format=msn,slash,msn_status,failcrawler "
-                f"-header +quiet 2>/dev/null"
+                f"=islatest =isvalid -header +quiet 2>/dev/null"
             )
 
             try:
@@ -3154,14 +3157,18 @@ def fetch_slash_for_failures(
                             msn, slash, msn_status, failcrawler = parts[0], parts[1], parts[2], parts[3]
                             # Exclude specified MSN_STATUS (Hang, Boot - no fail addresses)
                             if msn_status not in exclude_msn_status and msn_status != 'Pass':
-                                all_data.append({
-                                    'MSN': msn,
-                                    'SLASH': slash,
-                                    'MSN_STATUS': msn_status,
-                                    'FAILCRAWLER': failcrawler,
-                                    'STEP': step.upper(),
-                                    'MFG_WORKWEEK': ww
-                                })
+                                # Only keep 1 summary per MSN per step
+                                msn_step_key = (msn, step.upper())
+                                if msn_step_key not in seen_msn_step:
+                                    seen_msn_step.add(msn_step_key)
+                                    all_data.append({
+                                        'MSN': msn,
+                                        'SLASH': slash,
+                                        'MSN_STATUS': msn_status,
+                                        'FAILCRAWLER': failcrawler,
+                                        'STEP': step.upper(),
+                                        'MFG_WORKWEEK': ww
+                                    })
             except Exception as e:
                 logger.warning(f"Failed to fetch SLASH for {step} WW{ww}: {e}")
 
