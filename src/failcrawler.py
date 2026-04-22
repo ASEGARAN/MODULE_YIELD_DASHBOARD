@@ -4141,6 +4141,7 @@ def create_failcrawler_breakdown_html(
         return ""
 
     # Check for WIDE format (FAILCRAWLER names as columns)
+    # In wide format, the values ARE already DPM, not UFAIL counts
     known_fc_names = [
         'MULTI_BANK_MULTI_DQ', 'SINGLE_BURST_SINGLE_ROW', 'SECTION_FAIL_PERIPH',
         'MULTI_BANK_2ROW', 'MULTI_HALFBANK_MULTI_DQ', 'MULTI_HALFBANK_SINGLE_DQ',
@@ -4149,27 +4150,31 @@ def create_failcrawler_breakdown_html(
     ]
     fc_columns = [col for col in step_df.columns if col.upper() in known_fc_names]
 
+    is_wide_format = fc_columns and 'FAILCRAWLER' not in step_df.columns
+
     # Convert wide format to long format if needed
-    if fc_columns and 'FAILCRAWLER' not in step_df.columns:
-        # Wide format: FAILCRAWLER names as columns
-        # Melt to long format
+    if is_wide_format:
+        # Wide format: FAILCRAWLER columns contain DPM values (not UFAIL)
         id_cols = [col for col in step_df.columns if col not in fc_columns]
         long_df = step_df.melt(
             id_vars=id_cols,
             value_vars=fc_columns,
             var_name='FAILCRAWLER',
-            value_name='UFAIL'
+            value_name='DPM'  # These ARE DPM values, not UFAIL
         )
-        # Filter out zero values
-        long_df = long_df[long_df['UFAIL'] > 0]
+        # Filter out zero/null values
+        long_df = long_df[long_df['DPM'] > 0]
         step_df = long_df
-
-    # Calculate DPM for each FAILCRAWLER
-    if 'UFAIL' not in step_df.columns:
-        return ""
-
-    step_df['DPM'] = (step_df['UFAIL'] / total_uin) * 1_000_000
-    step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
+        # Calculate yield loss from DPM (already have DPM)
+        step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
+        # Back-calculate UFAIL for display (DPM * total_uin / 1M)
+        step_df['UFAIL'] = (step_df['DPM'] * total_uin / 1_000_000).round(0).astype(int)
+    else:
+        # Long format: Calculate DPM from UFAIL
+        if 'UFAIL' not in step_df.columns:
+            return ""
+        step_df['DPM'] = (step_df['UFAIL'] / total_uin) * 1_000_000
+        step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
 
     # Get verified RPx recovery rate if available
     rpx_recovery_rate = 0.0
