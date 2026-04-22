@@ -4282,15 +4282,23 @@ def create_failcrawler_breakdown_html(
             </tr>
         '''
 
-    # Summary row
-    total_dpm = step_df['DPM'].sum()
-    total_yield_loss = step_df['YIELD_LOSS'].sum()
-    total_recovered_yield = step_df['recovered_yield'].sum()
+    # Summary row - calculate properly using total_uin as denominator
+    # Don't sum DPM values (they have different denominators) - recalculate from UFAIL
+    total_ufail = step_df['UFAIL'].sum()
+    total_dpm = (total_ufail / total_uin) * 1_000_000 if total_uin > 0 else 0
+    total_yield_loss = total_dpm / 10_000  # DPM to yield %
+
+    # Calculate recovered yield properly (sum of individual recovered yields weighted by their share)
+    # Use recovered_yield which was calculated per-row based on proper DPM
+    total_recovered_ufail = (step_df['UFAIL'] * step_df['recovery_rate']).sum()
+    total_recovered_dpm = (total_recovered_ufail / total_uin) * 1_000_000 if total_uin > 0 else 0
+    total_recovered_yield = total_recovered_dpm / 10_000
 
     html += f'''
             <tr style="background: {header_bg}; font-weight: bold;">
-                <td colspan="3" style="padding: 6px; color: {text_color}; border-top: 2px solid {border_color};">TOTAL</td>
-                <td style="padding: 6px; text-align: right; color: {text_color}; border-top: 2px solid {border_color};">{total_dpm:.2f}</td>
+                <td colspan="2" style="padding: 6px; color: {text_color}; border-top: 2px solid {border_color};">TOTAL</td>
+                <td style="padding: 6px; text-align: right; color: {text_color}; border-top: 2px solid {border_color};">{int(total_ufail):,}</td>
+                <td style="padding: 6px; text-align: right; color: {text_color}; border-top: 2px solid {border_color};">{total_dpm:,.2f}</td>
                 <td style="padding: 6px; text-align: right; color: #f44336; border-top: 2px solid {border_color};">{total_yield_loss:.4f}%</td>
                 <td style="padding: 6px; text-align: center; border-top: 2px solid {border_color};">-</td>
                 <td style="padding: 6px; text-align: right; color: #4caf50; border-top: 2px solid {border_color};">{total_recovered_yield:.4f}%</td>
