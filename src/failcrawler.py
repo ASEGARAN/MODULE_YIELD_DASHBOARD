@@ -3137,15 +3137,15 @@ def fetch_slash_for_failures(
     for step in steps:
         for ww in workweeks:
             # Build mtsums command to get SLASH for failures
-            # Use =islatest =isvalid -standard_flow=yes for proper summary selection
+            # Include islatest,isvalid in format and filter in Python
             cmd = (
                 f"mtsums -dbase=y6cp -step={step} "
                 f"-module_form_factor=socamm,socamm2 "
                 f"-mfg_workweek={ww} "
                 f"-design_id={','.join(design_ids)} "
                 f"-standard_flow=yes "
-                f"-format=msn,slash,msn_status,failcrawler "
-                f"=islatest =isvalid -header +quiet 2>/dev/null"
+                f"-format=msn,slash,msn_status,failcrawler,islatest,isvalid "
+                f"-header +quiet 2>/dev/null"
             )
 
             try:
@@ -3153,8 +3153,12 @@ def fetch_slash_for_failures(
                 if result.returncode == 0 and result.stdout.strip():
                     for line in result.stdout.strip().split('\n'):
                         parts = line.split(',')
-                        if len(parts) >= 4:
-                            msn, slash, msn_status, failcrawler = parts[0], parts[1], parts[2], parts[3]
+                        # Format: msn,slash,msn_status,failcrawler,islatest,isvalid
+                        if len(parts) >= 6:
+                            msn, slash, msn_status, failcrawler, islatest, isvalid = parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                            # Filter: islatest=Y AND isvalid=Y
+                            if islatest != 'Y' or isvalid != 'Y':
+                                continue
                             # Exclude specified MSN_STATUS (Hang, Boot - no fail addresses)
                             if msn_status not in exclude_msn_status and msn_status != 'Pass':
                                 # Only keep 1 summary per MSN per step
