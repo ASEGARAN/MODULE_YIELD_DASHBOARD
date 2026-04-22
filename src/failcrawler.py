@@ -4128,10 +4128,35 @@ def create_failcrawler_breakdown_html(
         return ""
 
     # Exclude Pass status
-    step_df = step_df[step_df['MSN_STATUS'] != 'Pass']
+    if 'MSN_STATUS' in step_df.columns:
+        step_df = step_df[step_df['MSN_STATUS'] != 'Pass']
 
     if step_df.empty:
         return ""
+
+    # Check for WIDE format (FAILCRAWLER names as columns)
+    known_fc_names = [
+        'MULTI_BANK_MULTI_DQ', 'SINGLE_BURST_SINGLE_ROW', 'SECTION_FAIL_PERIPH',
+        'MULTI_BANK_2ROW', 'MULTI_HALFBANK_MULTI_DQ', 'MULTI_HALFBANK_SINGLE_DQ',
+        'HANG', 'HGDC', 'ROW', 'SB', 'SYS_EVEN_BURST_BIT', 'UNKNOWN', 'HALF_BANK',
+        'MULTI_BANK_4ROW', 'MULTI_BANK_SINGLE_DQ', 'SINGLE_BANK_MULTI_ROW'
+    ]
+    fc_columns = [col for col in step_df.columns if col.upper() in known_fc_names]
+
+    # Convert wide format to long format if needed
+    if fc_columns and 'FAILCRAWLER' not in step_df.columns:
+        # Wide format: FAILCRAWLER names as columns
+        # Melt to long format
+        id_cols = [col for col in step_df.columns if col not in fc_columns]
+        long_df = step_df.melt(
+            id_vars=id_cols,
+            value_vars=fc_columns,
+            var_name='FAILCRAWLER',
+            value_name='UFAIL'
+        )
+        # Filter out zero values
+        long_df = long_df[long_df['UFAIL'] > 0]
+        step_df = long_df
 
     # Calculate DPM for each FAILCRAWLER
     if 'UFAIL' not in step_df.columns:
@@ -4148,7 +4173,7 @@ def create_failcrawler_breakdown_html(
     # Determine recovery type for each FAILCRAWLER
     def get_recovery_info(row):
         fc = row['FAILCRAWLER']
-        msn = row['MSN_STATUS']
+        msn = row.get('MSN_STATUS', '')
 
         # HW+SOP: Hang MSN_STATUS (100% projected)
         if msn in HW_SOP_MSN_STATUS:
