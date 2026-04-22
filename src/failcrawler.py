@@ -4167,14 +4167,43 @@ def create_failcrawler_breakdown_html(
         step_df = long_df
         # Calculate yield loss from DPM (already have DPM)
         step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
-        # Back-calculate UFAIL for display (DPM * total_uin / 1M)
-        step_df['UFAIL'] = (step_df['DPM'] * total_uin / 1_000_000).round(0).astype(int)
+        # Back-calculate UFAIL using row-level UIN (DPM * row_UIN / 1M)
+        # Use row-level UIN if available, otherwise use total_uin
+        if 'UIN' in step_df.columns:
+            step_df['UFAIL'] = (step_df['DPM'] * step_df['UIN'] / 1_000_000).round(0).astype(int)
+        else:
+            step_df['UFAIL'] = (step_df['DPM'] * total_uin / 1_000_000).round(0).astype(int)
     else:
         # Long format: Calculate DPM from UFAIL
         if 'UFAIL' not in step_df.columns:
             return ""
         step_df['DPM'] = (step_df['UFAIL'] / total_uin) * 1_000_000
         step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
+
+    # Aggregate by MSN_STATUS × FAILCRAWLER (combine multiple workweeks)
+    # DPM should be weighted average by UIN
+    if 'MSN_STATUS' in step_df.columns and 'FAILCRAWLER' in step_df.columns:
+        # Calculate weighted DPM contribution for averaging
+        if 'UIN' in step_df.columns:
+            step_df['DPM_x_UIN'] = step_df['DPM'] * step_df['UIN']
+            agg_df = step_df.groupby(['MSN_STATUS', 'FAILCRAWLER'], as_index=False).agg({
+                'UFAIL': 'sum',
+                'UIN': 'sum',
+                'DPM_x_UIN': 'sum'
+            })
+            # Weighted average DPM
+            agg_df['DPM'] = agg_df['DPM_x_UIN'] / agg_df['UIN']
+            agg_df['DPM'] = agg_df['DPM'].fillna(0)
+            agg_df['YIELD_LOSS'] = agg_df['DPM'] / 10_000
+            step_df = agg_df.drop(columns=['DPM_x_UIN'])
+        else:
+            # No UIN column - just average DPM
+            agg_df = step_df.groupby(['MSN_STATUS', 'FAILCRAWLER'], as_index=False).agg({
+                'UFAIL': 'sum',
+                'DPM': 'mean',
+                'YIELD_LOSS': 'mean'
+            })
+            step_df = agg_df
 
     # Get verified RPx recovery rate if available
     rpx_recovery_rate = 0.0
