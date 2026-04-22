@@ -3080,3 +3080,563 @@ def get_heatmap_combinations(msn_corr_df: pd.DataFrame, step: str) -> list[tuple
 
     # Sort by cDPM descending
     return sorted(combinations, key=lambda x: -x[2])
+
+
+# =============================================================================
+# cDPM RECOVERY SIMULATION (Hybrid DPM Approach)
+# =============================================================================
+
+# Module-level vs FID-level MSN_STATUS categories
+MODULE_LEVEL_FAILURES = {'Mod-Sys', 'Hang', 'Multi-Mod', 'Boot'}
+FID_LEVEL_FAILURES = {'DQ', 'Row', 'SB_Int', 'Multi-DQ', 'SB', 'Col', 'Column'}
+
+# Recovery Configuration
+# New RPx Fix (VERIFIED) - False miscompare detection via signature analysis
+RPX_TARGET_FAILCRAWLERS = {'SINGLE_BURST_SINGLE_ROW', 'SB'}  # Common false miscompare patterns
+
+# New BIOS Fix (PROJECTED) - Timing/speed fix
+# - MULTI_BANK_MULTI_DQ: 100% recovery
+# - Other BANK/BURST/PERIPH patterns: 50% recovery (non-DRAM related)
+BIOS_FIX_FAILCRAWLERS_100PCT = {'MULTI_BANK_MULTI_DQ'}  # Full recovery
+BIOS_FIX_PATTERNS_50PCT = {'BANK', 'BURST', 'PERIPH'}  # 50% recovery (pattern substrings)
+BIOS_PARTIAL_RECOVERY_RATE = 0.50  # 50% projected recovery for pattern matches
+
+# HW+SOP Fix (PROJECTED) - Debris cleanup + HUNG2 retest for Hang
+HW_SOP_MSN_STATUS = {'Hang'}
+
+# Excluded from recovery analysis
+EXCLUDE_MSN_STATUS = {'Pass', 'Boot'}
+
+
+def calculate_hybrid_dpm(
+    msn_corr_df: pd.DataFrame,
+    fid_counts_df: pd.DataFrame,
+    step: str,
+    total_muin: int = None,
+    total_uin: int = None,
+    design_id: str = None
+) -> pd.DataFrame:
+    """
+    Calculate DPM using Hybrid DPM approach:
+    - MODULE-level (Mod-Sys, Hang, Multi-Mod, Boot): Unique MSNs / Total UIN × 1M
+    - FID-level (DQ, Row, SB_Int, etc.): UFAILs / Total UIN × 1M
+
+    Args:
+        msn_corr_df: FAILCRAWLER × MSN_STATUS correlation data
+        fid_counts_df: FID-level data with unique module/FID counts
+        step: Test step (HMFN, HMB1, QMON)
+        total_muin: Total modules tested
+        total_uin: Total FIDs tested (denominator)
+        design_id: Optional design ID filter
+
+    Returns:
+        DataFrame with MSN_STATUS, Level, Count, DPM, Percent columns
+    """
+    if msn_corr_df.empty or not total_uin:
+        return pd.DataFrame()
+
+    # Filter by step
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
+    if step_col in msn_corr_df.columns:
+        df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()].copy()
+    else:
+        df = msn_corr_df.copy()
+
+    if df.empty:
+        return pd.DataFrame()
+
+    # Filter by design_id if provided
+    if design_id and 'DESIGN_ID' in df.columns:
+        df = df[df['DESIGN_ID'] == design_id]
+
+    # Exclude Pass
+    df = df[df['MSN_STATUS'] != 'Pass']
+
+    if df.empty:
+        return pd.DataFrame()
+
+    # Get unique modules per MSN_STATUS from fid_counts_df
+    step_fid_counts = pd.DataFrame()
+    if not fid_counts_df.empty:
+        fid_step_col = 'STEP' if 'STEP' in fid_counts_df.columns else None
+        if fid_step_col:
+            step_fid_counts = fid_counts_df[fid_counts_df[fid_step_col].str.upper() == step.upper()]
+
+    results = []
+    for msn_status in df['MSN_STATUS'].unique():
+        if pd.isna(msn_status):
+            continue
+
+        msn_df = df[df['MSN_STATUS'] == msn_status]
+        is_module_level = msn_status in MODULE_LEVEL_FAILURES
+
+        # Get counts
+        unique_modules = 0
+        if not step_fid_counts.empty and 'MSN_STATUS' in step_fid_counts.columns:
+            status_counts = step_fid_counts[step_fid_counts['MSN_STATUS'] == msn_status]
+            if not status_counts.empty and 'UNIQUE_MODULES' in status_counts.columns:
+                unique_modules = int(status_counts['UNIQUE_MODULES'].sum())
+
+        ufail = int(pd.to_numeric(msn_df['UFAIL'], errors='coerce').sum()) if 'UFAIL' in msn_df.columns else 0
+
+        # Calculate DPM based on level
+        if is_module_level:
+            # Module-level: unique modules / total UIN
+            count = unique_modules if unique_modules > 0 else ufail
+            dpm = (count / total_uin) * 1_000_000
+            level = 'MODULE'
+            count_label = f'{count} MSNs'
+        else:
+            # FID-level: UFAILs / total UIN
+            count = ufail
+            dpm = (ufail / total_uin) * 1_000_000
+            level = 'FID'
+            count_label = f'{ufail} FIDs'
+
+        results.append({
+            'MSN_STATUS': msn_status,
+            'Level': level,
+            'Count': count_label,
+            'DPM': round(dpm, 2),
+            'raw_count': count
+        })
+
+    result_df = pd.DataFrame(results)
+    if not result_df.empty:
+        result_df = result_df.sort_values('DPM', ascending=False)
+        total_dpm = result_df['DPM'].sum()
+        result_df['Percent'] = (result_df['DPM'] / total_dpm * 100).round(1) if total_dpm > 0 else 0
+
+    return result_df
+
+
+def calculate_recovery_projection(
+    hybrid_dpm_df: pd.DataFrame,
+    msn_corr_df: pd.DataFrame,
+    step: str
+) -> dict:
+    """
+    Calculate recovery projections based on hybrid DPM data.
+
+    Recovery Types:
+    - New RPx (VERIFIED): False miscompare detection - targets SB, SINGLE_BURST patterns
+    - New BIOS (PROJECTED): Targets MULTI_BANK_MULTI_DQ FAILCRAWLER
+    - HW+SOP (PROJECTED): Targets Hang MSN_STATUS
+
+    Args:
+        hybrid_dpm_df: Output from calculate_hybrid_dpm()
+        msn_corr_df: FAILCRAWLER × MSN_STATUS correlation data
+        step: Test step
+
+    Returns:
+        Dictionary with recovery projections
+    """
+    if hybrid_dpm_df.empty:
+        return None
+
+    total_dpm = hybrid_dpm_df['DPM'].sum()
+
+    # Calculate HW+SOP recovery (Hang MSN_STATUS)
+    hw_sop_df = hybrid_dpm_df[hybrid_dpm_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)]
+    hw_sop_dpm = hw_sop_df['DPM'].sum() if not hw_sop_df.empty else 0
+
+    # Calculate BIOS and RPx recovery from FAILCRAWLER data
+    bios_dpm = 0
+    bios_partial_dpm = 0  # 50% recovery for BANK/BURST/PERIPH patterns
+    rpx_dpm = 0
+    if not msn_corr_df.empty and 'FAILCRAWLER' in msn_corr_df.columns:
+        step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
+        step_df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()] if step_col in msn_corr_df.columns else msn_corr_df
+        total_ufail = step_df[step_df['MSN_STATUS'] != 'Pass']['UFAIL'].sum() if 'UFAIL' in step_df.columns else 0
+
+        # BIOS recovery - 100% for MULTI_BANK_MULTI_DQ (excluding Hang)
+        bios_100_df = step_df[
+            (step_df['FAILCRAWLER'].isin(BIOS_FIX_FAILCRAWLERS_100PCT)) &
+            (~step_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)) &
+            (step_df['MSN_STATUS'] != 'Pass')
+        ]
+        if not bios_100_df.empty and 'UFAIL' in bios_100_df.columns:
+            bios_ufail = bios_100_df['UFAIL'].sum()
+            if total_ufail > 0 and total_dpm > 0:
+                bios_dpm = (bios_ufail / total_ufail) * total_dpm
+
+        # BIOS recovery - 50% for other BANK/BURST/PERIPH patterns (non-DRAM related)
+        # Match FAILCRAWLERs containing pattern substrings, excluding already counted
+        def matches_pattern(fc):
+            if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
+                return False  # Already counted at 100%
+            fc_upper = str(fc).upper()
+            return any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT)
+
+        bios_50_mask = (
+            step_df['FAILCRAWLER'].apply(matches_pattern) &
+            (~step_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)) &
+            (step_df['MSN_STATUS'] != 'Pass')
+        )
+        bios_50_df = step_df[bios_50_mask]
+        if not bios_50_df.empty and 'UFAIL' in bios_50_df.columns:
+            bios_50_ufail = bios_50_df['UFAIL'].sum()
+            if total_ufail > 0 and total_dpm > 0:
+                # Apply 50% recovery rate
+                bios_partial_dpm = (bios_50_ufail / total_ufail) * total_dpm * BIOS_PARTIAL_RECOVERY_RATE
+
+        # RPx recovery (SB, SINGLE_BURST patterns - common false miscompare signatures)
+        rpx_df = step_df[
+            (step_df['FAILCRAWLER'].isin(RPX_TARGET_FAILCRAWLERS)) &
+            (~step_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)) &
+            (~step_df['FAILCRAWLER'].isin(BIOS_FIX_FAILCRAWLERS_100PCT)) &  # Don't double count
+            (~step_df['FAILCRAWLER'].apply(matches_pattern)) &  # Don't double count 50% BIOS
+            (step_df['MSN_STATUS'] != 'Pass')
+        ]
+        if not rpx_df.empty and 'UFAIL' in rpx_df.columns:
+            rpx_ufail = rpx_df['UFAIL'].sum()
+            if total_ufail > 0 and total_dpm > 0:
+                rpx_dpm = (rpx_ufail / total_ufail) * total_dpm
+
+    # Total BIOS = 100% recovery + 50% partial recovery
+    total_bios_dpm = bios_dpm + bios_partial_dpm
+    combined_dpm = rpx_dpm + total_bios_dpm + hw_sop_dpm
+    remaining_dpm = total_dpm - combined_dpm
+
+    # Helper to check if FAILCRAWLER matches 50% BIOS patterns
+    def matches_bios_50_pattern(fc):
+        if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
+            return False
+        fc_upper = str(fc).upper()
+        return any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT)
+
+    # Build breakdown with recovery info
+    breakdown = []
+    for _, row in hybrid_dpm_df.iterrows():
+        msn_status = row['MSN_STATUS']
+        is_rpx = False
+        is_bios_100 = False
+        is_bios_50 = False
+        is_hw_sop = msn_status in HW_SOP_MSN_STATUS
+
+        # Check FAILCRAWLERs for this MSN_STATUS
+        if not msn_corr_df.empty and 'FAILCRAWLER' in msn_corr_df.columns and not is_hw_sop:
+            step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
+            step_df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()] if step_col in msn_corr_df.columns else msn_corr_df
+            status_df = step_df[step_df['MSN_STATUS'] == msn_status]
+            if not status_df.empty:
+                fcs = set(status_df['FAILCRAWLER'].unique())
+                is_bios_100 = bool(fcs & BIOS_FIX_FAILCRAWLERS_100PCT)
+                is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
+                is_rpx = bool(fcs & RPX_TARGET_FAILCRAWLERS) and not is_bios_100 and not is_bios_50
+
+        # Determine recovery type and calculate recovered DPM
+        if is_hw_sop:
+            recovery_type = 'HW+SOP'
+            recovered_dpm = row['DPM']
+        elif is_bios_100:
+            recovery_type = 'BIOS'
+            recovered_dpm = row['DPM']
+        elif is_bios_50:
+            recovery_type = 'BIOS*'  # Asterisk indicates 50% recovery
+            recovered_dpm = row['DPM'] * BIOS_PARTIAL_RECOVERY_RATE
+        elif is_rpx:
+            recovery_type = 'RPx'
+            recovered_dpm = row['DPM']
+        else:
+            recovery_type = None
+            recovered_dpm = 0
+
+        breakdown.append({
+            'msn_status': msn_status,
+            'level': row['Level'],
+            'count': row['Count'],
+            'dpm': row['DPM'],
+            'percent': row.get('Percent', 0),
+            'is_rpx_target': is_rpx,
+            'is_bios_target': is_bios_100 or is_bios_50,
+            'is_bios_partial': is_bios_50,
+            'is_hw_sop_target': is_hw_sop,
+            'recovery_type': recovery_type,
+            'recovered_dpm': recovered_dpm
+        })
+
+    return {
+        'step': step,
+        'total_dpm': round(total_dpm, 2),
+        'rpx_dpm': round(rpx_dpm, 2),
+        'bios_dpm': round(total_bios_dpm, 2),  # Total BIOS = 100% + 50%
+        'bios_100_dpm': round(bios_dpm, 2),
+        'bios_50_dpm': round(bios_partial_dpm, 2),
+        'hw_sop_dpm': round(hw_sop_dpm, 2),
+        'combined_dpm': round(combined_dpm, 2),
+        'remaining_dpm': round(remaining_dpm, 2),
+        'rpx_pct': round(rpx_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'bios_pct': round(total_bios_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'hw_sop_pct': round(hw_sop_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'combined_pct': round(combined_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'remaining_pct': round(remaining_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'breakdown': breakdown
+    }
+
+
+def create_hybrid_dpm_table_html(
+    hybrid_dpm_df: pd.DataFrame,
+    step: str,
+    total_uin: int = None,
+    dark_mode: bool = False
+) -> str:
+    """
+    Create HTML table for hybrid DPM data.
+
+    Args:
+        hybrid_dpm_df: Output from calculate_hybrid_dpm()
+        step: Test step
+        total_uin: Total UIN for display
+        dark_mode: Use dark mode styling
+
+    Returns:
+        HTML string for the table
+    """
+    if hybrid_dpm_df.empty:
+        return "<p style='color: #888;'>No DPM data available</p>"
+
+    bg_color = '#1e1e1e' if dark_mode else '#ffffff'
+    text_color = '#e0e0e0' if dark_mode else '#1a1a1a'
+    border_color = '#444' if dark_mode else '#e0e0e0'
+    header_bg = '#283593' if dark_mode else '#1a237e'
+
+    total_dpm = hybrid_dpm_df['DPM'].sum()
+
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: {text_color};">
+                📊 Hybrid DPM - {step}
+            </span>
+            <span style="font-size: 10px; color: #888;">
+                Total UIN: {total_uin:,} FIDs
+            </span>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            <thead>
+                <tr style="background: {header_bg};">
+                    <th style="padding: 6px; text-align: left; color: white; border-radius: 4px 0 0 0;">MSN_STATUS</th>
+                    <th style="padding: 6px; text-align: center; color: white;">Level</th>
+                    <th style="padding: 6px; text-align: right; color: white;">Count</th>
+                    <th style="padding: 6px; text-align: right; color: white;">DPM</th>
+                    <th style="padding: 6px; text-align: right; color: white; border-radius: 0 4px 0 0;">%</th>
+                </tr>
+            </thead>
+            <tbody>
+    '''
+
+    for i, (_, row) in enumerate(hybrid_dpm_df.iterrows()):
+        row_bg = '#f5f5f5' if i % 2 == 0 else '#ffffff'
+        if dark_mode:
+            row_bg = '#2d2d2d' if i % 2 == 0 else '#1e1e1e'
+
+        level_badge = '<span style="background: #9c27b0; color: white; padding: 1px 4px; border-radius: 2px; font-size: 8px;">M</span>' if row['Level'] == 'MODULE' else '<span style="background: #00897b; color: white; padding: 1px 4px; border-radius: 2px; font-size: 8px;">F</span>'
+
+        html += f'''
+            <tr style="background: {row_bg};">
+                <td style="padding: 5px 6px; color: {text_color}; border-bottom: 1px solid {border_color};">{row['MSN_STATUS']}</td>
+                <td style="padding: 5px 6px; text-align: center; border-bottom: 1px solid {border_color};">{level_badge}</td>
+                <td style="padding: 5px 6px; text-align: right; color: #888; border-bottom: 1px solid {border_color};">{row['Count']}</td>
+                <td style="padding: 5px 6px; text-align: right; color: {text_color}; font-weight: 600; border-bottom: 1px solid {border_color};">{row['DPM']:.2f}</td>
+                <td style="padding: 5px 6px; text-align: right; color: #888; border-bottom: 1px solid {border_color};">{row['Percent']:.1f}%</td>
+            </tr>
+        '''
+
+    # Total row
+    html += f'''
+            <tr style="background: {'#363636' if dark_mode else '#e8eaf6'}; font-weight: bold;">
+                <td style="padding: 6px; color: {text_color};">TOTAL</td>
+                <td style="padding: 6px;"></td>
+                <td style="padding: 6px;"></td>
+                <td style="padding: 6px; text-align: right; color: {text_color};">{total_dpm:.2f}</td>
+                <td style="padding: 6px; text-align: right; color: {text_color};">100%</td>
+            </tr>
+        </tbody>
+    </table>
+    <div style="margin-top: 6px; font-size: 9px; color: #888;">
+        <b>Level:</b> <span style="background: #9c27b0; color: white; padding: 0 3px; border-radius: 2px;">M</span> Module (MSNs/UIN) | <span style="background: #00897b; color: white; padding: 0 3px; border-radius: 2px;">F</span> FID (UFAILs/UIN)
+    </div>
+    </div>
+    '''
+
+    return html
+
+
+def create_recovery_projection_html(
+    recovery_data: dict,
+    dark_mode: bool = False
+) -> str:
+    """
+    Create HTML visualization for cDPM recovery projection.
+
+    Args:
+        recovery_data: Output from calculate_recovery_projection()
+        dark_mode: Use dark mode styling
+
+    Returns:
+        HTML string for the recovery projection card
+    """
+    if not recovery_data:
+        return ""
+
+    step = recovery_data.get('step', '')
+    total_dpm = recovery_data['total_dpm']
+    rpx_dpm = recovery_data.get('rpx_dpm', 0)
+    bios_dpm = recovery_data['bios_dpm']
+    hw_sop_dpm = recovery_data['hw_sop_dpm']
+    combined_dpm = recovery_data['combined_dpm']
+    remaining_dpm = recovery_data['remaining_dpm']
+    rpx_pct = recovery_data.get('rpx_pct', 0)
+    bios_pct = recovery_data['bios_pct']
+    hw_sop_pct = recovery_data['hw_sop_pct']
+    combined_pct = recovery_data['combined_pct']
+    remaining_pct = recovery_data['remaining_pct']
+    breakdown = recovery_data.get('breakdown', [])
+
+    bg_color = '#1e1e1e' if dark_mode else '#ffffff'
+    text_color = '#e0e0e0' if dark_mode else '#1a1a1a'
+    border_color = '#444' if dark_mode else '#e0e0e0'
+    header_bg = '#283593' if dark_mode else '#1a237e'
+
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 16px; font-family: Arial, sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 14px; font-weight: 600; color: {text_color};">
+                🔮 Recovery Projection - {step}
+            </span>
+            <span style="font-size: 11px; color: #888;">
+                {total_dpm:.1f} → {remaining_dpm:.1f} DPM ({combined_pct:.0f}% recoverable)
+            </span>
+        </div>
+
+        <!-- Summary Cards -->
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px;">
+            <!-- New RPx Fix -->
+            <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 8px; border-radius: 6px; border-left: 4px solid #4caf50;">
+                <div style="font-size: 16px; font-weight: bold; color: #2e7d32;">{rpx_dpm:.1f}</div>
+                <div style="font-size: 9px; color: #388e3c;">New RPx Fix</div>
+                <div style="font-size: 8px; color: #666; margin-top: 2px;">
+                    <span style="background: #4caf50; color: white; padding: 1px 3px; border-radius: 2px; font-size: 7px;">VERIFIED</span>
+                </div>
+            </div>
+
+            <!-- New BIOS Fix -->
+            <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 8px; border-radius: 6px; border-left: 4px solid #1976d2;">
+                <div style="font-size: 16px; font-weight: bold; color: #1565c0;">{bios_dpm:.1f}</div>
+                <div style="font-size: 9px; color: #1976d2;">New BIOS Fix</div>
+                <div style="font-size: 8px; color: #666; margin-top: 2px;">
+                    <span style="background: #ff9800; color: white; padding: 1px 3px; border-radius: 2px; font-size: 7px;">PROJECTED</span>
+                </div>
+            </div>
+
+            <!-- HW+SOP Fix -->
+            <div style="background: linear-gradient(135deg, #fce4ec, #f8bbd0); padding: 8px; border-radius: 6px; border-left: 4px solid #c2185b;">
+                <div style="font-size: 16px; font-weight: bold; color: #ad1457;">{hw_sop_dpm:.1f}</div>
+                <div style="font-size: 9px; color: #c2185b;">HW+SOP Fix</div>
+                <div style="font-size: 8px; color: #666; margin-top: 2px;">
+                    <span style="background: #ff9800; color: white; padding: 1px 3px; border-radius: 2px; font-size: 7px;">PROJECTED</span>
+                </div>
+            </div>
+
+            <!-- Combined -->
+            <div style="background: linear-gradient(135deg, #ede7f6, #d1c4e9); padding: 8px; border-radius: 6px; border-left: 4px solid #7b1fa2;">
+                <div style="font-size: 16px; font-weight: bold; color: #6a1b9a;">{combined_dpm:.1f}</div>
+                <div style="font-size: 9px; color: #7b1fa2;">Total Recoverable</div>
+                <div style="font-size: 8px; color: #666; margin-top: 2px;">{combined_pct:.0f}% of total</div>
+            </div>
+
+            <!-- Remaining -->
+            <div style="background: linear-gradient(135deg, #fff3e0, #ffe0b2); padding: 8px; border-radius: 6px; border-left: 4px solid #f57c00;">
+                <div style="font-size: 16px; font-weight: bold; color: #e65100;">{remaining_dpm:.1f}</div>
+                <div style="font-size: 9px; color: #f57c00;">Remaining</div>
+                <div style="font-size: 8px; color: #666; margin-top: 2px;">{remaining_pct:.0f}% needs analysis</div>
+            </div>
+        </div>
+
+        <!-- Recovery Progress Bar -->
+        <div style="background: #eceff1; border-radius: 4px; height: 24px; overflow: hidden; position: relative; margin-bottom: 12px;">
+    '''
+
+    # Progress bar segments
+    if total_dpm > 0:
+        html += f'''
+            <div style="position: absolute; left: 0; top: 0; height: 100%; width: {rpx_pct}%; background: linear-gradient(90deg, #388e3c, #4caf50); display: flex; align-items: center; justify-content: center;">
+                <span style="color: white; font-size: 8px; font-weight: bold;">{rpx_pct:.0f}% RPx</span>
+            </div>
+            <div style="position: absolute; left: {rpx_pct}%; top: 0; height: 100%; width: {bios_pct}%; background: linear-gradient(90deg, #1976d2, #42a5f5); display: flex; align-items: center; justify-content: center;">
+                <span style="color: white; font-size: 8px; font-weight: bold;">{bios_pct:.0f}% BIOS</span>
+            </div>
+            <div style="position: absolute; left: {rpx_pct + bios_pct}%; top: 0; height: 100%; width: {hw_sop_pct}%; background: linear-gradient(90deg, #c2185b, #e91e63); display: flex; align-items: center; justify-content: center;">
+                <span style="color: white; font-size: 8px; font-weight: bold;">{hw_sop_pct:.0f}% HW</span>
+            </div>
+            <div style="position: absolute; left: {rpx_pct + bios_pct + hw_sop_pct}%; top: 0; height: 100%; width: {remaining_pct}%; background: #bdbdbd; display: flex; align-items: center; justify-content: center;">
+                <span style="color: #424242; font-size: 8px; font-weight: bold;">{remaining_pct:.0f}% Remaining</span>
+            </div>
+        '''
+
+    html += '</div>'
+
+    # Breakdown Table
+    if breakdown:
+        html += f'''
+        <div style="margin-top: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: {text_color}; margin-bottom: 6px;">Recovery Breakdown by MSN_STATUS</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                <thead>
+                    <tr style="background: {header_bg};">
+                        <th style="padding: 6px; text-align: left; color: white; border-radius: 4px 0 0 0;">MSN_STATUS</th>
+                        <th style="padding: 6px; text-align: center; color: white;">Level</th>
+                        <th style="padding: 6px; text-align: right; color: white;">DPM</th>
+                        <th style="padding: 6px; text-align: center; color: white;">Recovery</th>
+                        <th style="padding: 6px; text-align: right; color: white; border-radius: 0 4px 0 0;">Recovered</th>
+                    </tr>
+                </thead>
+                <tbody>
+        '''
+
+        for i, item in enumerate(breakdown[:8]):
+            row_bg = '#f5f5f5' if i % 2 == 0 else '#ffffff'
+            if dark_mode:
+                row_bg = '#2d2d2d' if i % 2 == 0 else '#1e1e1e'
+
+            recovery_badge = ''
+            recovered_dpm = item.get('recovered_dpm', 0)
+            if item.get('is_hw_sop_target'):
+                recovery_badge = '<span style="background: #c2185b; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">HW+SOP</span>'
+            elif item.get('is_bios_partial'):
+                recovery_badge = '<span style="background: #64b5f6; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">BIOS 50%</span>'
+            elif item.get('is_bios_target'):
+                recovery_badge = '<span style="background: #1976d2; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">BIOS</span>'
+            elif item.get('is_rpx_target'):
+                recovery_badge = '<span style="background: #4caf50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">RPx</span>'
+            else:
+                recovery_badge = '<span style="color: #888;">-</span>'
+                recovered_dpm = 0
+
+            level_badge = '<span style="background: #9c27b0; color: white; padding: 1px 4px; border-radius: 2px; font-size: 8px;">M</span>' if item['level'] == 'MODULE' else '<span style="background: #00897b; color: white; padding: 1px 4px; border-radius: 2px; font-size: 8px;">F</span>'
+
+            html += f'''
+                <tr style="background: {row_bg};">
+                    <td style="padding: 5px 6px; color: {text_color}; border-bottom: 1px solid {border_color};">{item['msn_status']}</td>
+                    <td style="padding: 5px 6px; text-align: center; border-bottom: 1px solid {border_color};">{level_badge}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{item['dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: center; border-bottom: 1px solid {border_color};">{recovery_badge}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: {'#4caf50' if recovered_dpm > 0 else '#888'}; font-weight: {'bold' if recovered_dpm > 0 else 'normal'}; border-bottom: 1px solid {border_color};">{recovered_dpm:.2f if recovered_dpm > 0 else '-'}</td>
+                </tr>
+            '''
+
+        html += '''
+                </tbody>
+            </table>
+        </div>
+        '''
+
+    html += '''
+        <div style="margin-top: 8px; font-size: 9px; color: #888; text-align: right;">
+            <b>RPx:</b> False miscompare | <b>BIOS:</b> MULTI_BANK_MULTI_DQ (100%) | <b>BIOS 50%:</b> Bank/Burst/Periph (non-DRAM) | <b>HW+SOP:</b> Hang
+        </div>
+    </div>
+    '''
+
+    return html

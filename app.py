@@ -75,6 +75,11 @@ from src.failcrawler import (
     create_failcrawler_drilldown_html,
     get_failcrawler_list_for_step,
     get_msn_status_list_for_step,
+    # cDPM Recovery Simulation
+    calculate_hybrid_dpm,
+    calculate_recovery_projection,
+    create_hybrid_dpm_table_html,
+    create_recovery_projection_html,
 )
 
 # AI Assistant module
@@ -4242,18 +4247,244 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
 
 
 def render_pareto_tab(filters: dict[str, Any]) -> None:
-    """Render the Pareto Analysis tab with sub-tabs for FAILCRAWLER and Register Fallout."""
+    """Render the Pareto Analysis tab with sub-tabs for FAILCRAWLER, Register Fallout, and cDPM Recovery."""
     st.header("Pareto Analysis")
-    st.info("📉 **FAILCRAWLER DPM:** cDPM by fail mode with MSN_STATUS | **Register Fallout:** Top failed registers — Required: WW range, Form Factor, DID, Facility, Step")
+    st.info("📉 **FAILCRAWLER DPM:** cDPM by fail mode | **Register Fallout:** Top failed registers | **SLT cDPM Recovery:** HMB1/QMON recovery projections")
 
     # Create sub-tabs
-    fc_tab, reg_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout"])
+    fc_tab, reg_tab, recovery_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout", "🔮 SLT cDPM Recovery"])
 
     with fc_tab:
         render_failcrawler_subtab(filters)
 
     with reg_tab:
         render_register_fallout_subtab(filters)
+
+    with recovery_tab:
+        render_cdpm_recovery_subtab(filters)
+
+
+def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
+    """Render the SLT cDPM Recovery Simulation sub-tab with hybrid DPM and recovery projections."""
+    import streamlit.components.v1 as components
+
+    st.caption("**SLT cDPM Recovery Simulation** - Hybrid DPM approach with recovery projections (New RPx, New BIOS, HW+SOP)")
+
+    use_cache = st.session_state.get("use_cache", True)
+
+    # Calculate workweeks from filters
+    try:
+        workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
+    except Exception:
+        workweeks = []
+
+    # Get steps from main dashboard filter - only HMB1 and QMON for SLT recovery
+    all_steps = filters.get("test_steps", ["HMFN", "HMB1", "QMON"])
+    slt_steps = [s for s in all_steps if s.upper() in ("HMB1", "QMON")]
+    has_hmfn = "HMFN" in [s.upper() for s in all_steps]
+
+    # Show warning if HMFN is selected
+    if has_hmfn:
+        st.warning("⚠️ **Note:** SLT cDPM Recovery analysis is only applicable for **HMB1** and **QMON** test steps. HMFN is excluded from this analysis.")
+
+    # Check if we have valid SLT steps
+    if not slt_steps:
+        st.info("📋 Please select **HMB1** or **QMON** in the sidebar filters to use SLT cDPM Recovery analysis.")
+        return
+
+    # Build filter display with optional density/speed
+    filter_parts = [', '.join(filters['design_ids']), ', '.join(slt_steps)]
+    if filters.get('densities'):
+        filter_parts.append(f"Density: {', '.join(filters['densities'])}")
+    if filters.get('speeds'):
+        filter_parts.append(f"Speed: {', '.join(filters['speeds'])}")
+    filter_parts.append(f"WW{filters['start_ww']}-{filters['end_ww']} ({len(workweeks)} weeks)")
+
+    # Display current filter info
+    st.caption(f"**Filters:** {' | '.join(filter_parts)}")
+
+    # Check if FAILCRAWLER data is already loaded
+    fc_data_loaded = not st.session_state.failcrawler_data.empty
+
+    # Fetch controls
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        fetch_btn = st.button(
+            "🔄 Fetch Recovery Data" if not fc_data_loaded else "🔄 Refresh Data",
+            type="primary",
+            use_container_width=True,
+            key="fetch_recovery_btn"
+        )
+    with col2:
+        if fc_data_loaded:
+            st.caption("✅ Using data from FAILCRAWLER DPM tab")
+        else:
+            st.caption("Will fetch FAILCRAWLER × MSN_STATUS correlation data")
+
+    if fetch_btn:
+        try:
+            with st.spinner(f"Fetching data for {len(filters['design_ids'])} DIDs × {len(slt_steps)} steps × {len(workweeks)} weeks..."):
+                # Fetch MSN_STATUS correlation data (HMB1/QMON only)
+                msn_corr_df = fetch_msn_status_correlation_data(
+                    design_ids=filters['design_ids'],
+                    steps=slt_steps,
+                    workweeks=workweeks
+                )
+
+                # Fetch FID-level data for unique module counts
+                fid_counts_df = fetch_msn_status_fid_counts(
+                    design_ids=filters['design_ids'],
+                    steps=slt_steps,
+                    workweeks=workweeks
+                )
+
+                # Fetch total UIN
+                total_uin_df = fetch_total_uin_by_step(
+                    design_ids=filters['design_ids'],
+                    steps=slt_steps,
+                    workweeks=workweeks
+                )
+
+                # Store in session state
+                st.session_state.failcrawler_msn_corr_data = msn_corr_df
+                st.session_state.failcrawler_fid_counts = fid_counts_df
+                st.session_state.failcrawler_total_uin = total_uin_df
+                st.session_state.recovery_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                st.success(f"Loaded {len(msn_corr_df):,} correlation records!")
+                st.rerun()
+
+        except Exception as e:
+            st.error(f"Failed to fetch data: {e}")
+            logger.exception("Recovery fetch error")
+            return
+
+    # Display recovery analysis if data is available
+    msn_corr_df = st.session_state.get('failcrawler_msn_corr_data', pd.DataFrame())
+    fid_counts_df = st.session_state.get('failcrawler_fid_counts', pd.DataFrame())
+    total_uin_df = st.session_state.get('failcrawler_total_uin', pd.DataFrame())
+
+    if msn_corr_df.empty:
+        st.info("👆 Click 'Fetch Recovery Data' to load FAILCRAWLER × MSN_STATUS data for recovery analysis.")
+        return
+
+    # Show last fetch time
+    last_fetch = st.session_state.get('recovery_last_fetch_time') or st.session_state.get('failcrawler_last_fetch_time')
+    if last_fetch:
+        st.caption(f"📅 Data from: {last_fetch}")
+
+    # Time range toggle
+    time_col1, time_col2 = st.columns([1, 3])
+    with time_col1:
+        time_range = st.radio(
+            "Time Range",
+            options=["Latest WW", "4-Week Cumulative"],
+            horizontal=True,
+            key="recovery_time_range",
+            label_visibility="collapsed"
+        )
+
+    # Get the latest workweek from data
+    latest_ww = None
+    if 'MFG_WORKWEEK' in msn_corr_df.columns:
+        latest_ww = int(msn_corr_df['MFG_WORKWEEK'].max())
+
+    with time_col2:
+        if time_range == "Latest WW":
+            st.caption(f"📅 Showing WW{latest_ww} only")
+        else:
+            st.caption(f"📅 Showing {len(workweeks)} weeks cumulative")
+
+    # Filter data based on time range
+    if time_range == "Latest WW" and latest_ww and 'MFG_WORKWEEK' in msn_corr_df.columns:
+        filtered_msn_corr = msn_corr_df[msn_corr_df['MFG_WORKWEEK'] == latest_ww].copy()
+        filtered_fid_counts = fid_counts_df[fid_counts_df['MFG_WORKWEEK'] == latest_ww].copy() if not fid_counts_df.empty and 'MFG_WORKWEEK' in fid_counts_df.columns else fid_counts_df
+        filtered_total_uin = total_uin_df[total_uin_df['MFG_WORKWEEK'] == latest_ww].copy() if not total_uin_df.empty and 'MFG_WORKWEEK' in total_uin_df.columns else total_uin_df
+    else:
+        filtered_msn_corr = msn_corr_df.copy()
+        filtered_fid_counts = fid_counts_df.copy()
+        filtered_total_uin = total_uin_df.copy()
+
+    # Aggregate fid_counts by STEP and MSN_STATUS (for cumulative)
+    if not filtered_fid_counts.empty and 'MSN' in filtered_fid_counts.columns:
+        filtered_fid_counts['STEP'] = filtered_fid_counts['STEP'].str.upper()
+        agg_fid_counts = filtered_fid_counts.groupby(
+            ['STEP', 'MSN_STATUS'], as_index=False
+        ).agg(UNIQUE_MODULES=('MSN', 'nunique'), UNIQUE_FIDS=('FID', 'nunique'))
+    else:
+        agg_fid_counts = filtered_fid_counts
+
+    # Process each SLT step (HMB1, QMON only)
+    for step in slt_steps:
+        st.markdown(f"### 📊 {step}")
+
+        # Get total UIN for this step
+        step_total_uin = 0
+        step_total_muin = 0
+        if not filtered_total_uin.empty and 'STEP' in filtered_total_uin.columns:
+            step_uin_rows = filtered_total_uin[filtered_total_uin['STEP'].str.upper() == step.upper()]
+            if not step_uin_rows.empty:
+                step_total_uin = int(step_uin_rows['TOTAL_UIN'].sum()) if 'TOTAL_UIN' in step_uin_rows.columns else 0
+                step_total_muin = int(step_uin_rows['TOTAL_MUIN'].sum()) if 'TOTAL_MUIN' in step_uin_rows.columns else 0
+
+        if step_total_uin == 0:
+            st.warning(f"No UIN data available for {step}")
+            continue
+
+        # Calculate hybrid DPM
+        hybrid_dpm_df = calculate_hybrid_dpm(
+            msn_corr_df=filtered_msn_corr,
+            fid_counts_df=agg_fid_counts,
+            step=step,
+            total_muin=step_total_muin,
+            total_uin=step_total_uin
+        )
+
+        if hybrid_dpm_df.empty:
+            st.info(f"No DPM data for {step}")
+            continue
+
+        # Calculate recovery projection
+        recovery_data = calculate_recovery_projection(
+            hybrid_dpm_df=hybrid_dpm_df,
+            msn_corr_df=filtered_msn_corr,
+            step=step
+        )
+
+        # Create correlation heatmap data
+        correlation_data = process_msn_status_correlation(
+            filtered_msn_corr, step, design_id=None, fid_counts=agg_fid_counts,
+            total_muin=step_total_muin, total_uin=step_total_uin
+        )
+
+        # Layout: Hybrid DPM Table | Correlation Heatmap
+        col1, col2 = st.columns([1, 1.5])
+
+        with col1:
+            # Hybrid DPM Table
+            dpm_html = create_hybrid_dpm_table_html(
+                hybrid_dpm_df=hybrid_dpm_df,
+                step=step,
+                total_uin=step_total_uin,
+                dark_mode=False
+            )
+            components.html(dpm_html, height=350, scrolling=True)
+
+        with col2:
+            # Correlation Heatmap
+            if correlation_data:
+                corr_fig = create_msn_status_correlation_chart(correlation_data, dark_mode=False)
+                if corr_fig:
+                    st.plotly_chart(corr_fig, use_container_width=True)
+            else:
+                st.info("No correlation data available")
+
+        # Recovery Projection
+        if recovery_data:
+            recovery_html = create_recovery_projection_html(recovery_data, dark_mode=False)
+            components.html(recovery_html, height=420, scrolling=True)
+
+        st.divider()
 
 
 def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
