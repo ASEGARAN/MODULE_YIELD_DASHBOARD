@@ -3428,7 +3428,8 @@ def calculate_recovery_projection(
     hybrid_dpm_df: pd.DataFrame,
     msn_corr_df: pd.DataFrame,
     step: str,
-    verified_rpx_data: dict = None
+    verified_rpx_data: dict = None,
+    total_muin: int = 0
 ) -> dict:
     """
     Calculate recovery projections based on hybrid DPM data.
@@ -3438,14 +3439,23 @@ def calculate_recovery_projection(
     - New BIOS (PROJECTED): Targets MULTI_BANK_MULTI_DQ FAILCRAWLER (100%) and BANK/BURST/PERIPH (50%)
     - HW+SOP (PROJECTED): Targets Hang MSN_STATUS
 
+    DPM Calculation (Kevin Roos Method):
+        DPM = (Unique Failing MSNs / Total FIDs) × 1,000,000
+        - Reflects fail mode severity relative to component population
+
+    Yield Recovery Calculation (Module-Based):
+        Yield (%) = (Recovered MSNs / Total MUIN) × 100
+        - Reflects actual manufacturing yield impact
+
     Args:
         hybrid_dpm_df: Output from calculate_hybrid_dpm()
         msn_corr_df: FAILCRAWLER × MSN_STATUS correlation data
         step: Test step
         verified_rpx_data: Optional verified RPx recovery from false miscompare script
+        total_muin: Total modules tested (MUIN) for yield calculation
 
     Returns:
-        Dictionary with recovery projections
+        Dictionary with recovery projections (DPM and Yield)
     """
     if hybrid_dpm_df.empty:
         return None
@@ -3620,6 +3630,17 @@ def calculate_recovery_projection(
             recovery_type = None
             recovered_dpm = 0
 
+        # Calculate recovered MSNs for yield (module-based)
+        recovered_msns = 0
+        if is_hw_sop:
+            recovered_msns = row['Count']  # 100% recovery
+        elif is_bios_100:
+            recovered_msns = row['Count']  # 100% recovery
+        elif is_bios_50:
+            recovered_msns = row['Count'] * BIOS_PARTIAL_RECOVERY_RATE  # 50% recovery
+        elif is_rpx:
+            recovered_msns = row['Count'] * rpx_recovery_rate  # Verified rate recovery
+
         breakdown.append({
             'msn_status': msn_status,
             'level': row['Level'],
@@ -3632,12 +3653,30 @@ def calculate_recovery_projection(
             'is_bios_partial': is_bios_50,
             'is_hw_sop_target': is_hw_sop,
             'recovery_type': recovery_type,
-            'recovered_dpm': recovered_dpm
+            'recovered_dpm': recovered_dpm,
+            'recovered_msns': recovered_msns
         })
+
+    # Calculate module-based yield recovery (MSNs / MUIN × 100)
+    # Sum recovered MSNs from breakdown by recovery type
+    rpx_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['is_rpx_target'] and not b['is_hw_sop_target'])
+    bios_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['is_bios_target'] and not b['is_hw_sop_target'])
+    hw_sop_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['is_hw_sop_target'])
+    total_recovered_msns = rpx_recovered_msns + bios_recovered_msns + hw_sop_recovered_msns
+
+    # Calculate yield percentages (module-based denominator)
+    if total_muin > 0:
+        rpx_yield = round(rpx_recovered_msns / total_muin * 100, 3)
+        bios_yield = round(bios_recovered_msns / total_muin * 100, 3)
+        hw_sop_yield = round(hw_sop_recovered_msns / total_muin * 100, 3)
+        combined_yield = round(total_recovered_msns / total_muin * 100, 3)
+    else:
+        rpx_yield = bios_yield = hw_sop_yield = combined_yield = 0
 
     return {
         'step': step,
         'total_dpm': round(total_dpm, 2),
+        'total_muin': total_muin,
         'rpx_dpm': round(rpx_dpm, 2),
         'rpx_verified': True if verified_rpx_data else False,
         'rpx_verified_count': rpx_verified_count,
@@ -3654,6 +3693,15 @@ def calculate_recovery_projection(
         'hw_sop_pct': round(hw_sop_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
         'combined_pct': round(combined_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
         'remaining_pct': round(remaining_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        # Module-based yield recovery (percentage points)
+        'rpx_yield': rpx_yield,
+        'bios_yield': bios_yield,
+        'hw_sop_yield': hw_sop_yield,
+        'combined_yield': combined_yield,
+        'rpx_recovered_msns': round(rpx_recovered_msns, 1),
+        'bios_recovered_msns': round(bios_recovered_msns, 1),
+        'hw_sop_recovered_msns': round(hw_sop_recovered_msns, 1),
+        'total_recovered_msns': round(total_recovered_msns, 1),
         'breakdown': breakdown
     }
 
@@ -3943,52 +3991,94 @@ def create_dpm_formula_info_html(dark_mode: bool = False) -> str:
     muted_color = '#888' if dark_mode else '#666'
     highlight_bg = '#2d2d2d' if dark_mode else '#fff'
     accent_color = '#4fc3f7' if dark_mode else '#1976d2'
+    warning_bg = '#fff3e0' if not dark_mode else '#3e2723'
 
     html = f'''
-    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 12px; font-family: 'Segoe UI', sans-serif;">
-        <div style="font-size: 11px; font-weight: 600; color: {accent_color}; margin-bottom: 8px;">
-            📐 DPM Calculation Methodology
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 12px; font-family: 'Segoe UI', sans-serif; font-size: 10px;">
+        <div style="font-size: 12px; font-weight: 600; color: {accent_color}; margin-bottom: 10px;">
+            📐 DPM & Yield Calculation Methodology
         </div>
 
-        <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
-            <div style="font-size: 10px; color: {muted_color}; margin-bottom: 4px;">Hybrid DPM Approach</div>
-            <div style="font-size: 11px; color: {text_color};">
-                <b>MODULE-level:</b> Mod-Sys, Hang, Multi-Mod, Boot<br>
-                <b>FID-level:</b> DQ, Row, SB_Int, others
+        <!-- Kevin Roos DPM Method -->
+        <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; margin-bottom: 10px; border-left: 3px solid {accent_color};">
+            <div style="font-size: 10px; font-weight: 600; color: {accent_color}; margin-bottom: 6px;">
+                DPM Calculation (Kevin Roos Method)
+            </div>
+            <div style="font-family: monospace; font-size: 11px; color: {text_color}; background: {bg_color}; padding: 6px; border-radius: 4px; margin-bottom: 6px;">
+                DPM = (Unique Failing MSNs / Total FIDs) × 1,000,000
+            </div>
+            <div style="font-size: 9px; color: {muted_color};">
+                • Each MSN (module) is counted <b>once</b> regardless of how many FIDs failed<br>
+                • Denominator is Total FIDs (component UIN) from <code>+fidag</code><br>
+                • This provides a normalized DPM across all failure types
             </div>
         </div>
 
-        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <!-- Yield Recovery Calculation -->
+        <div style="background: {warning_bg}; border-radius: 6px; padding: 10px; margin-bottom: 10px; border-left: 3px solid #ff9800;">
+            <div style="font-size: 10px; font-weight: 600; color: #ff9800; margin-bottom: 6px;">
+                ⚠️ Yield Recovery Calculation (Module-Based)
+            </div>
+            <div style="font-family: monospace; font-size: 11px; color: {text_color}; background: {bg_color}; padding: 6px; border-radius: 4px; margin-bottom: 6px;">
+                Yield Recovery (%) = (Recovered MSNs / Total MUIN) × 100
+            </div>
+            <div style="font-size: 9px; color: {muted_color};">
+                <b>Why module-based?</b> Yield is measured at the module level for shipping decisions.<br>
+                • DPM uses FID denominator (for fail mode analysis)<br>
+                • Yield uses MUIN denominator (for actual yield impact)<br>
+                • Example: 40 modules recovered / 2,675 MUIN = <b>1.49% yield gain</b>
+            </div>
+        </div>
+
+        <!-- DPM vs Yield Comparison -->
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
             <div style="flex: 1; background: {highlight_bg}; border-radius: 6px; padding: 8px;">
-                <div style="font-size: 9px; color: {muted_color};">MDPM Formula</div>
-                <div style="font-size: 10px; color: {text_color}; font-family: monospace;">
-                    (Modules / MUIN) × 10⁶
+                <div style="font-size: 9px; color: {muted_color}; margin-bottom: 4px;">DPM (Fail Mode Analysis)</div>
+                <div style="font-size: 10px; color: {text_color};">
+                    Numerator: Unique MSNs<br>
+                    Denominator: <b>Total FIDs</b>
                 </div>
             </div>
             <div style="flex: 1; background: {highlight_bg}; border-radius: 6px; padding: 8px;">
-                <div style="font-size: 9px; color: {muted_color};">cDPM Formula</div>
-                <div style="font-size: 10px; color: {text_color}; font-family: monospace;">
-                    (FIDs / UIN) × 10⁶
+                <div style="font-size: 9px; color: {muted_color}; margin-bottom: 4px;">Yield (Shipping Impact)</div>
+                <div style="font-size: 10px; color: {text_color};">
+                    Numerator: Unique MSNs<br>
+                    Denominator: <b>Total MUIN</b>
                 </div>
             </div>
         </div>
 
-        <div style="background: {highlight_bg}; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
-            <div style="font-size: 9px; color: {muted_color};">DPM to Yield Conversion</div>
-            <div style="font-size: 10px; color: {text_color}; font-family: monospace;">
-                Yield Loss (%) = DPM ÷ 10,000
+        <!-- Recovery Types -->
+        <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; border-left: 3px solid #4caf50;">
+            <div style="font-size: 10px; font-weight: 600; color: #4caf50; margin-bottom: 6px;">
+                Recovery Types & Targets
             </div>
-            <div style="font-size: 9px; color: {muted_color}; margin-top: 4px;">
-                Example: 1000 DPM = 0.1% yield loss
-            </div>
+            <table style="width: 100%; font-size: 9px; color: {text_color};">
+                <tr style="border-bottom: 1px solid {border_color};">
+                    <td style="padding: 3px 0;"><span style="color: #9c27b0;">●</span> <b>RPx (VERIFIED)</b></td>
+                    <td>All except Hang/Boot</td>
+                    <td>False miscompare script</td>
+                </tr>
+                <tr style="border-bottom: 1px solid {border_color};">
+                    <td style="padding: 3px 0;"><span style="color: #2196f3;">●</span> <b>BIOS 100%</b></td>
+                    <td>MULTI_BANK_MULTI_DQ</td>
+                    <td>BIOS timing fix</td>
+                </tr>
+                <tr style="border-bottom: 1px solid {border_color};">
+                    <td style="padding: 3px 0;"><span style="color: #03a9f4;">●</span> <b>BIOS 50%</b></td>
+                    <td>BANK/BURST/PERIPH</td>
+                    <td>Partial BIOS fix</td>
+                </tr>
+                <tr>
+                    <td style="padding: 3px 0;"><span style="color: #ff9800;">●</span> <b>HW+SOP</b></td>
+                    <td>Hang only</td>
+                    <td>Hardware + SOP fix</td>
+                </tr>
+            </table>
         </div>
 
-        <div style="font-size: 9px; color: {muted_color}; border-top: 1px solid {border_color}; padding-top: 8px;">
-            <b>Recovery Types:</b><br>
-            • <span style="color: #9c27b0;">RPx</span> (100%): False miscompare - SB, SINGLE_BURST patterns<br>
-            • <span style="color: #2196f3;">BIOS</span> (100%): MULTI_BANK_MULTI_DQ timing fix<br>
-            • <span style="color: #03a9f4;">BIOS*</span> (50%): Bank/Burst/Periph (non-DRAM)<br>
-            • <span style="color: #ff9800;">HW+SOP</span> (100%): Hang debris cleanup
+        <div style="font-size: 8px; color: {muted_color}; margin-top: 8px; padding-top: 6px; border-top: 1px solid {border_color};">
+            RPx runs <code>socamm_false_miscompare.py</code> on summaries with <code>-standard_flow=yes -islatest=Y -isvalid=Y</code>
         </div>
     </div>
     '''

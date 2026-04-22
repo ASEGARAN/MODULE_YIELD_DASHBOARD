@@ -4505,7 +4505,8 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
             hybrid_dpm_df=hybrid_dpm_df,
             msn_corr_df=filtered_msn_corr,
             step=step,
-            verified_rpx_data=verified_rpx_data
+            verified_rpx_data=verified_rpx_data,
+            total_muin=step_total_muin
         )
 
         # Create correlation heatmap data
