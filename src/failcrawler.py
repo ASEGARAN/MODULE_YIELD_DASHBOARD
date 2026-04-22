@@ -3631,8 +3631,8 @@ def calculate_recovery_projection(
             recovered_dpm = 0
 
         # Calculate recovered MSNs for yield (module-based)
-        # Ensure count is numeric (handle potential string values)
-        msn_count = float(row['Count']) if pd.notna(row['Count']) else 0
+        # Use raw_count (numeric) instead of Count (formatted string like "30 MSNs")
+        msn_count = float(row.get('raw_count', 0)) if pd.notna(row.get('raw_count')) else 0
         recovered_msns = 0.0
         if is_hw_sop:
             recovered_msns = msn_count  # 100% recovery
