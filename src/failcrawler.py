@@ -4012,7 +4012,13 @@ def create_dpm_formula_info_html(dark_mode: bool = False) -> str:
             <div style="font-size: 9px; color: {muted_color};">
                 • Each MSN (module) is counted <b>once</b> regardless of how many FIDs failed<br>
                 • Denominator is Total FIDs (component UIN) from <code>+fidag</code><br>
-                • This provides a normalized DPM across all failure types
+                • Essentially mDPM ÷ (FIDs per MSN)
+            </div>
+            <div style="font-size: 9px; color: {muted_color}; margin-top: 6px; padding-top: 6px; border-top: 1px dashed {border_color};">
+                <b>Why count unique MSNs?</b> For Mod-Sys, Hang, and Multi-Mod fails, we assume the failure occurs at the MSN level.
+                Analysis shows that fails on different FIDs within the same MSN (or different packages in the same MSN) are
+                <b>not independent events</b> — FIDs and packages fail together from a single event or cause.
+                Counting each failed FID would overcount the actual failure rate.
             </div>
         </div>
 
