@@ -80,6 +80,10 @@ from src.failcrawler import (
     calculate_recovery_projection,
     create_hybrid_dpm_table_html,
     create_recovery_projection_html,
+    create_dpm_formula_info_html,
+    create_failcrawler_breakdown_html,
+    calculate_slt_combined_recovery,
+    create_slt_combined_html,
 )
 
 # AI Assistant module
@@ -4373,8 +4377,15 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
     if last_fetch:
         st.caption(f"📅 Data from: {last_fetch}")
 
-    # Time range toggle
-    time_col1, time_col2 = st.columns([1, 3])
+    # Check if both HMB1 and QMON are selected for combined SLT
+    has_both_slt_steps = all(s.upper() in [step.upper() for step in slt_steps] for s in ['HMB1', 'QMON'])
+    if has_both_slt_steps:
+        st.success("✅ Both HMB1 and QMON selected - Combined SLT analysis will be shown below.")
+    else:
+        st.info("ℹ️ Select both **HMB1** and **QMON** to see combined SLT (HMB1 × QMON) yield analysis.")
+
+    # Time range and DPM formula info layout
+    time_col1, time_col2, info_col = st.columns([1, 2, 1.5])
     with time_col1:
         time_range = st.radio(
             "Time Range",
@@ -4395,6 +4406,11 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
         else:
             st.caption(f"📅 Showing {len(workweeks)} weeks cumulative")
 
+    with info_col:
+        with st.expander("📐 **DPM Methodology**", expanded=False):
+            formula_html = create_dpm_formula_info_html(dark_mode=False)
+            components.html(formula_html, height=380, scrolling=True)
+
     # Filter data based on time range
     if time_range == "Latest WW" and latest_ww and 'MFG_WORKWEEK' in msn_corr_df.columns:
         filtered_msn_corr = msn_corr_df[msn_corr_df['MFG_WORKWEEK'] == latest_ww].copy()
@@ -4413,6 +4429,10 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
         ).agg(UNIQUE_MODULES=('MSN', 'nunique'), UNIQUE_FIDS=('FID', 'nunique'))
     else:
         agg_fid_counts = filtered_fid_counts
+
+    # Track recovery data for combined SLT calculation
+    step_recovery_data = {}
+    step_uin_data = {}
 
     # Process each SLT step (HMB1, QMON only)
     for step in slt_steps:
@@ -4484,7 +4504,48 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
             recovery_html = create_recovery_projection_html(recovery_data, dark_mode=False)
             components.html(recovery_html, height=420, scrolling=True)
 
+            # Store for combined SLT calculation
+            step_recovery_data[step.upper()] = recovery_data
+            step_uin_data[step.upper()] = step_total_uin
+
+        # Collapsible FAILCRAWLER Breakdown
+        with st.expander(f"📋 **{step} FAILCRAWLER Details** (DPM → Yield Impact)", expanded=False):
+            breakdown_html = create_failcrawler_breakdown_html(
+                msn_corr_df=filtered_msn_corr,
+                step=step,
+                total_uin=step_total_uin,
+                dark_mode=False
+            )
+            if breakdown_html:
+                components.html(breakdown_html, height=450, scrolling=True)
+            else:
+                st.info("No detailed FAILCRAWLER breakdown available")
+
         st.divider()
+
+    # Combined SLT Section (only if both HMB1 and QMON have data)
+    if has_both_slt_steps and 'HMB1' in step_recovery_data and 'QMON' in step_recovery_data:
+        st.markdown("### 🔗 Combined SLT Analysis (HMB1 × QMON)")
+
+        slt_combined = calculate_slt_combined_recovery(
+            hmb1_recovery=step_recovery_data['HMB1'],
+            qmon_recovery=step_recovery_data['QMON']
+        )
+
+        if slt_combined:
+            slt_html = create_slt_combined_html(slt_combined, dark_mode=False)
+            components.html(slt_html, height=380, scrolling=True)
+
+            # Add yield impact summary
+            slt_data = slt_combined['slt']
+            st.markdown(f"""
+            **SLT Yield Impact Summary:**
+            - Current SLT Yield: **{slt_data['current_yield']:.2f}%**
+            - Projected SLT Yield (after recovery): **{slt_data['projected_yield']:.2f}%**
+            - Total Yield Gain: **+{slt_data['yield_gain']:.4f}%**
+            """)
+        else:
+            st.warning("Unable to calculate combined SLT recovery")
 
 
 def render_grace_motherboard_section(filters: dict[str, Any]) -> None:

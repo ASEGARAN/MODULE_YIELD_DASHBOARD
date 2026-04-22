@@ -3644,3 +3644,397 @@ def create_recovery_projection_html(
     '''
 
     return html
+
+
+def create_dpm_formula_info_html(dark_mode: bool = False) -> str:
+    """
+    Create an HTML info box explaining DPM calculation methodology.
+
+    Args:
+        dark_mode: Whether to use dark mode styling
+
+    Returns:
+        HTML string with DPM formula explanation
+    """
+    bg_color = '#1e1e1e' if dark_mode else '#f8f9fa'
+    border_color = '#444' if dark_mode else '#e0e0e0'
+    text_color = '#e0e0e0' if dark_mode else '#333'
+    muted_color = '#888' if dark_mode else '#666'
+    highlight_bg = '#2d2d2d' if dark_mode else '#fff'
+    accent_color = '#4fc3f7' if dark_mode else '#1976d2'
+
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 12px; font-family: 'Segoe UI', sans-serif;">
+        <div style="font-size: 11px; font-weight: 600; color: {accent_color}; margin-bottom: 8px;">
+            📐 DPM Calculation Methodology
+        </div>
+
+        <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+            <div style="font-size: 10px; color: {muted_color}; margin-bottom: 4px;">Hybrid DPM Approach</div>
+            <div style="font-size: 11px; color: {text_color};">
+                <b>MODULE-level:</b> Mod-Sys, Hang, Multi-Mod, Boot<br>
+                <b>FID-level:</b> DQ, Row, SB_Int, others
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <div style="flex: 1; background: {highlight_bg}; border-radius: 6px; padding: 8px;">
+                <div style="font-size: 9px; color: {muted_color};">MDPM Formula</div>
+                <div style="font-size: 10px; color: {text_color}; font-family: monospace;">
+                    (Modules / MUIN) × 10⁶
+                </div>
+            </div>
+            <div style="flex: 1; background: {highlight_bg}; border-radius: 6px; padding: 8px;">
+                <div style="font-size: 9px; color: {muted_color};">cDPM Formula</div>
+                <div style="font-size: 10px; color: {text_color}; font-family: monospace;">
+                    (FIDs / UIN) × 10⁶
+                </div>
+            </div>
+        </div>
+
+        <div style="background: {highlight_bg}; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
+            <div style="font-size: 9px; color: {muted_color};">DPM to Yield Conversion</div>
+            <div style="font-size: 10px; color: {text_color}; font-family: monospace;">
+                Yield Loss (%) = DPM ÷ 10,000
+            </div>
+            <div style="font-size: 9px; color: {muted_color}; margin-top: 4px;">
+                Example: 1000 DPM = 0.1% yield loss
+            </div>
+        </div>
+
+        <div style="font-size: 9px; color: {muted_color}; border-top: 1px solid {border_color}; padding-top: 8px;">
+            <b>Recovery Types:</b><br>
+            • <span style="color: #9c27b0;">RPx</span> (100%): False miscompare - SB, SINGLE_BURST patterns<br>
+            • <span style="color: #2196f3;">BIOS</span> (100%): MULTI_BANK_MULTI_DQ timing fix<br>
+            • <span style="color: #03a9f4;">BIOS*</span> (50%): Bank/Burst/Periph (non-DRAM)<br>
+            • <span style="color: #ff9800;">HW+SOP</span> (100%): Hang debris cleanup
+        </div>
+    </div>
+    '''
+
+    return html
+
+
+def create_failcrawler_breakdown_html(
+    msn_corr_df: pd.DataFrame,
+    step: str,
+    total_uin: int,
+    dark_mode: bool = False
+) -> str:
+    """
+    Create detailed MSN_STATUS → FAILCRAWLER breakdown with recovery mapping.
+
+    Args:
+        msn_corr_df: FAILCRAWLER × MSN_STATUS correlation data
+        step: Test step (HMB1, QMON)
+        total_uin: Total UIN for DPM calculation
+        dark_mode: Whether to use dark mode styling
+
+    Returns:
+        HTML string with detailed breakdown table
+    """
+    if msn_corr_df.empty or total_uin == 0:
+        return ""
+
+    bg_color = '#1e1e1e' if dark_mode else '#fff'
+    border_color = '#444' if dark_mode else '#e0e0e0'
+    text_color = '#e0e0e0' if dark_mode else '#333'
+    muted_color = '#888' if dark_mode else '#666'
+    header_bg = '#2d2d2d' if dark_mode else '#f5f5f5'
+
+    # Filter by step
+    step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
+    if step_col in msn_corr_df.columns:
+        step_df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()].copy()
+    else:
+        step_df = msn_corr_df.copy()
+
+    if step_df.empty:
+        return ""
+
+    # Exclude Pass status
+    step_df = step_df[step_df['MSN_STATUS'] != 'Pass']
+
+    if step_df.empty:
+        return ""
+
+    # Calculate DPM for each FAILCRAWLER
+    if 'UFAIL' not in step_df.columns:
+        return ""
+
+    step_df['DPM'] = (step_df['UFAIL'] / total_uin) * 1_000_000
+    step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
+
+    # Determine recovery type for each FAILCRAWLER
+    def get_recovery_info(row):
+        fc = row['FAILCRAWLER']
+        msn = row['MSN_STATUS']
+
+        if msn in HW_SOP_MSN_STATUS:
+            return ('HW+SOP', 1.0, '#ff9800')
+        if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
+            return ('BIOS', 1.0, '#2196f3')
+        if fc in RPX_TARGET_FAILCRAWLERS:
+            return ('RPx', 1.0, '#9c27b0')
+        fc_upper = str(fc).upper()
+        if any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT):
+            return ('BIOS*', 0.5, '#03a9f4')
+        return (None, 0.0, '#888')
+
+    step_df['recovery_info'] = step_df.apply(get_recovery_info, axis=1)
+    step_df['recovery_type'] = step_df['recovery_info'].apply(lambda x: x[0])
+    step_df['recovery_rate'] = step_df['recovery_info'].apply(lambda x: x[1])
+    step_df['recovery_color'] = step_df['recovery_info'].apply(lambda x: x[2])
+    step_df['recovered_dpm'] = step_df['DPM'] * step_df['recovery_rate']
+    step_df['recovered_yield'] = step_df['YIELD_LOSS'] * step_df['recovery_rate']
+
+    # Sort by DPM descending
+    step_df = step_df.sort_values('DPM', ascending=False)
+
+    # Build HTML table
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 12px; font-family: 'Segoe UI', sans-serif;">
+        <div style="font-size: 11px; font-weight: 600; color: {text_color}; margin-bottom: 8px;">
+            📋 {step} FAILCRAWLER Breakdown (DPM → Yield Impact)
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            <thead>
+                <tr style="background: {header_bg};">
+                    <th style="padding: 6px; text-align: left; border-bottom: 2px solid {border_color}; color: {text_color};">MSN_STATUS</th>
+                    <th style="padding: 6px; text-align: left; border-bottom: 2px solid {border_color}; color: {text_color};">FAILCRAWLER</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: {text_color};">UFAIL</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: {text_color};">DPM</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: {text_color};">Yield Loss</th>
+                    <th style="padding: 6px; text-align: center; border-bottom: 2px solid {border_color}; color: {text_color};">Recovery</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: #4caf50;">Recovered</th>
+                </tr>
+            </thead>
+            <tbody>
+    '''
+
+    for idx, (_, row) in enumerate(step_df.iterrows()):
+        row_bg = header_bg if idx % 2 == 0 else bg_color
+        recovery_type = row['recovery_type']
+        recovery_color = row['recovery_color']
+
+        recovery_badge = f'<span style="background: {recovery_color}; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 9px;">{recovery_type}</span>' if recovery_type else '-'
+        recovered_val = f"{row['recovered_yield']:.4f}%" if row['recovered_yield'] > 0 else '-'
+
+        html += f'''
+            <tr style="background: {row_bg};">
+                <td style="padding: 5px 6px; color: {text_color}; border-bottom: 1px solid {border_color};">{row['MSN_STATUS']}</td>
+                <td style="padding: 5px 6px; color: {text_color}; border-bottom: 1px solid {border_color}; font-family: monospace; font-size: 9px;">{row['FAILCRAWLER']}</td>
+                <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{int(row['UFAIL']):,}</td>
+                <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{row['DPM']:.2f}</td>
+                <td style="padding: 5px 6px; text-align: right; color: #f44336; border-bottom: 1px solid {border_color};">{row['YIELD_LOSS']:.4f}%</td>
+                <td style="padding: 5px 6px; text-align: center; border-bottom: 1px solid {border_color};">{recovery_badge}</td>
+                <td style="padding: 5px 6px; text-align: right; color: #4caf50; border-bottom: 1px solid {border_color};">{recovered_val}</td>
+            </tr>
+        '''
+
+    # Summary row
+    total_dpm = step_df['DPM'].sum()
+    total_yield_loss = step_df['YIELD_LOSS'].sum()
+    total_recovered_yield = step_df['recovered_yield'].sum()
+
+    html += f'''
+            <tr style="background: {header_bg}; font-weight: bold;">
+                <td colspan="3" style="padding: 6px; color: {text_color}; border-top: 2px solid {border_color};">TOTAL</td>
+                <td style="padding: 6px; text-align: right; color: {text_color}; border-top: 2px solid {border_color};">{total_dpm:.2f}</td>
+                <td style="padding: 6px; text-align: right; color: #f44336; border-top: 2px solid {border_color};">{total_yield_loss:.4f}%</td>
+                <td style="padding: 6px; text-align: center; border-top: 2px solid {border_color};">-</td>
+                <td style="padding: 6px; text-align: right; color: #4caf50; border-top: 2px solid {border_color};">{total_recovered_yield:.4f}%</td>
+            </tr>
+        </tbody>
+        </table>
+
+        <div style="margin-top: 8px; padding: 8px; background: {'#2d2d2d' if dark_mode else '#e8f5e9'}; border-radius: 6px;">
+            <div style="font-size: 10px; color: {text_color};">
+                <b>Projected Yield After Recovery:</b>
+                <span style="color: #4caf50; font-weight: bold;">+{total_recovered_yield:.4f}%</span>
+                (from {total_yield_loss:.4f}% loss → {total_yield_loss - total_recovered_yield:.4f}% remaining)
+            </div>
+        </div>
+    </div>
+    '''
+
+    return html
+
+
+def calculate_slt_combined_recovery(
+    hmb1_recovery: dict,
+    qmon_recovery: dict
+) -> dict:
+    """
+    Calculate combined SLT (HMB1 × QMON) recovery projection.
+
+    SLT Yield = HMB1 Yield × QMON Yield
+
+    Args:
+        hmb1_recovery: Recovery data from HMB1
+        qmon_recovery: Recovery data from QMON
+
+    Returns:
+        Combined SLT recovery projection
+    """
+    if not hmb1_recovery or not qmon_recovery:
+        return None
+
+    # Convert DPM to yield for each step
+    # Yield = 100 - (DPM / 10,000)
+    def dpm_to_yield(dpm):
+        return 100 - (dpm / 10_000)
+
+    def yield_to_dpm(yield_pct):
+        return (100 - yield_pct) * 10_000
+
+    # Current yields (before recovery)
+    hmb1_current_yield = dpm_to_yield(hmb1_recovery['total_dpm'])
+    qmon_current_yield = dpm_to_yield(qmon_recovery['total_dpm'])
+    slt_current_yield = (hmb1_current_yield / 100) * (qmon_current_yield / 100) * 100
+
+    # Projected yields (after recovery)
+    hmb1_remaining_dpm = hmb1_recovery['remaining_dpm']
+    qmon_remaining_dpm = qmon_recovery['remaining_dpm']
+    hmb1_projected_yield = dpm_to_yield(hmb1_remaining_dpm)
+    qmon_projected_yield = dpm_to_yield(qmon_remaining_dpm)
+    slt_projected_yield = (hmb1_projected_yield / 100) * (qmon_projected_yield / 100) * 100
+
+    # Recovery amounts
+    hmb1_yield_gain = hmb1_projected_yield - hmb1_current_yield
+    qmon_yield_gain = qmon_projected_yield - qmon_current_yield
+    slt_yield_gain = slt_projected_yield - slt_current_yield
+
+    return {
+        'hmb1': {
+            'current_dpm': hmb1_recovery['total_dpm'],
+            'remaining_dpm': hmb1_remaining_dpm,
+            'current_yield': round(hmb1_current_yield, 4),
+            'projected_yield': round(hmb1_projected_yield, 4),
+            'yield_gain': round(hmb1_yield_gain, 4),
+            'rpx_dpm': hmb1_recovery['rpx_dpm'],
+            'bios_dpm': hmb1_recovery['bios_dpm'],
+            'hw_sop_dpm': hmb1_recovery['hw_sop_dpm'],
+        },
+        'qmon': {
+            'current_dpm': qmon_recovery['total_dpm'],
+            'remaining_dpm': qmon_remaining_dpm,
+            'current_yield': round(qmon_current_yield, 4),
+            'projected_yield': round(qmon_projected_yield, 4),
+            'yield_gain': round(qmon_yield_gain, 4),
+            'rpx_dpm': qmon_recovery['rpx_dpm'],
+            'bios_dpm': qmon_recovery['bios_dpm'],
+            'hw_sop_dpm': qmon_recovery['hw_sop_dpm'],
+        },
+        'slt': {
+            'current_yield': round(slt_current_yield, 4),
+            'projected_yield': round(slt_projected_yield, 4),
+            'yield_gain': round(slt_yield_gain, 4),
+        }
+    }
+
+
+def create_slt_combined_html(slt_data: dict, dark_mode: bool = False) -> str:
+    """
+    Create HTML visualization for combined SLT (HMB1 × QMON) recovery.
+
+    Args:
+        slt_data: Output from calculate_slt_combined_recovery()
+        dark_mode: Whether to use dark mode styling
+
+    Returns:
+        HTML string with SLT combined visualization
+    """
+    if not slt_data:
+        return ""
+
+    bg_color = '#1e1e1e' if dark_mode else '#fff'
+    border_color = '#444' if dark_mode else '#e0e0e0'
+    text_color = '#e0e0e0' if dark_mode else '#333'
+    muted_color = '#888' if dark_mode else '#666'
+    card_bg = '#2d2d2d' if dark_mode else '#f5f5f5'
+
+    hmb1 = slt_data['hmb1']
+    qmon = slt_data['qmon']
+    slt = slt_data['slt']
+
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 16px; font-family: 'Segoe UI', sans-serif;">
+        <div style="font-size: 13px; font-weight: 600; color: {text_color}; margin-bottom: 12px; text-align: center;">
+            🔗 Combined SLT Recovery (HMB1 × QMON)
+        </div>
+
+        <!-- SLT Formula Visual -->
+        <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+            <!-- HMB1 Card -->
+            <div style="background: {card_bg}; border-radius: 8px; padding: 12px; text-align: center; min-width: 120px;">
+                <div style="font-size: 10px; color: {muted_color};">HMB1</div>
+                <div style="font-size: 18px; font-weight: bold; color: {text_color};">{hmb1['current_yield']:.2f}%</div>
+                <div style="font-size: 10px; color: #4caf50;">→ {hmb1['projected_yield']:.2f}%</div>
+                <div style="font-size: 9px; color: #4caf50;">(+{hmb1['yield_gain']:.4f}%)</div>
+            </div>
+
+            <div style="font-size: 20px; color: {muted_color};">×</div>
+
+            <!-- QMON Card -->
+            <div style="background: {card_bg}; border-radius: 8px; padding: 12px; text-align: center; min-width: 120px;">
+                <div style="font-size: 10px; color: {muted_color};">QMON</div>
+                <div style="font-size: 18px; font-weight: bold; color: {text_color};">{qmon['current_yield']:.2f}%</div>
+                <div style="font-size: 10px; color: #4caf50;">→ {qmon['projected_yield']:.2f}%</div>
+                <div style="font-size: 9px; color: #4caf50;">(+{qmon['yield_gain']:.4f}%)</div>
+            </div>
+
+            <div style="font-size: 20px; color: {muted_color};">=</div>
+
+            <!-- SLT Result -->
+            <div style="background: linear-gradient(135deg, #1976d2, #1565c0); border-radius: 8px; padding: 12px; text-align: center; min-width: 140px;">
+                <div style="font-size: 10px; color: rgba(255,255,255,0.8);">SLT Yield</div>
+                <div style="font-size: 22px; font-weight: bold; color: #fff;">{slt['current_yield']:.2f}%</div>
+                <div style="font-size: 11px; color: #a5d6a7;">→ {slt['projected_yield']:.2f}%</div>
+                <div style="font-size: 10px; color: #a5d6a7; font-weight: bold;">(+{slt['yield_gain']:.4f}%)</div>
+            </div>
+        </div>
+
+        <!-- Recovery Breakdown Table -->
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px;">
+            <thead>
+                <tr style="background: {card_bg};">
+                    <th style="padding: 6px; text-align: left; border-bottom: 2px solid {border_color}; color: {text_color};">Step</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: {text_color};">Current DPM</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: #9c27b0;">RPx</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: #2196f3;">BIOS</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: #ff9800;">HW+SOP</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: #4caf50;">Remaining</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: {text_color};">Yield Gain</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 5px 6px; color: {text_color}; border-bottom: 1px solid {border_color}; font-weight: bold;">HMB1</td>
+                    <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{hmb1['current_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #9c27b0; border-bottom: 1px solid {border_color};">{hmb1['rpx_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #2196f3; border-bottom: 1px solid {border_color};">{hmb1['bios_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #ff9800; border-bottom: 1px solid {border_color};">{hmb1['hw_sop_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #4caf50; border-bottom: 1px solid {border_color};">{hmb1['remaining_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #4caf50; border-bottom: 1px solid {border_color};">+{hmb1['yield_gain']:.4f}%</td>
+                </tr>
+                <tr style="background: {card_bg};">
+                    <td style="padding: 5px 6px; color: {text_color}; border-bottom: 1px solid {border_color}; font-weight: bold;">QMON</td>
+                    <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{qmon['current_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #9c27b0; border-bottom: 1px solid {border_color};">{qmon['rpx_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #2196f3; border-bottom: 1px solid {border_color};">{qmon['bios_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #ff9800; border-bottom: 1px solid {border_color};">{qmon['hw_sop_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #4caf50; border-bottom: 1px solid {border_color};">{qmon['remaining_dpm']:.2f}</td>
+                    <td style="padding: 5px 6px; text-align: right; color: #4caf50; border-bottom: 1px solid {border_color};">+{qmon['yield_gain']:.4f}%</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 10px; font-size: 9px; color: {muted_color}; text-align: center;">
+            SLT Yield = HMB1 Yield × QMON Yield | Combined SLT only shown when both steps are selected
+        </div>
+    </div>
+    '''
+
+    return html
