@@ -3603,14 +3603,33 @@ def calculate_recovery_projection(
             is_rpx = True
 
         # Check FAILCRAWLERs for BIOS recovery (PROJECTED)
-        if not msn_corr_df.empty and 'FAILCRAWLER' in msn_corr_df.columns and not is_hw_sop:
+        if not msn_corr_df.empty and not is_hw_sop:
             step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
             step_df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()] if step_col in msn_corr_df.columns else msn_corr_df
             status_df = step_df[step_df['MSN_STATUS'] == msn_status]
+
             if not status_df.empty:
-                fcs = set(status_df['FAILCRAWLER'].unique())
-                is_bios_100 = bool(fcs & BIOS_FIX_FAILCRAWLERS_100PCT)
-                is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
+                # Check for LONG format (FAILCRAWLER column exists)
+                if 'FAILCRAWLER' in status_df.columns:
+                    fcs = set(status_df['FAILCRAWLER'].unique())
+                    is_bios_100 = bool(fcs & BIOS_FIX_FAILCRAWLERS_100PCT)
+                    is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
+                else:
+                    # WIDE format: FAILCRAWLER names are column names
+                    # Check which FAILCRAWLER columns have non-zero values for this MSN_STATUS
+                    known_fc_cols = [c for c in status_df.columns if c.upper() in [
+                        'MULTI_BANK_MULTI_DQ', 'SINGLE_BURST_SINGLE_ROW', 'SECTION_FAIL_PERIPH',
+                        'MULTI_BANK_2ROW', 'MULTI_HALFBANK_MULTI_DQ', 'MULTI_HALFBANK_SINGLE_DQ',
+                        'HANG', 'HGDC', 'ROW', 'SB', 'SYS_EVEN_BURST_BIT', 'UNKNOWN', 'HALF_BANK'
+                    ]]
+                    # Find FAILCRAWLERs with non-zero DPM for this MSN_STATUS
+                    fcs = set()
+                    for fc_col in known_fc_cols:
+                        if status_df[fc_col].sum() > 0:
+                            fcs.add(fc_col.upper())
+
+                    is_bios_100 = bool(fcs & {f.upper() for f in BIOS_FIX_FAILCRAWLERS_100PCT})
+                    is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
 
         # Determine recovery type and calculate recovered DPM
         # Priority: HW+SOP > BIOS 100% > BIOS 50% (RPx is separate/verified)
@@ -4181,29 +4200,14 @@ def create_failcrawler_breakdown_html(
         step_df['YIELD_LOSS'] = step_df['DPM'] / 10_000  # DPM to yield loss %
 
     # Aggregate by MSN_STATUS × FAILCRAWLER (combine multiple workweeks)
-    # DPM should be weighted average by UIN
     if 'MSN_STATUS' in step_df.columns and 'FAILCRAWLER' in step_df.columns:
-        # Calculate weighted DPM contribution for averaging
-        if 'UIN' in step_df.columns:
-            step_df['DPM_x_UIN'] = step_df['DPM'] * step_df['UIN']
-            agg_df = step_df.groupby(['MSN_STATUS', 'FAILCRAWLER'], as_index=False).agg({
-                'UFAIL': 'sum',
-                'UIN': 'sum',
-                'DPM_x_UIN': 'sum'
-            })
-            # Weighted average DPM
-            agg_df['DPM'] = agg_df['DPM_x_UIN'] / agg_df['UIN']
-            agg_df['DPM'] = agg_df['DPM'].fillna(0)
-            agg_df['YIELD_LOSS'] = agg_df['DPM'] / 10_000
-            step_df = agg_df.drop(columns=['DPM_x_UIN'])
-        else:
-            # No UIN column - just average DPM
-            agg_df = step_df.groupby(['MSN_STATUS', 'FAILCRAWLER'], as_index=False).agg({
-                'UFAIL': 'sum',
-                'DPM': 'mean',
-                'YIELD_LOSS': 'mean'
-            })
-            step_df = agg_df
+        # Sum UFAIL across workweeks
+        agg_df = step_df.groupby(['MSN_STATUS', 'FAILCRAWLER'], as_index=False).agg({
+            'UFAIL': 'sum'
+        })
+        # Kevin's approach: DPM = UFAIL / total_uin × 1M (consistent denominator)
+        agg_df['DPM'] = (agg_df['UFAIL'] / total_uin) * 1_000_000
+        step_df = agg_df
 
     # Get verified RPx recovery rate if available
     rpx_recovery_rate = 0.0
