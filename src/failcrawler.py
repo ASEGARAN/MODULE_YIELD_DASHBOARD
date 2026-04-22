@@ -3240,39 +3240,22 @@ def calculate_recovery_projection(
     hw_sop_df = hybrid_dpm_df[hybrid_dpm_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)]
     hw_sop_dpm = hw_sop_df['DPM'].sum() if not hw_sop_df.empty else 0
 
-    # Non-Hang DPM base for UFAIL proportion calculations
-    # This prevents double-counting since hw_sop_dpm is added separately
-    non_hang_dpm = total_dpm - hw_sop_dpm
+    # Build MSN_STATUS → DPM lookup from hybrid_dpm_df
+    # This respects the hybrid approach (MODULE-level vs FID-level denominator)
+    msn_dpm_lookup = dict(zip(hybrid_dpm_df['MSN_STATUS'], hybrid_dpm_df['DPM']))
 
     # Calculate BIOS and RPx recovery from FAILCRAWLER data
+    # Recovery is calculated PER MSN_STATUS to respect hybrid DPM levels
     bios_dpm = 0
     bios_partial_dpm = 0  # 50% recovery for BANK/BURST/PERIPH patterns
     rpx_dpm = 0
+
     if not msn_corr_df.empty and 'FAILCRAWLER' in msn_corr_df.columns:
         step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
         step_df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()] if step_col in msn_corr_df.columns else msn_corr_df
 
-        # Total UFAIL excluding Hang (for proportion calculation)
-        non_hang_df = step_df[
-            (~step_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)) &
-            (step_df['MSN_STATUS'] != 'Pass')
-        ]
-        total_ufail_non_hang = non_hang_df['UFAIL'].sum() if 'UFAIL' in non_hang_df.columns else 0
-
-        # BIOS recovery - 100% for MULTI_BANK_MULTI_DQ (excluding Hang)
-        bios_100_df = step_df[
-            (step_df['FAILCRAWLER'].isin(BIOS_FIX_FAILCRAWLERS_100PCT)) &
-            (~step_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)) &
-            (step_df['MSN_STATUS'] != 'Pass')
-        ]
-        if not bios_100_df.empty and 'UFAIL' in bios_100_df.columns:
-            bios_ufail = bios_100_df['UFAIL'].sum()
-            if total_ufail_non_hang > 0 and non_hang_dpm > 0:
-                bios_dpm = (bios_ufail / total_ufail_non_hang) * non_hang_dpm
-
-        # BIOS recovery - 50% for other BANK/BURST/PERIPH patterns (non-DRAM related)
-        # Match FAILCRAWLERs containing pattern substrings, excluding already counted
-        def matches_pattern(fc):
+        # Helper to check BIOS 50% pattern match
+        def matches_bios_50_pattern_inner(fc):
             if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
                 return False  # Already counted at 100%
             if fc in RPX_TARGET_FAILCRAWLERS:
@@ -3280,29 +3263,40 @@ def calculate_recovery_projection(
             fc_upper = str(fc).upper()
             return any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT)
 
-        bios_50_mask = (
-            step_df['FAILCRAWLER'].apply(matches_pattern) &
-            (~step_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)) &
-            (step_df['MSN_STATUS'] != 'Pass')
-        )
-        bios_50_df = step_df[bios_50_mask]
-        if not bios_50_df.empty and 'UFAIL' in bios_50_df.columns:
-            bios_50_ufail = bios_50_df['UFAIL'].sum()
-            if total_ufail_non_hang > 0 and non_hang_dpm > 0:
-                # Apply 50% recovery rate
-                bios_partial_dpm = (bios_50_ufail / total_ufail_non_hang) * non_hang_dpm * BIOS_PARTIAL_RECOVERY_RATE
+        # Calculate recovery per MSN_STATUS (respects hybrid DPM approach)
+        # For each MSN_STATUS, calculate FAILCRAWLER proportions within that MSN_STATUS
+        for msn_status in step_df['MSN_STATUS'].unique():
+            if msn_status == 'Pass' or msn_status in HW_SOP_MSN_STATUS:
+                continue  # Skip Pass and Hang (Hang handled separately above)
 
-        # RPx recovery (SB, SINGLE_BURST patterns - common false miscompare signatures)
-        # Note: RPx targets are excluded from BIOS 50% via matches_pattern(), so no overlap
-        rpx_df = step_df[
-            (step_df['FAILCRAWLER'].isin(RPX_TARGET_FAILCRAWLERS)) &
-            (~step_df['MSN_STATUS'].isin(HW_SOP_MSN_STATUS)) &
-            (step_df['MSN_STATUS'] != 'Pass')
-        ]
-        if not rpx_df.empty and 'UFAIL' in rpx_df.columns:
-            rpx_ufail = rpx_df['UFAIL'].sum()
-            if total_ufail_non_hang > 0 and non_hang_dpm > 0:
-                rpx_dpm = (rpx_ufail / total_ufail_non_hang) * non_hang_dpm
+            msn_dpm = msn_dpm_lookup.get(msn_status, 0)
+            if msn_dpm == 0:
+                continue
+
+            # Get all FAILCRAWLERs for this MSN_STATUS
+            msn_fc_df = step_df[step_df['MSN_STATUS'] == msn_status]
+            msn_total_ufail = msn_fc_df['UFAIL'].sum() if 'UFAIL' in msn_fc_df.columns else 0
+
+            if msn_total_ufail == 0:
+                continue
+
+            # Calculate each recovery type's share within this MSN_STATUS
+            for _, row in msn_fc_df.iterrows():
+                fc = row['FAILCRAWLER']
+                ufail = row.get('UFAIL', 0)
+                if ufail == 0:
+                    continue
+
+                # FAILCRAWLER's share of this MSN_STATUS's DPM
+                fc_dpm = (ufail / msn_total_ufail) * msn_dpm
+
+                # Classify recovery type (mutually exclusive)
+                if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
+                    bios_dpm += fc_dpm  # 100% recovery
+                elif fc in RPX_TARGET_FAILCRAWLERS:
+                    rpx_dpm += fc_dpm  # 100% recovery
+                elif matches_bios_50_pattern_inner(fc):
+                    bios_partial_dpm += fc_dpm * BIOS_PARTIAL_RECOVERY_RATE  # 50% recovery
 
     # Total BIOS = 100% recovery + 50% partial recovery
     total_bios_dpm = bios_dpm + bios_partial_dpm
