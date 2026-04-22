@@ -4254,9 +4254,8 @@ def create_failcrawler_breakdown_html(
                     <th style="padding: 6px; text-align: left; border-bottom: 2px solid {border_color}; color: {text_color};">FAILCRAWLER</th>
                     <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: {text_color};">UFAIL</th>
                     <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: {text_color};">DPM</th>
-                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: {text_color};">Yield Loss</th>
                     <th style="padding: 6px; text-align: center; border-bottom: 2px solid {border_color}; color: {text_color};">Recovery</th>
-                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: #4caf50;">Recovered</th>
+                    <th style="padding: 6px; text-align: right; border-bottom: 2px solid {border_color}; color: #4caf50;">Recovered DPM</th>
                 </tr>
             </thead>
             <tbody>
@@ -4268,15 +4267,15 @@ def create_failcrawler_breakdown_html(
         recovery_color = row['recovery_color']
 
         recovery_badge = f'<span style="background: {recovery_color}; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 9px;">{recovery_type}</span>' if recovery_type else '-'
-        recovered_val = f"{row['recovered_yield']:.4f}%" if row['recovered_yield'] > 0 else '-'
+        recovered_dpm = row['DPM'] * row['recovery_rate'] if row['recovery_rate'] > 0 else 0
+        recovered_val = f"{recovered_dpm:,.2f}" if recovered_dpm > 0 else '-'
 
         html += f'''
             <tr style="background: {row_bg};">
                 <td style="padding: 5px 6px; color: {text_color}; border-bottom: 1px solid {border_color};">{row['MSN_STATUS']}</td>
                 <td style="padding: 5px 6px; color: {text_color}; border-bottom: 1px solid {border_color}; font-family: monospace; font-size: 9px;">{row['FAILCRAWLER']}</td>
                 <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{int(row['UFAIL']):,}</td>
-                <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{row['DPM']:.2f}</td>
-                <td style="padding: 5px 6px; text-align: right; color: #f44336; border-bottom: 1px solid {border_color};">{row['YIELD_LOSS']:.4f}%</td>
+                <td style="padding: 5px 6px; text-align: right; color: {text_color}; border-bottom: 1px solid {border_color};">{row['DPM']:,.2f}</td>
                 <td style="padding: 5px 6px; text-align: center; border-bottom: 1px solid {border_color};">{recovery_badge}</td>
                 <td style="padding: 5px 6px; text-align: right; color: #4caf50; border-bottom: 1px solid {border_color};">{recovered_val}</td>
             </tr>
@@ -4286,33 +4285,21 @@ def create_failcrawler_breakdown_html(
     # Don't sum DPM values (they have different denominators) - recalculate from UFAIL
     total_ufail = step_df['UFAIL'].sum()
     total_dpm = (total_ufail / total_uin) * 1_000_000 if total_uin > 0 else 0
-    total_yield_loss = total_dpm / 10_000  # DPM to yield %
 
-    # Calculate recovered yield properly (sum of individual recovered yields weighted by their share)
-    # Use recovered_yield which was calculated per-row based on proper DPM
+    # Calculate recovered DPM properly
     total_recovered_ufail = (step_df['UFAIL'] * step_df['recovery_rate']).sum()
     total_recovered_dpm = (total_recovered_ufail / total_uin) * 1_000_000 if total_uin > 0 else 0
-    total_recovered_yield = total_recovered_dpm / 10_000
 
     html += f'''
             <tr style="background: {header_bg}; font-weight: bold;">
                 <td colspan="2" style="padding: 6px; color: {text_color}; border-top: 2px solid {border_color};">TOTAL</td>
                 <td style="padding: 6px; text-align: right; color: {text_color}; border-top: 2px solid {border_color};">{int(total_ufail):,}</td>
                 <td style="padding: 6px; text-align: right; color: {text_color}; border-top: 2px solid {border_color};">{total_dpm:,.2f}</td>
-                <td style="padding: 6px; text-align: right; color: #f44336; border-top: 2px solid {border_color};">{total_yield_loss:.4f}%</td>
                 <td style="padding: 6px; text-align: center; border-top: 2px solid {border_color};">-</td>
-                <td style="padding: 6px; text-align: right; color: #4caf50; border-top: 2px solid {border_color};">{total_recovered_yield:.4f}%</td>
+                <td style="padding: 6px; text-align: right; color: #4caf50; border-top: 2px solid {border_color};">{total_recovered_dpm:,.2f}</td>
             </tr>
         </tbody>
         </table>
-
-        <div style="margin-top: 8px; padding: 8px; background: {'#2d2d2d' if dark_mode else '#e8f5e9'}; border-radius: 6px;">
-            <div style="font-size: 10px; color: {text_color};">
-                <b>Projected Yield After Recovery:</b>
-                <span style="color: #4caf50; font-weight: bold;">+{total_recovered_yield:.4f}%</span>
-                (from {total_yield_loss:.4f}% loss → {total_yield_loss - total_recovered_yield:.4f}% remaining)
-            </div>
-        </div>
     </div>
     '''
 
