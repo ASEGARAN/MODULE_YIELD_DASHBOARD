@@ -3507,14 +3507,25 @@ def calculate_recovery_projection(
         step_df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()] if step_col in msn_corr_df.columns else msn_corr_df
 
         # Check if data is in WIDE format (FAILCRAWLER names as columns)
-        # Wide format has columns like MULTI_BANK_MULTI_DQ, SINGLE_BURST_SINGLE_ROW, etc.
-        fc_columns = [col for col in step_df.columns if col.upper() in [
-            'MULTI_BANK_MULTI_DQ', 'SINGLE_BURST_SINGLE_ROW', 'SECTION_FAIL_PERIPH',
-            'MULTI_BANK_2ROW', 'MULTI_HALFBANK_MULTI_DQ', 'MULTI_HALFBANK_SINGLE_DQ',
-            'HANG', 'HGDC', 'ROW', 'SB', 'SYS_EVEN_BURST_BIT', 'UNKNOWN', 'HALF_BANK'
-        ]]
+        # Detect FAILCRAWLER columns by excluding known metadata columns
+        metadata_cols = {
+            'MSN_STATUS', 'MFG_WORKWEEK', 'STEP', 'QUERY_STEP', 'UIN', 'MUIN',
+            'UFAIL', 'MUFAIL', 'TOTAL', 'DPM', 'MDPM', 'CDPM', 'YIELD', 'PASS',
+            'DESIGN_ID', 'FORM_FACTOR', 'DENSITY', 'SPEED', 'FACILITY', 'DBASE',
+            'COUNT', 'PERCENT', 'LEVEL', 'RAW_COUNT', 'INDEX'
+        }
+        # Filter to only columns with numeric data (likely FAILCRAWLERs)
+        fc_columns = []
+        for col in step_df.columns:
+            if col.upper() not in metadata_cols:
+                try:
+                    col_numeric = pd.to_numeric(step_df[col], errors='coerce')
+                    if col_numeric.notna().any() and col_numeric.sum() > 0:
+                        fc_columns.append(col)
+                except (TypeError, ValueError):
+                    pass
 
-        if fc_columns and 'MSN_STATUS' in step_df.columns:
+        if fc_columns and 'MSN_STATUS' in step_df.columns and 'FAILCRAWLER' not in step_df.columns:
             # WIDE FORMAT: FAILCRAWLER names as columns with DPM values
             for _, row in step_df.iterrows():
                 msn_status = row.get('MSN_STATUS')
@@ -3526,14 +3537,24 @@ def calculate_recovery_projection(
                     continue
 
                 # Sum all FAILCRAWLER DPM values for this MSN_STATUS (for proportion calc)
-                total_fc_dpm = sum(row.get(fc, 0) or 0 for fc in fc_columns)
+                total_fc_dpm = 0
+                for fc in fc_columns:
+                    try:
+                        val = pd.to_numeric(row.get(fc, 0), errors='coerce')
+                        if pd.notna(val):
+                            total_fc_dpm += val
+                    except (TypeError, ValueError):
+                        pass
                 if total_fc_dpm == 0:
                     continue
 
                 # Calculate BIOS recovery based on FAILCRAWLER proportions
                 for fc in fc_columns:
-                    fc_val = row.get(fc, 0) or 0
-                    if fc_val <= 0:
+                    try:
+                        fc_val = pd.to_numeric(row.get(fc, 0), errors='coerce')
+                        if pd.isna(fc_val) or fc_val <= 0:
+                            continue
+                    except (TypeError, ValueError):
                         continue
 
                     # FAILCRAWLER's share of this MSN_STATUS's DPM
@@ -3616,17 +3637,27 @@ def calculate_recovery_projection(
                     is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
                 else:
                     # WIDE format: FAILCRAWLER names are column names
-                    # Check which FAILCRAWLER columns have non-zero values for this MSN_STATUS
-                    known_fc_cols = [c for c in status_df.columns if c.upper() in [
-                        'MULTI_BANK_MULTI_DQ', 'SINGLE_BURST_SINGLE_ROW', 'SECTION_FAIL_PERIPH',
-                        'MULTI_BANK_2ROW', 'MULTI_HALFBANK_MULTI_DQ', 'MULTI_HALFBANK_SINGLE_DQ',
-                        'HANG', 'HGDC', 'ROW', 'SB', 'SYS_EVEN_BURST_BIT', 'UNKNOWN', 'HALF_BANK'
-                    ]]
-                    # Find FAILCRAWLERs with non-zero DPM for this MSN_STATUS
-                    fcs = set()
-                    for fc_col in known_fc_cols:
-                        if status_df[fc_col].sum() > 0:
-                            fcs.add(fc_col.upper())
+                    # Detect all potential FAILCRAWLER columns (exclude known metadata columns)
+                    metadata_cols = {
+                        'MSN_STATUS', 'MFG_WORKWEEK', 'STEP', 'QUERY_STEP', 'UIN', 'MUIN',
+                        'UFAIL', 'MUFAIL', 'TOTAL', 'DPM', 'MDPM', 'CDPM', 'YIELD', 'PASS',
+                        'DESIGN_ID', 'FORM_FACTOR', 'DENSITY', 'SPEED', 'FACILITY', 'DBASE',
+                        'COUNT', 'PERCENT', 'LEVEL', 'RAW_COUNT', 'INDEX'
+                    }
+                    # Find numeric columns that aren't metadata - these are likely FAILCRAWLERs
+                    fc_cols = []
+                    for col in status_df.columns:
+                        if col.upper() not in metadata_cols:
+                            # Check if column has numeric-like values
+                            try:
+                                col_sum = pd.to_numeric(status_df[col], errors='coerce').sum()
+                                if col_sum > 0:
+                                    fc_cols.append(col)
+                            except (TypeError, ValueError):
+                                pass
+
+                    # Build set of FAILCRAWLERs with non-zero values
+                    fcs = {col.upper() for col in fc_cols}
 
                     is_bios_100 = bool(fcs & {f.upper() for f in BIOS_FIX_FAILCRAWLERS_100PCT})
                     is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
@@ -4161,13 +4192,23 @@ def create_failcrawler_breakdown_html(
 
     # Check for WIDE format (FAILCRAWLER names as columns)
     # In wide format, the values ARE already DPM, not UFAIL counts
-    known_fc_names = [
-        'MULTI_BANK_MULTI_DQ', 'SINGLE_BURST_SINGLE_ROW', 'SECTION_FAIL_PERIPH',
-        'MULTI_BANK_2ROW', 'MULTI_HALFBANK_MULTI_DQ', 'MULTI_HALFBANK_SINGLE_DQ',
-        'HANG', 'HGDC', 'ROW', 'SB', 'SYS_EVEN_BURST_BIT', 'UNKNOWN', 'HALF_BANK',
-        'MULTI_BANK_4ROW', 'MULTI_BANK_SINGLE_DQ', 'SINGLE_BANK_MULTI_ROW'
-    ]
-    fc_columns = [col for col in step_df.columns if col.upper() in known_fc_names]
+    # Detect FAILCRAWLER columns by excluding known metadata columns
+    metadata_cols = {
+        'MSN_STATUS', 'MFG_WORKWEEK', 'STEP', 'QUERY_STEP', 'UIN', 'MUIN',
+        'UFAIL', 'MUFAIL', 'TOTAL', 'DPM', 'MDPM', 'CDPM', 'YIELD', 'PASS',
+        'DESIGN_ID', 'FORM_FACTOR', 'DENSITY', 'SPEED', 'FACILITY', 'DBASE',
+        'COUNT', 'PERCENT', 'LEVEL', 'RAW_COUNT', 'INDEX', 'FAILCRAWLER'
+    }
+    # Find numeric columns that aren't metadata - these are likely FAILCRAWLERs
+    fc_columns = []
+    for col in step_df.columns:
+        if col.upper() not in metadata_cols:
+            try:
+                col_numeric = pd.to_numeric(step_df[col], errors='coerce')
+                if col_numeric.notna().any() and col_numeric.sum() > 0:
+                    fc_columns.append(col)
+            except (TypeError, ValueError):
+                pass
 
     is_wide_format = fc_columns and 'FAILCRAWLER' not in step_df.columns
 
