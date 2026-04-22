@@ -3142,7 +3142,7 @@ def fetch_slash_for_failures(
                 f"-mfg_workweek={ww} "
                 f"-design_id={','.join(design_ids)} "
                 f"-format=msn,slash,msn_status,failcrawler "
-                f"-header +quiet +module 2>/dev/null"
+                f"-header +quiet 2>/dev/null"
             )
 
             try:
