@@ -2076,17 +2076,31 @@ def process_msn_status_correlation(
         msn_status_agg['CDPM'] = 0.0
 
     # Build correlation matrix (FAILCRAWLER × MSN_STATUS) from original step_df
-    # Use DPM values for relative distribution within each FAILCRAWLER category
-    # Note: This shows "for each FAILCRAWLER, what % came from each MSN_STATUS"
+    # Use COLUMN-WISE percentages: For each MSN_STATUS, what % came from each FAILCRAWLER
+    # Note: Each MSN_STATUS column sums to 100% (answers "What causes this MSN_STATUS?")
+
+    # Step 1: Calculate total for each MSN_STATUS across all FAILCRAWLERs
+    msn_totals = {}
+    for msn_status in step_df['MSN_STATUS'].unique():
+        msn_df = step_df[step_df['MSN_STATUS'] == msn_status]
+        msn_total = 0
+        for fc in fc_columns:
+            if fc in msn_df.columns:
+                msn_total += msn_df[fc].sum()
+        msn_totals[msn_status] = msn_total
+
+    # Step 2: Build correlation matrix with column-wise percentages
     correlation_matrix = {}
     for fc in fc_columns:
         if fc in step_df.columns:
             fc_by_msn = step_df.groupby('MSN_STATUS')[fc].sum()
-            fc_total = fc_by_msn.sum()
-            if fc_total > 0:
-                correlation_matrix[fc] = {}
-                for msn_status in fc_by_msn.index:
-                    correlation_matrix[fc][msn_status] = round(fc_by_msn[msn_status] / fc_total * 100, 1)
+            correlation_matrix[fc] = {}
+            for msn_status in fc_by_msn.index:
+                msn_total = msn_totals.get(msn_status, 0)
+                if msn_total > 0:
+                    correlation_matrix[fc][msn_status] = round(fc_by_msn[msn_status] / msn_total * 100, 1)
+                else:
+                    correlation_matrix[fc][msn_status] = 0.0
 
     # Get top FAILCRAWLERs (by total DPM across all MSN_STATUS)
     fc_totals = {}
@@ -2179,7 +2193,7 @@ def create_msn_status_correlation_chart(data: dict, dark_mode: bool = False) -> 
         x=msn_statuses,
         y=top_fcs,
         colorscale=colorscale,
-        hovertemplate='FAILCRAWLER: %{y}<br>MSN_STATUS: %{x}<br>Contribution: %{z:.1f}%<extra></extra>',
+        hovertemplate='MSN_STATUS: %{x}<br>FAILCRAWLER: %{y}<br>Contribution: %{z:.1f}% of this MSN_STATUS<extra></extra>',
         colorbar=dict(
             title=dict(text='Contribution %', font=dict(color=font_color)),
             tickfont=dict(color=font_color)
@@ -2204,7 +2218,7 @@ def create_msn_status_correlation_chart(data: dict, dark_mode: bool = False) -> 
     fig.update_layout(
         annotations=annotations,
         title=dict(
-            text=f'<b>{step} FAILCRAWLER × MSN_STATUS Contribution</b>',
+            text=f'<b>{step} FAILCRAWLER × MSN_STATUS</b><br><sub>What causes each MSN_STATUS? (Column = 100%)</sub>',
             font=dict(color=font_color, size=14)
         ),
         xaxis=dict(
