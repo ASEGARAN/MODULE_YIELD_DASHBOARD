@@ -3106,6 +3106,12 @@ BIOS_PARTIAL_RECOVERY_RATE = 0.50  # 50% projected recovery for pattern matches
 # HW+SOP Fix (PROJECTED) - Debris cleanup + HUNG2 retest for Hang
 HW_SOP_MSN_STATUS = {'Hang'}
 
+# DRAM-Related (Potential silicon issue - NOT recoverable)
+# - SB/DB FAILCRAWLERs: Single Bit / Double Bit errors
+# - ROW MSN_STATUS: Row-related failures not cleared by RPx
+DRAM_FAILCRAWLERS = {'SB', 'DB', 'SB_INT', 'DB_INT'}  # Single/Double bit errors
+DRAM_MSN_STATUS = {'Row'}  # Row failures that persist after RPx screening
+
 # Excluded from recovery analysis
 EXCLUDE_MSN_STATUS = {'Pass', 'Boot'}
 
@@ -3662,11 +3668,49 @@ def calculate_recovery_projection(
                     is_bios_100 = bool(fcs & {f.upper() for f in BIOS_FIX_FAILCRAWLERS_100PCT})
                     is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
 
+        # Check for DRAM-related failures (potential actual silicon issues - NO recovery)
+        # - SB/DB FAILCRAWLERs: Single Bit / Double Bit errors (can't be fixed by RPx)
+        # - ROW MSN_STATUS: Row failures that don't get cleared by RPx
+        is_dram_fc = False  # DRAM FAILCRAWLER (SB/DB) - takes priority over RPx
+        is_dram_row = False  # ROW MSN_STATUS without other recovery
+
+        if not msn_corr_df.empty and not is_hw_sop:
+            step_col = 'QUERY_STEP' if 'QUERY_STEP' in msn_corr_df.columns else 'STEP'
+            step_df = msn_corr_df[msn_corr_df[step_col].str.upper() == step.upper()] if step_col in msn_corr_df.columns else msn_corr_df
+            status_df = step_df[step_df['MSN_STATUS'] == msn_status]
+
+            if not status_df.empty:
+                # Check for DRAM FAILCRAWLERs (SB, DB) - these are actual bit errors
+                if 'FAILCRAWLER' in status_df.columns:
+                    fcs = set(status_df['FAILCRAWLER'].str.upper().unique())
+                    is_dram_fc = bool(fcs & {f.upper() for f in DRAM_FAILCRAWLERS})
+                else:
+                    # Wide format - check column names
+                    for col in status_df.columns:
+                        if col.upper() in {f.upper() for f in DRAM_FAILCRAWLERS}:
+                            try:
+                                if pd.to_numeric(status_df[col], errors='coerce').sum() > 0:
+                                    is_dram_fc = True
+                                    break
+                            except (TypeError, ValueError):
+                                pass
+
+        # ROW MSN_STATUS without RPx recovery is DRAM-related (only if no BIOS recovery)
+        if msn_status in DRAM_MSN_STATUS and not is_rpx and not is_bios_100 and not is_bios_50:
+            is_dram_row = True
+
+        is_dram = is_dram_fc or is_dram_row
+
         # Determine recovery type and calculate recovered DPM
-        # Priority: HW+SOP > BIOS 100% > BIOS 50% (RPx is separate/verified)
+        # Priority: HW+SOP > DRAM FC (SB/DB) > BIOS 100% > BIOS 50% > RPx > DRAM ROW > None
+        # Note: SB/DB FAILCRAWLERs are actual silicon failures - RPx can't fix them
         if is_hw_sop:
             recovery_type = 'HW+SOP'
             recovered_dpm = row['DPM']
+        elif is_dram_fc:
+            # SB/DB FAILCRAWLERs = actual DRAM failures, no recovery possible
+            recovery_type = 'DRAM'
+            recovered_dpm = 0
         elif is_bios_100:
             recovery_type = 'BIOS'
             recovered_dpm = row['DPM']
@@ -3676,6 +3720,10 @@ def calculate_recovery_projection(
         elif is_rpx:
             recovery_type = 'RPx✓'  # Checkmark indicates verified
             recovered_dpm = row['DPM'] * rpx_recovery_rate
+        elif is_dram_row:
+            # ROW MSN_STATUS without other recovery = potential DRAM failure
+            recovery_type = 'DRAM'
+            recovered_dpm = 0
         else:
             recovery_type = None
             recovered_dpm = 0
@@ -3692,6 +3740,7 @@ def calculate_recovery_projection(
             recovered_msns = msn_count * BIOS_PARTIAL_RECOVERY_RATE  # 50% recovery
         elif is_rpx:
             recovered_msns = msn_count * rpx_recovery_rate  # Verified rate recovery
+        # DRAM: No recovery (recovered_msns stays 0)
 
         breakdown.append({
             'msn_status': msn_status,
@@ -3704,6 +3753,7 @@ def calculate_recovery_projection(
             'is_bios_target': is_bios_100 or is_bios_50,
             'is_bios_partial': is_bios_50,
             'is_hw_sop_target': is_hw_sop,
+            'is_dram': is_dram,
             'recovery_type': recovery_type,
             'recovered_dpm': recovered_dpm,
             'recovered_msns': recovered_msns
@@ -4004,6 +4054,8 @@ def create_recovery_projection_html(
                 recovery_badge = '<span style="background: #1976d2; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">BIOS</span>'
             elif item.get('is_rpx_target'):
                 recovery_badge = '<span style="background: #4caf50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">RPx</span>'
+            elif item.get('is_dram'):
+                recovery_badge = '<span style="background: #d32f2f; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">DRAM</span>'
             else:
                 recovery_badge = '<span style="color: #888;">-</span>'
                 recovered_dpm = 0
@@ -4028,7 +4080,7 @@ def create_recovery_projection_html(
 
     html += '''
         <div style="margin-top: 8px; font-size: 9px; color: #888; text-align: right;">
-            <b>RPx:</b> False miscompare | <b>BIOS:</b> MULTI_BANK_MULTI_DQ (100%) | <b>BIOS 50%:</b> Bank/Burst/Periph (non-DRAM) | <b>HW+SOP:</b> Hang
+            <b>RPx:</b> False miscompare | <b>BIOS:</b> MULTI_BANK_MULTI_DQ (100%) | <b>BIOS 50%:</b> Bank/Burst/Periph | <b>HW+SOP:</b> Hang | <b style="color:#d32f2f;">DRAM:</b> SB/DB/Row (no recovery)
         </div>
     </div>
     '''
@@ -4272,20 +4324,26 @@ def create_failcrawler_breakdown_html(
     def get_recovery_info(row):
         fc = row['FAILCRAWLER']
         msn = row.get('MSN_STATUS', '')
+        fc_upper = str(fc).upper()
 
         # HW+SOP: Hang MSN_STATUS (100% projected)
         if msn in HW_SOP_MSN_STATUS:
             return ('HW+SOP', 1.0, '#ff9800')
+        # DRAM FAILCRAWLER: SB/DB = actual bit errors, no recovery possible
+        if fc_upper in {f.upper() for f in DRAM_FAILCRAWLERS}:
+            return ('DRAM', 0.0, '#d32f2f')  # Red = no recovery, actual failure
         # BIOS 100%: MULTI_BANK_MULTI_DQ (projected)
         if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
             return ('BIOS', 1.0, '#2196f3')
         # BIOS 50%: BANK/BURST/PERIPH patterns (projected)
-        fc_upper = str(fc).upper()
         if any(pattern in fc_upper for pattern in BIOS_FIX_PATTERNS_50PCT):
             return ('BIOS*', 0.5, '#03a9f4')
         # RPx: All other failures (not Hang/Boot) - verified via script
         if msn not in RPX_EXCLUDE_MSN_STATUS and rpx_recovery_rate > 0:
             return ('RPx✓', rpx_recovery_rate, '#9c27b0')  # Checkmark = verified
+        # DRAM ROW: ROW MSN_STATUS without RPx = potential DRAM failure
+        if msn in DRAM_MSN_STATUS:
+            return ('DRAM', 0.0, '#d32f2f')  # Red = no recovery
         return (None, 0.0, '#888')
 
     step_df['recovery_info'] = step_df.apply(get_recovery_info, axis=1)
