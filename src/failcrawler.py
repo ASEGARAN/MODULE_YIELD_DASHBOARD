@@ -4179,37 +4179,80 @@ def create_dpm_formula_info_html(dark_mode: bool = False) -> str:
             </div>
         </div>
 
+        <!-- MSN_STATUS Classification -->
+        <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; margin-bottom: 10px; border-left: 3px solid #9c27b0;">
+            <div style="font-size: 10px; font-weight: 600; color: #9c27b0; margin-bottom: 6px;">
+                🏷️ MSN_STATUS Classification
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <div style="font-size: 9px; color: {muted_color}; margin-bottom: 4px;">
+                        <span style="background: #9c27b0; color: white; padding: 1px 4px; border-radius: 2px; font-size: 8px;">M</span> Module-Level
+                    </div>
+                    <div style="font-size: 9px; color: {text_color};">
+                        Mod-Sys, Hang, Multi-Mod, Boot
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 9px; color: {muted_color}; margin-bottom: 4px;">
+                        <span style="background: #00897b; color: white; padding: 1px 4px; border-radius: 2px; font-size: 8px;">F</span> FID-Level
+                    </div>
+                    <div style="font-size: 9px; color: {text_color};">
+                        DQ, Row, SB_Int, Multi-DQ, SB, Col
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Recovery Types -->
-        <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; border-left: 3px solid #4caf50;">
+        <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; margin-bottom: 10px; border-left: 3px solid #4caf50;">
             <div style="font-size: 10px; font-weight: 600; color: #4caf50; margin-bottom: 6px;">
-                Recovery Types & Targets
+                🔧 Recovery Types & Targets
             </div>
             <table style="width: 100%; font-size: 9px; color: {text_color};">
                 <tr style="border-bottom: 1px solid {border_color};">
-                    <td style="padding: 3px 0;"><span style="color: #9c27b0;">●</span> <b>RPx (VERIFIED)</b></td>
-                    <td>All except Hang/Boot</td>
-                    <td>False miscompare script</td>
+                    <td style="padding: 4px 0; width: 30%;"><span style="background: #4caf50; color: white; padding: 1px 4px; border-radius: 2px;">RPx✓</span></td>
+                    <td style="width: 35%;">All except Hang/Boot</td>
+                    <td>False miscompare (VERIFIED)</td>
                 </tr>
                 <tr style="border-bottom: 1px solid {border_color};">
-                    <td style="padding: 3px 0;"><span style="color: #2196f3;">●</span> <b>BIOS 100%</b></td>
+                    <td style="padding: 4px 0;"><span style="background: #1976d2; color: white; padding: 1px 4px; border-radius: 2px;">BIOS</span></td>
                     <td>MULTI_BANK_MULTI_DQ</td>
-                    <td>BIOS timing fix</td>
+                    <td>100% BIOS timing fix</td>
                 </tr>
                 <tr style="border-bottom: 1px solid {border_color};">
-                    <td style="padding: 3px 0;"><span style="color: #03a9f4;">●</span> <b>BIOS 50%</b></td>
-                    <td>BANK/BURST/PERIPH</td>
-                    <td>Partial BIOS fix</td>
+                    <td style="padding: 4px 0;"><span style="background: #64b5f6; color: white; padding: 1px 4px; border-radius: 2px;">BIOS*</span></td>
+                    <td>BANK/BURST/PERIPH patterns</td>
+                    <td>50% partial BIOS fix</td>
+                </tr>
+                <tr style="border-bottom: 1px solid {border_color};">
+                    <td style="padding: 4px 0;"><span style="background: #ff9800; color: white; padding: 1px 4px; border-radius: 2px;">HW+SOP</span></td>
+                    <td>Hang MSN_STATUS only</td>
+                    <td>Hardware + SOP fix</td>
                 </tr>
                 <tr>
-                    <td style="padding: 3px 0;"><span style="color: #ff9800;">●</span> <b>HW+SOP</b></td>
-                    <td>Hang only</td>
-                    <td>Hardware + SOP fix</td>
+                    <td style="padding: 4px 0;"><span style="background: #d32f2f; color: white; padding: 1px 4px; border-radius: 2px;">No Recovery</span></td>
+                    <td>SB/DB FAILCRAWLERs, Row (no RPx)</td>
+                    <td>DRAM-related (no fix available)</td>
                 </tr>
             </table>
         </div>
 
+        <!-- Priority Order -->
+        <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; border-left: 3px solid #607d8b;">
+            <div style="font-size: 10px; font-weight: 600; color: #607d8b; margin-bottom: 6px;">
+                ⚡ Recovery Priority Order
+            </div>
+            <div style="font-size: 9px; color: {text_color}; font-family: monospace; background: {bg_color}; padding: 6px; border-radius: 4px;">
+                HW+SOP → No Recovery (SB/DB) → BIOS → BIOS* → RPx → No Recovery (Row)
+            </div>
+            <div style="font-size: 8px; color: {muted_color}; margin-top: 4px;">
+                SB/DB FAILCRAWLERs are actual bit errors — RPx can't fix silicon issues
+            </div>
+        </div>
+
         <div style="font-size: 8px; color: {muted_color}; margin-top: 8px; padding-top: 6px; border-top: 1px solid {border_color};">
-            RPx runs <code>socamm_false_miscompare.py</code> on summaries with <code>-standard_flow=yes -islatest=Y -isvalid=Y</code>
+            RPx runs <code>/home/nmewes/Y6CP_FA/socamm_false_miscompare.py</code> with <code>-standard_flow=yes -islatest=Y -isvalid=Y</code>
         </div>
     </div>
     '''
