@@ -3058,6 +3058,11 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
             target_key = f"{chart_selected_dids[0]}_{chart_selected_densities[0]}_{chart_selected_speeds[0]}"
             target_label = f"{chart_selected_dids[0]} {chart_selected_densities[0]} {chart_selected_speeds[0]}"
 
+        # Warning if targets requested but multiple configs selected
+        show_targets = st.session_state.get("elc_show_targets", False)
+        if show_targets and not can_show_targets and len(series_configs) > 1:
+            st.warning("⚠️ **Targets require single config.** Select series with same DID + Density + Speed to show target lines.")
+
         st.divider()
 
         # ========================================================================
