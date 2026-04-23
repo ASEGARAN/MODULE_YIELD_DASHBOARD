@@ -709,10 +709,27 @@ def create_correlation_heatmap(df, step, workweek, total_uin, module_counts=None
     col_totals = pivot_df.sum(axis=0).sort_values(ascending=False)
     pivot_df = pivot_df.loc[row_totals.index, col_totals.index[:10]]  # Top 10 FAILCRAWLERs
 
+    # Calculate percentage contribution per row (MSN_STATUS)
+    row_totals_aligned = pivot_df.sum(axis=1)
+    pct_df = pivot_df.div(row_totals_aligned, axis=0) * 100
+
     # Add level indicators
     level_map = {row: '[M]' if row in MODULE_LEVEL_FAILURES else '[F]' for row in pivot_df.index}
     new_index = ["{} {}".format(row, level_map[row]) for row in pivot_df.index]
     pivot_df.index = new_index
+    pct_df.index = new_index
+
+    # Create text annotations with percentage only
+    text_annotations = []
+    for i, row in enumerate(pivot_df.values):
+        row_text = []
+        for j, v in enumerate(row):
+            if v > 0:
+                pct = pct_df.values[i][j]
+                row_text.append('{:.0f}%'.format(pct))
+            else:
+                row_text.append('')
+        text_annotations.append(row_text)
 
     # Create heatmap
     fig = go.Figure(data=go.Heatmap(
@@ -721,20 +738,34 @@ def create_correlation_heatmap(df, step, workweek, total_uin, module_counts=None
         y=list(pivot_df.index),
         colorscale=[[0, '#fff5f0'], [0.2, '#fee0d2'], [0.4, '#fcbba1'],
                     [0.6, '#fc9272'], [0.8, '#de2d26'], [1.0, '#a50f15']],
-        text=[['{:.1f}'.format(v) if v > 0 else '' for v in row] for row in pivot_df.values],
-        texttemplate='%{text}',
-        textfont={"size": 9, "color": "black"},
-        hovertemplate='<b>%{y}</b><br>FAILCRAWLER: %{x}<br>DPM: %{z:.2f}<extra></extra>',
+        hovertemplate='<b>%{y}</b><br>FAILCRAWLER: %{x}<br>DPM: %{z:.2f}<br>Contribution: %{text}<extra></extra>',
+        text=text_annotations,
         colorbar=dict(title=dict(text='DPM', side='right'), thickness=12, len=0.8)
     ))
+
+    # Add text annotations manually for each cell
+    annotations = []
+    for i, y_val in enumerate(pivot_df.index):
+        for j, x_val in enumerate(pivot_df.columns):
+            text = text_annotations[i][j]
+            if text:  # Only add annotation if there's text
+                annotations.append(dict(
+                    x=x_val,
+                    y=y_val,
+                    text=text,
+                    showarrow=False,
+                    font=dict(size=9, color='black', family='Arial'),
+                    align='center'
+                ))
 
     fig.update_layout(
         title=dict(text='MSN_STATUS x FAILCRAWLER', x=0.5, font=dict(size=10)),
         xaxis=dict(title='', tickangle=60, tickfont=dict(size=7), side='bottom'),
         yaxis=dict(title='', tickfont=dict(size=8), autorange='reversed'),
-        height=280, width=380,
-        margin=dict(l=80, r=30, t=30, b=120),
-        paper_bgcolor='white', plot_bgcolor='white'
+        height=400, width=550,
+        margin=dict(l=100, r=50, t=40, b=150),
+        paper_bgcolor='white', plot_bgcolor='white',
+        annotations=annotations
     )
 
     return fig, pivot_df
@@ -755,7 +786,8 @@ def generate_html_report(results, output_file):
     html.append('.container { max-width: 1400px; margin: 0 auto; }')
     html.append('.header { background: linear-gradient(135deg, #1a237e, #283593); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }')
     html.append('.section { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }')
-    html.append('.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }')
+    html.append('.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; align-items: start; }')
+    html.append('.grid-2-compact { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(400px, 1.5fr); gap: 20px; align-items: start; }')
     html.append('.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }')
     html.append('.metric-card { padding: 10px; border-radius: 6px; text-align: center; }')
     html.append('.metric-value { font-size: 24px; font-weight: bold; }')
@@ -804,12 +836,20 @@ def generate_html_report(results, output_file):
                 html.append('<div style="margin-bottom:15px;">')
                 html.append('<h4 style="margin:0 0 10px 0;color:#555;">{}</h4>'.format(period_label))
 
-                # DPM Summary table
+                # Side-by-side layout for table and heatmap
                 dpm_summary = period_data.get('dpm_summary')
+                heatmap_html = period_data.get('heatmap_html')
+
                 if dpm_summary is not None and not dpm_summary.empty:
                     total_uin = period_data.get('total_uin', 0)
-                    html.append('<p style="font-size:11px;color:#666;">Total UIN: {:,} FIDs</p>'.format(total_uin))
-                    html.append('<table>')
+
+                    # Start grid container for side-by-side layout
+                    html.append('<div class="grid-2-compact">')
+
+                    # Left side: DPM Summary table
+                    html.append('<div>')
+                    html.append('<p style="font-size:11px;color:#666;margin:0 0 8px 0;">Total UIN: {:,} FIDs</p>'.format(total_uin))
+                    html.append('<table style="font-size:10px;">')
                     html.append('<tr><th class="text-left">MSN_STATUS</th><th>Level</th><th>Count</th><th>DPM</th><th>%</th></tr>')
                     for _, row in dpm_summary.iterrows():
                         html.append('<tr><td class="text-left">{}</td><td>{}</td><td>{}</td><td>{:.2f}</td><td>{:.1f}%</td></tr>'.format(
@@ -817,13 +857,15 @@ def generate_html_report(results, output_file):
                     total_dpm = dpm_summary['DPM'].sum()
                     html.append('<tr style="font-weight:bold;background:#f5f5f5;"><td class="text-left">TOTAL</td><td></td><td></td><td>{:.2f}</td><td>100%</td></tr>'.format(total_dpm))
                     html.append('</table>')
-
-                # Heatmap
-                heatmap_html = period_data.get('heatmap_html')
-                if heatmap_html:
-                    html.append('<div style="margin-top:10px;">')
-                    html.append(heatmap_html)
                     html.append('</div>')
+
+                    # Right side: Heatmap
+                    if heatmap_html:
+                        html.append('<div style="display:flex;justify-content:center;align-items:flex-start;">')
+                        html.append(heatmap_html)
+                        html.append('</div>')
+
+                    html.append('</div>')  # End grid container
 
                 html.append('</div>')
 

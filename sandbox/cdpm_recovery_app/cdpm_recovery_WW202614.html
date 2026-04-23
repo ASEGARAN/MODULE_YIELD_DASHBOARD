@@ -1,0 +1,515 @@
+<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<title>cDPM Recovery Simulation Report</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+.container { max-width: 1400px; margin: 0 auto; }
+.header { background: linear-gradient(135deg, #1a237e, #283593); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+.section { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.metric-card { padding: 10px; border-radius: 6px; text-align: center; }
+.metric-value { font-size: 24px; font-weight: bold; }
+.metric-label { font-size: 11px; color: #666; }
+.rpx { background: #e8f5e9; border-left: 4px solid #4caf50; }
+.bios { background: #e3f2fd; border-left: 4px solid #1976d2; }
+.hwsop { background: #fce4ec; border-left: 4px solid #c2185b; }
+.combined { background: #fff3e0; border-left: 4px solid #f57c00; }
+.badge { font-size: 8px; padding: 2px 6px; border-radius: 3px; color: white; }
+.badge-verified { background: #4caf50; }
+.badge-projected { background: #ff9800; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th, td { padding: 6px; text-align: center; border-bottom: 1px solid #eee; }
+th { background: #424242; color: white; }
+.text-left { text-align: left; }
+.text-green { color: #4caf50; font-weight: bold; }
+.text-blue { color: #1976d2; font-weight: bold; }
+.text-pink { color: #c2185b; font-weight: bold; }
+.text-orange { color: #f57c00; font-weight: bold; }
+</style></head><body>
+<div class="container">
+<div class="header">
+<h1 style="margin:0;">cDPM Recovery Simulation Report</h1>
+<p style="margin:5px 0 0 0;opacity:0.9;">SOCAMM2 Hybrid DPM Analysis with Recovery Projections</p>
+<p style="margin:5px 0 0 0;font-size:12px;">Generated: 2026-04-21 07:31</p>
+</div>
+<div class="section">
+<h2 style="margin-top:0;color:#1a237e;">Y6CP</h2>
+<div style="margin-bottom:20px;padding:15px;background:#fafafa;border-radius:6px;">
+<h3 style="margin-top:0;">HMB1</h3>
+<div style="margin-bottom:15px;">
+<h4 style="margin:0 0 10px 0;color:#555;">Single Week: WW202614</h4>
+<p style="font-size:11px;color:#666;">Total UIN: 300,588.5 FIDs</p>
+<table>
+<tr><th class="text-left">MSN_STATUS</th><th>Level</th><th>Count</th><th>DPM</th><th>%</th></tr>
+<tr><td class="text-left">Mod-Sys</td><td>MODULE</td><td>61 MSNs</td><td>202.94</td><td>68.9%</td></tr>
+<tr><td class="text-left">Hang</td><td>MODULE</td><td>7 MSNs</td><td>24.95</td><td>8.5%</td></tr>
+<tr><td class="text-left">DQ</td><td>FID</td><td>7 FIDs</td><td>23.29</td><td>7.9%</td></tr>
+<tr><td class="text-left">Row</td><td>FID</td><td>6 FIDs</td><td>19.96</td><td>6.8%</td></tr>
+<tr><td class="text-left">SB_Int</td><td>FID</td><td>3 FIDs</td><td>9.98</td><td>3.4%</td></tr>
+<tr><td class="text-left">Boot</td><td>MODULE</td><td>2 MSNs</td><td>6.65</td><td>2.3%</td></tr>
+<tr><td class="text-left">Multi-DQ</td><td>FID</td><td>2 FIDs</td><td>6.65</td><td>2.3%</td></tr>
+<tr style="font-weight:bold;background:#f5f5f5;"><td class="text-left">TOTAL</td><td></td><td></td><td>294.42</td><td>100%</td></tr>
+</table>
+<div style="margin-top:10px;">
+<div>                            <div id="b6954d29-2e42-45c9-af3d-7c68f067bf37" class="plotly-graph-div" style="height:280px; width:380px;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("b6954d29-2e42-45c9-af3d-7c68f067bf37")) {                    Plotly.newPlot(                        "b6954d29-2e42-45c9-af3d-7c68f067bf37",                        [{"colorbar":{"len":0.8,"thickness":12,"title":{"side":"right","text":"DPM"}},"colorscale":[[0,"#fff5f0"],[0.2,"#fee0d2"],[0.4,"#fcbba1"],[0.6,"#fc9272"],[0.8,"#de2d26"],[1.0,"#a50f15"]],"hovertemplate":"\u003cb\u003e%{y}\u003c\u002fb\u003e\u003cbr\u003eFAILCRAWLER: %{x}\u003cbr\u003eDPM: %{z:.2f}\u003cextra\u003e\u003c\u002fextra\u003e","text":[["81.0","49.2","40.1","","3.3","11.1","","","1.7","4.2"],["","","","25.0","","","","","",""],["","3.3","","","13.3","6.7","","","",""],["","6.7","10.0","","","","","","",""],["","","","","","","10.0","","",""],["","","","","","","","6.7","",""],["","","","","3.3","","","","3.3",""]],"textfont":{"color":"black","size":9},"texttemplate":"%{text}","x":["MULTI_BANK_MULTI_DQ","HGDC","SINGLE_BURST_SINGLE_ROW","HANG","SYS_EVEN_BURST_BIT","MULTI_HALFBANK_SINGLE_DQ","SB","BOOT","SINGLE_BANK","SB_MODSYS"],"y":["Mod-Sys [M]","Hang [M]","DQ [F]","Row [F]","SB_Int [F]","Boot [M]","Multi-DQ [F]"],"z":[[80.95088474028528,49.17967036024121,40.0530082293428,0.0,3.337750685778566,11.12583565241946,0.0,0.0,1.668875342889283,4.172188357223208],[0.0,0.0,0.0,24.95105434838658,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,3.326807246451544,0.0,0.0,13.307228985806177,6.653614492903088,0.0,0.0,0.0,0.0],[0.0,6.653614492903088,9.980421739354632,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,9.980421739354632,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,6.653614492903088,0.0,0.0],[0.0,0.0,0.0,0.0,3.326807246451544,0.0,0.0,0.0,3.326807246451544,0.0]],"type":"heatmap"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"title":{"font":{"size":10},"text":"MSN_STATUS x FAILCRAWLER","x":0.5},"xaxis":{"tickfont":{"size":7},"title":{"text":""},"tickangle":60,"side":"bottom"},"yaxis":{"tickfont":{"size":8},"title":{"text":""},"autorange":"reversed"},"margin":{"l":80,"r":30,"t":30,"b":120},"height":280,"width":380,"paper_bgcolor":"white","plot_bgcolor":"white"},                        {"responsive": true}                    )                };            </script>        </div>
+</div>
+</div>
+<div style="margin-bottom:15px;">
+<h4 style="margin:0 0 10px 0;color:#555;">4-Week Cumulative: WW202611 to WW202614</h4>
+<p style="font-size:11px;color:#666;">Total UIN: 987,264.5 FIDs</p>
+<table>
+<tr><th class="text-left">MSN_STATUS</th><th>Level</th><th>Count</th><th>DPM</th><th>%</th></tr>
+<tr><td class="text-left">Mod-Sys</td><td>MODULE</td><td>177 MSNs</td><td>179.28</td><td>63.8%</td></tr>
+<tr><td class="text-left">Row</td><td>FID</td><td>31 FIDs</td><td>31.40</td><td>11.2%</td></tr>
+<tr><td class="text-left">DQ</td><td>FID</td><td>23 FIDs</td><td>23.30</td><td>8.3%</td></tr>
+<tr><td class="text-left">Hang</td><td>MODULE</td><td>19 MSNs</td><td>19.75</td><td>7.0%</td></tr>
+<tr><td class="text-left">Multi-DQ</td><td>FID</td><td>11 FIDs</td><td>11.14</td><td>4.0%</td></tr>
+<tr><td class="text-left">SB_Int</td><td>FID</td><td>8 FIDs</td><td>8.10</td><td>2.9%</td></tr>
+<tr><td class="text-left">Multi-Mod</td><td>MODULE</td><td>6 MSNs</td><td>6.08</td><td>2.2%</td></tr>
+<tr><td class="text-left">Boot</td><td>MODULE</td><td>2 MSNs</td><td>2.03</td><td>0.7%</td></tr>
+<tr style="font-weight:bold;background:#f5f5f5;"><td class="text-left">TOTAL</td><td></td><td></td><td>281.08</td><td>100%</td></tr>
+</table>
+<div style="margin-top:10px;">
+<div>                            <div id="97ca2323-658c-41f5-afe2-2d60f49ce03f" class="plotly-graph-div" style="height:280px; width:380px;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("97ca2323-658c-41f5-afe2-2d60f49ce03f")) {                    Plotly.newPlot(                        "97ca2323-658c-41f5-afe2-2d60f49ce03f",                        [{"colorbar":{"len":0.8,"thickness":12,"title":{"side":"right","text":"DPM"}},"colorscale":[[0,"#fff5f0"],[0.2,"#fee0d2"],[0.4,"#fcbba1"],[0.6,"#fc9272"],[0.8,"#de2d26"],[1.0,"#a50f15"]],"hovertemplate":"\u003cb\u003e%{y}\u003c\u002fb\u003e\u003cbr\u003eFAILCRAWLER: %{x}\u003cbr\u003eDPM: %{z:.2f}\u003cextra\u003e\u003c\u002fextra\u003e","text":[["74.6","37.4","41.7","","5.3","4.4","","0.5","1.9","2.7"],["","19.2","2.0","","","","","7.1","",""],["","","2.0","","11.1","7.1","","","2.0","1.0"],["","","","19.8","","","","","",""],["7.1","","","","1.0","","","","",""],["","","","","","","8.1","","",""],["2.0","2.4","","","","","0.3","0.4","",""],["","","","","","","","","",""]],"textfont":{"color":"black","size":9},"texttemplate":"%{text}","x":["MULTI_BANK_MULTI_DQ","SINGLE_BURST_SINGLE_ROW","HGDC","HANG","SYS_EVEN_BURST_BIT","MULTI_HALFBANK_SINGLE_DQ","SB","DB","SYS_ODD_BURST_BIT","MULTI_BANK_SINGLE_DQ"],"y":["Mod-Sys [M]","Row [F]","DQ [F]","Hang [M]","Multi-DQ [F]","SB_Int [F]","Multi-Mod [M]","Boot [M]"],"z":[[74.62779116858157,37.382368451673706,41.655091849788526,0.0,5.339583880808319,4.394197600270197,0.0,0.507022798868834,1.9435874158111375,2.725247574140893],[0.0,19.24509591907741,2.025799570429201,0.0,0.0,0.0,0.0,7.090298496502204,0.0,0.0],[0.0,0.0,2.025799570429201,0.0,11.141897637360607,7.090298496502204,0.0,0.0,2.025799570429201,1.0128997852146004],[0.0,0.0,0.0,19.75154581168471,0.0,0.0,0.0,0.0,0.0,0.0],[7.090298496502204,0.0,0.0,0.0,1.0128997852146004,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,8.103198281716804,0.0,0.0,0.0],[2.0257995603669463,2.3634328455837403,0.0,0.0,0.0,0.0,0.2532249450458683,0.42204158010757437,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],"type":"heatmap"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"title":{"font":{"size":10},"text":"MSN_STATUS x FAILCRAWLER","x":0.5},"xaxis":{"tickfont":{"size":7},"title":{"text":""},"tickangle":60,"side":"bottom"},"yaxis":{"tickfont":{"size":8},"title":{"text":""},"autorange":"reversed"},"margin":{"l":80,"r":30,"t":30,"b":120},"height":280,"width":380,"paper_bgcolor":"white","plot_bgcolor":"white"},                        {"responsive": true}                    )                };            </script>        </div>
+</div>
+</div>
+<div style="margin-top:15px;padding:15px;background:#f0f0f0;border-radius:6px;">
+<h4 style="margin:0 0 15px 0;">Recovery Simulation (WW202614)</h4>
+<div style="text-align:center;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:6px;">
+<span style="color:#666;">Current DPM:</span> 
+<span style="font-size:28px;font-weight:bold;color:#c62828;">402.6</span>
+</div>
+<div class="grid-4">
+<div class="metric-card rpx">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+<span style="font-weight:bold;color:#2e7d32;font-size:11px;">New RPx Fix</span>
+<span class="badge badge-verified">VERIFIED</span>
+</div>
+<div style="font-size:9px;color:#666;margin-bottom:8px;">False Miscompare</div>
+<div class="metric-value text-green">0.0</div>
+<div class="metric-label">DPM Recoverable (0%)</div>
+</div>
+<div class="metric-card bios">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+<span style="font-weight:bold;color:#1565c0;font-size:11px;">New BIOS Fix</span>
+<span class="badge badge-projected">PROJECTED</span>
+</div>
+<div style="font-size:9px;color:#666;margin-bottom:8px;">MULTI_BANK_MULTI_DQ - CCE</div>
+<div class="metric-value text-blue">116.4</div>
+<div class="metric-label">DPM Recoverable (29%)</div>
+</div>
+<div class="metric-card hwsop">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+<span style="font-weight:bold;color:#c2185b;font-size:11px;">HW + SOP Fix</span>
+<span class="badge badge-projected">PROJECTED</span>
+</div>
+<div style="font-size:9px;color:#666;margin-bottom:8px;">Hang - Debris/HUNG2</div>
+<div class="metric-value text-pink">106.5</div>
+<div class="metric-label">DPM Recoverable (26%)</div>
+</div>
+<div class="metric-card combined">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+<span style="font-weight:bold;color:#e65100;font-size:11px;">All Fixes</span>
+<span class="badge" style="background:#9e9e9e;">COMBINED</span>
+</div>
+<div style="font-size:9px;color:#666;margin-bottom:8px;">RPx + BIOS + HW/SOP</div>
+<div class="metric-value text-orange">222.9</div>
+<div class="metric-label">DPM Recoverable (55%)</div>
+</div>
+</div>
+<div style="text-align:center;margin-top:15px;padding:10px;background:#e8f5e9;border-radius:6px;">
+<span style="color:#666;">After All Fixes:</span> 
+<span style="font-size:24px;font-weight:bold;color:#2e7d32;">179.7</span>
+<span style="color:#666;"> DPM</span>
+</div>
+<details style="margin-top:15px;"><summary style="cursor:pointer;font-weight:bold;">MSN_STATUS Breakdown</summary>
+<table style="margin-top:10px;">
+<tr><th class="text-left">MSN_STATUS</th><th>MSNs</th><th>DPM</th>
+<th style="background:#4caf50;">RPx</th><th style="background:#1976d2;">BIOS</th>
+<th style="background:#c2185b;">HW+SOP</th><th style="background:#f57c00;">All</th><th>After</th></tr>
+<tr><td class="text-left">Mod-Sys</td><td>70</td><td>232.9</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">113.1</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">113.1</td>
+<td>119.8</td></tr>
+<tr><td class="text-left">Hang</td><td>32</td><td>106.5</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">0.0</td>
+<td class="text-pink">106.5</td>
+<td class="text-orange">106.5</td>
+<td>0.0</td></tr>
+<tr><td class="text-left">DQ</td><td>7</td><td>23.3</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">0.0</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">0.0</td>
+<td>23.3</td></tr>
+<tr><td class="text-left">Row</td><td>6</td><td>20.0</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">0.0</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">0.0</td>
+<td>20.0</td></tr>
+<tr><td class="text-left">Multi-DQ</td><td>3</td><td>10.0</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">3.3</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">3.3</td>
+<td>6.7</td></tr>
+<tr><td class="text-left">SB_Int</td><td>3</td><td>10.0</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">0.0</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">0.0</td>
+<td>10.0</td></tr>
+</table></details>
+<details style="margin-top:10px;"><summary style="cursor:pointer;font-weight:bold;">FAILCRAWLER Details</summary>
+<table style="margin-top:10px;">
+<tr><th class="text-left">FAILCRAWLER</th><th>Tot</th>
+<th style="background:#4caf50;">RPx</th><th style="background:#1976d2;">BIOS</th>
+<th style="background:#c2185b;">HW+SOP</th><th style="background:#f57c00;">Comb</th><th>Fix Type</th></tr>
+<tr><td class="text-left">UNKNOWN</td><td>53</td>
+<td class="text-green">0</td>
+<td class="text-blue">29</td>
+<td class="text-pink">0</td>
+<td class="text-orange">29</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">MULTI_BANK_MULTI_DQ</td><td>34</td>
+<td class="text-green">0</td>
+<td class="text-blue">34</td>
+<td class="text-pink">0</td>
+<td class="text-orange">34</td>
+<td style="font-weight:bold;">BIOS</td></tr>
+<tr><td class="text-left">HGDC</td><td>21</td>
+<td class="text-green">0</td>
+<td class="text-blue">6</td>
+<td class="text-pink">0</td>
+<td class="text-orange">6</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SINGLE_BURST_SINGLE_ROW</td><td>14</td>
+<td class="text-green">0</td>
+<td class="text-blue">1</td>
+<td class="text-pink">0</td>
+<td class="text-orange">1</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">MULTI_HALFBANK_SINGLE_DQ</td><td>6</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">HANG</td><td>32</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">32</td>
+<td class="text-orange">32</td>
+<td style="font-weight:bold;">HW+SOP</td></tr>
+<tr><td class="text-left">UNKNOWN</td><td>7</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SYS_EVEN_BURST_BIT</td><td>4</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">MULTI_HALFBANK_SINGLE_DQ</td><td>2</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">HGDC</td><td>1</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">UNKNOWN</td><td>6</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SINGLE_BURST_SINGLE_ROW</td><td>3</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">HGDC</td><td>2</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">DB</td><td>1</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">UNKNOWN</td><td>3</td>
+<td class="text-green">0</td>
+<td class="text-blue">1</td>
+<td class="text-pink">0</td>
+<td class="text-orange">1</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">MULTI_BANK_MULTI_DQ</td><td>1</td>
+<td class="text-green">0</td>
+<td class="text-blue">1</td>
+<td class="text-pink">0</td>
+<td class="text-orange">1</td>
+<td style="font-weight:bold;">BIOS</td></tr>
+<tr><td class="text-left">SINGLE_BANK</td><td>1</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SYS_EVEN_BURST_BIT</td><td>1</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">UNKNOWN</td><td>3</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SB</td><td>3</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+</table></details>
+</div>
+</div>
+<div style="margin-bottom:20px;padding:15px;background:#fafafa;border-radius:6px;">
+<h3 style="margin-top:0;">QMON</h3>
+<div style="margin-bottom:15px;">
+<h4 style="margin:0 0 10px 0;color:#555;">Single Week: WW202614</h4>
+<p style="font-size:11px;color:#666;">Total UIN: 156,200.0 FIDs</p>
+<table>
+<tr><th class="text-left">MSN_STATUS</th><th>Level</th><th>Count</th><th>DPM</th><th>%</th></tr>
+<tr><td class="text-left">Mod-Sys</td><td>MODULE</td><td>16 MSNs</td><td>102.43</td><td>57.1%</td></tr>
+<tr><td class="text-left">Row</td><td>FID</td><td>5 FIDs</td><td>32.01</td><td>17.9%</td></tr>
+<tr><td class="text-left">Multi-DQ</td><td>FID</td><td>4 FIDs</td><td>25.61</td><td>14.3%</td></tr>
+<tr><td class="text-left">DQ</td><td>FID</td><td>2 FIDs</td><td>12.80</td><td>7.1%</td></tr>
+<tr><td class="text-left">SB_Int</td><td>FID</td><td>1 FIDs</td><td>6.40</td><td>3.6%</td></tr>
+<tr style="font-weight:bold;background:#f5f5f5;"><td class="text-left">TOTAL</td><td></td><td></td><td>179.25</td><td>100%</td></tr>
+</table>
+<div style="margin-top:10px;">
+<div>                            <div id="8fecbb93-fb70-44c1-b683-fb07816a27d2" class="plotly-graph-div" style="height:280px; width:380px;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("8fecbb93-fb70-44c1-b683-fb07816a27d2")) {                    Plotly.newPlot(                        "8fecbb93-fb70-44c1-b683-fb07816a27d2",                        [{"colorbar":{"len":0.8,"thickness":12,"title":{"side":"right","text":"DPM"}},"colorscale":[[0,"#fff5f0"],[0.2,"#fee0d2"],[0.4,"#fcbba1"],[0.6,"#fc9272"],[0.8,"#de2d26"],[1.0,"#a50f15"]],"hovertemplate":"\u003cb\u003e%{y}\u003c\u002fb\u003e\u003cbr\u003eFAILCRAWLER: %{x}\u003cbr\u003eDPM: %{z:.2f}\u003cextra\u003e\u003c\u002fextra\u003e","text":[["70.4","6.4","12.8","","6.4","","6.4",""],["","19.2","","12.8","","","",""],["25.6","","","","","","",""],["","","","","6.4","","","6.4"],["","","","","","6.4","",""]],"textfont":{"color":"black","size":9},"texttemplate":"%{text}","x":["MULTI_BANK_MULTI_DQ","SINGLE_BURST_SINGLE_ROW","HGDC","DB","SYS_ODD_BURST_BIT","SB","SECTION_TWO_ROW","SYS_EVEN_BURST_BIT"],"y":["Mod-Sys [M]","Row [F]","Multi-DQ [F]","DQ [F]","SB_Int [F]"],"z":[[70.42253521126761,6.402048655569782,12.804097311139564,0.0,6.402048655569782,0.0,6.402048655569782,0.0],[0.0,19.206145966709347,0.0,12.804097311139564,0.0,0.0,0.0,0.0],[25.60819462227913,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,6.402048655569782,0.0,0.0,6.402048655569782],[0.0,0.0,0.0,0.0,0.0,6.402048655569782,0.0,0.0]],"type":"heatmap"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"title":{"font":{"size":10},"text":"MSN_STATUS x FAILCRAWLER","x":0.5},"xaxis":{"tickfont":{"size":7},"title":{"text":""},"tickangle":60,"side":"bottom"},"yaxis":{"tickfont":{"size":8},"title":{"text":""},"autorange":"reversed"},"margin":{"l":80,"r":30,"t":30,"b":120},"height":280,"width":380,"paper_bgcolor":"white","plot_bgcolor":"white"},                        {"responsive": true}                    )                };            </script>        </div>
+</div>
+</div>
+<div style="margin-bottom:15px;">
+<h4 style="margin:0 0 10px 0;color:#555;">4-Week Cumulative: WW202611 to WW202614</h4>
+<p style="font-size:11px;color:#666;">Total UIN: 830,983.0 FIDs</p>
+<table>
+<tr><th class="text-left">MSN_STATUS</th><th>Level</th><th>Count</th><th>DPM</th><th>%</th></tr>
+<tr><td class="text-left">Mod-Sys</td><td>MODULE</td><td>114 MSNs</td><td>137.19</td><td>68.7%</td></tr>
+<tr><td class="text-left">Row</td><td>FID</td><td>21 FIDs</td><td>25.27</td><td>12.6%</td></tr>
+<tr><td class="text-left">DQ</td><td>FID</td><td>15 FIDs</td><td>18.05</td><td>9.0%</td></tr>
+<tr><td class="text-left">Multi-DQ</td><td>FID</td><td>14 FIDs</td><td>16.85</td><td>8.4%</td></tr>
+<tr><td class="text-left">SB_Int</td><td>FID</td><td>2 FIDs</td><td>2.41</td><td>1.2%</td></tr>
+<tr style="font-weight:bold;background:#f5f5f5;"><td class="text-left">TOTAL</td><td></td><td></td><td>199.77</td><td>100%</td></tr>
+</table>
+<div style="margin-top:10px;">
+<div>                            <div id="4f9c7369-aad2-4716-b01b-2e06f921703d" class="plotly-graph-div" style="height:280px; width:380px;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("4f9c7369-aad2-4716-b01b-2e06f921703d")) {                    Plotly.newPlot(                        "4f9c7369-aad2-4716-b01b-2e06f921703d",                        [{"colorbar":{"len":0.8,"thickness":12,"title":{"side":"right","text":"DPM"}},"colorscale":[[0,"#fff5f0"],[0.2,"#fee0d2"],[0.4,"#fcbba1"],[0.6,"#fc9272"],[0.8,"#de2d26"],[1.0,"#a50f15"]],"hovertemplate":"\u003cb\u003e%{y}\u003c\u002fb\u003e\u003cbr\u003eFAILCRAWLER: %{x}\u003cbr\u003eDPM: %{z:.2f}\u003cextra\u003e\u003c\u002fextra\u003e","text":[["99.2","7.8","9.5","1.8","0.6","1.4","5.9","3.0","1.2","2.0"],["","19.3","","","","4.8","","","",""],["","","","6.0","7.2","1.2","","2.4","",""],["10.8","","","","","","","","3.6","1.2"],["","","","","","","","","",""]],"textfont":{"color":"black","size":9},"texttemplate":"%{text}","x":["MULTI_BANK_MULTI_DQ","SINGLE_BURST_SINGLE_ROW","HGDC","SYS_EVEN_BURST_BIT","MULTI_HALFBANK_SINGLE_DQ","DB","ROW","SYS_ODD_BURST_BIT","SECTION_FAIL_PERIPH","MULTI_BANK_2ROW"],"y":["Mod-Sys [M]","Row [F]","DQ [F]","Multi-DQ [F]","SB_Int [F]"],"z":[[99.21733252846919,7.822061335201916,9.476728134384745,1.823894141092745,0.6205000564180488,1.4039597295898776,5.9166874664261355,3.0272881540395713,1.2033940488107615,2.0056567719272254],[0.0,19.254304841374612,0.0,0.0,0.0,4.813576210343653,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,6.016970262929566,7.2203643155154795,1.2033940525859133,0.0,2.4067881051718265,0.0,0.0],[10.83054647327322,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.6101821577577398,1.2033940525859133],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],"type":"heatmap"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"title":{"font":{"size":10},"text":"MSN_STATUS x FAILCRAWLER","x":0.5},"xaxis":{"tickfont":{"size":7},"title":{"text":""},"tickangle":60,"side":"bottom"},"yaxis":{"tickfont":{"size":8},"title":{"text":""},"autorange":"reversed"},"margin":{"l":80,"r":30,"t":30,"b":120},"height":280,"width":380,"paper_bgcolor":"white","plot_bgcolor":"white"},                        {"responsive": true}                    )                };            </script>        </div>
+</div>
+</div>
+<div style="margin-top:15px;padding:15px;background:#f0f0f0;border-radius:6px;">
+<h4 style="margin:0 0 15px 0;">Recovery Simulation (WW202614)</h4>
+<div style="text-align:center;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:6px;">
+<span style="color:#666;">Current DPM:</span> 
+<span style="font-size:28px;font-weight:bold;color:#c62828;">198.5</span>
+</div>
+<div class="grid-4">
+<div class="metric-card rpx">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+<span style="font-weight:bold;color:#2e7d32;font-size:11px;">New RPx Fix</span>
+<span class="badge badge-verified">VERIFIED</span>
+</div>
+<div style="font-size:9px;color:#666;margin-bottom:8px;">False Miscompare</div>
+<div class="metric-value text-green">0.0</div>
+<div class="metric-label">DPM Recoverable (0%)</div>
+</div>
+<div class="metric-card bios">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+<span style="font-weight:bold;color:#1565c0;font-size:11px;">New BIOS Fix</span>
+<span class="badge badge-projected">PROJECTED</span>
+</div>
+<div style="font-size:9px;color:#666;margin-bottom:8px;">MULTI_BANK_MULTI_DQ - CCE</div>
+<div class="metric-value text-blue">102.4</div>
+<div class="metric-label">DPM Recoverable (52%)</div>
+</div>
+<div class="metric-card hwsop">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+<span style="font-weight:bold;color:#c2185b;font-size:11px;">HW + SOP Fix</span>
+<span class="badge badge-projected">PROJECTED</span>
+</div>
+<div style="font-size:9px;color:#666;margin-bottom:8px;">Hang - Debris/HUNG2</div>
+<div class="metric-value text-pink">0.0</div>
+<div class="metric-label">DPM Recoverable (0%)</div>
+</div>
+<div class="metric-card combined">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+<span style="font-weight:bold;color:#e65100;font-size:11px;">All Fixes</span>
+<span class="badge" style="background:#9e9e9e;">COMBINED</span>
+</div>
+<div style="font-size:9px;color:#666;margin-bottom:8px;">RPx + BIOS + HW/SOP</div>
+<div class="metric-value text-orange">102.4</div>
+<div class="metric-label">DPM Recoverable (52%)</div>
+</div>
+</div>
+<div style="text-align:center;margin-top:15px;padding:10px;background:#e8f5e9;border-radius:6px;">
+<span style="color:#666;">After All Fixes:</span> 
+<span style="font-size:24px;font-weight:bold;color:#2e7d32;">96.0</span>
+<span style="color:#666;"> DPM</span>
+</div>
+<details style="margin-top:15px;"><summary style="cursor:pointer;font-weight:bold;">MSN_STATUS Breakdown</summary>
+<table style="margin-top:10px;">
+<tr><th class="text-left">MSN_STATUS</th><th>MSNs</th><th>DPM</th>
+<th style="background:#4caf50;">RPx</th><th style="background:#1976d2;">BIOS</th>
+<th style="background:#c2185b;">HW+SOP</th><th style="background:#f57c00;">All</th><th>After</th></tr>
+<tr><td class="text-left">Mod-Sys</td><td>18</td><td>115.2</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">76.8</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">76.8</td>
+<td>38.4</td></tr>
+<tr><td class="text-left">Row</td><td>5</td><td>32.0</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">0.0</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">0.0</td>
+<td>32.0</td></tr>
+<tr><td class="text-left">Multi-DQ</td><td>4</td><td>25.6</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">25.6</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">25.6</td>
+<td>0.0</td></tr>
+<tr><td class="text-left">DQ</td><td>2</td><td>12.8</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">0.0</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">0.0</td>
+<td>12.8</td></tr>
+<tr><td class="text-left">SB_Int</td><td>2</td><td>12.8</td>
+<td class="text-green">0.0</td>
+<td class="text-blue">0.0</td>
+<td class="text-pink">0.0</td>
+<td class="text-orange">0.0</td>
+<td>12.8</td></tr>
+</table></details>
+<details style="margin-top:10px;"><summary style="cursor:pointer;font-weight:bold;">FAILCRAWLER Details</summary>
+<table style="margin-top:10px;">
+<tr><th class="text-left">FAILCRAWLER</th><th>Tot</th>
+<th style="background:#4caf50;">RPx</th><th style="background:#1976d2;">BIOS</th>
+<th style="background:#c2185b;">HW+SOP</th><th style="background:#f57c00;">Comb</th><th>Fix Type</th></tr>
+<tr><td class="text-left">UNKNOWN</td><td>17</td>
+<td class="text-green">0</td>
+<td class="text-blue">12</td>
+<td class="text-pink">0</td>
+<td class="text-orange">12</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">MULTI_BANK_MULTI_DQ</td><td>12</td>
+<td class="text-green">0</td>
+<td class="text-blue">12</td>
+<td class="text-pink">0</td>
+<td class="text-orange">12</td>
+<td style="font-weight:bold;">BIOS</td></tr>
+<tr><td class="text-left">SYS_ODD_BURST_BIT</td><td>2</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">HGDC</td><td>2</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SECTION_TWO_ROW</td><td>1</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">UNKNOWN</td><td>5</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SINGLE_BURST_SINGLE_ROW</td><td>3</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">DB</td><td>2</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">UNKNOWN</td><td>4</td>
+<td class="text-green">0</td>
+<td class="text-blue">4</td>
+<td class="text-pink">0</td>
+<td class="text-orange">4</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">MULTI_BANK_MULTI_DQ</td><td>4</td>
+<td class="text-green">0</td>
+<td class="text-blue">4</td>
+<td class="text-pink">0</td>
+<td class="text-orange">4</td>
+<td style="font-weight:bold;">BIOS</td></tr>
+<tr><td class="text-left">UNKNOWN</td><td>2</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SYS_EVEN_BURST_BIT</td><td>1</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SYS_ODD_BURST_BIT</td><td>1</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">UNKNOWN</td><td>2</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+<tr><td class="text-left">SB</td><td>2</td>
+<td class="text-green">0</td>
+<td class="text-blue">0</td>
+<td class="text-pink">0</td>
+<td class="text-orange">0</td>
+<td style="font-weight:bold;">-</td></tr>
+</table></details>
+</div>
+</div>
+</div>
+</div></body></html>
