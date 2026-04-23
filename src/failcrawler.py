@@ -3668,6 +3668,13 @@ def calculate_recovery_projection(
                     is_bios_100 = bool(fcs & {f.upper() for f in BIOS_FIX_FAILCRAWLERS_100PCT})
                     is_bios_50 = any(matches_bios_50_pattern(fc) for fc in fcs) and not is_bios_100
 
+        # ROW MSN_STATUS: BIOS patterns do NOT apply - only RPx can recover Row failures
+        # Row failures are potential DRAM issues; SINGLE_BURST_SINGLE_ROW contains "BURST"
+        # but since MSN_STATUS=Row, the failure is classified as row-level, not burst-recoverable
+        if msn_status in DRAM_MSN_STATUS:
+            is_bios_100 = False
+            is_bios_50 = False
+
         # Check for DRAM-related failures (potential actual silicon issues - NO recovery)
         # - SB/DB FAILCRAWLERs: Single Bit / Double Bit errors (can't be fixed by RPx)
         # - ROW MSN_STATUS: Row failures that don't get cleared by RPx
@@ -3695,8 +3702,9 @@ def calculate_recovery_projection(
                             except (TypeError, ValueError):
                                 pass
 
-        # ROW MSN_STATUS without RPx recovery is DRAM-related (only if no BIOS recovery)
-        if msn_status in DRAM_MSN_STATUS and not is_rpx and not is_bios_100 and not is_bios_50:
+        # ROW MSN_STATUS without RPx recovery is DRAM-related (potential silicon issue)
+        # Note: BIOS patterns don't apply to ROW - only RPx verification can recover
+        if msn_status in DRAM_MSN_STATUS and not is_rpx:
             is_dram_row = True
 
         is_dram = is_dram_fc or is_dram_row
@@ -4232,10 +4240,14 @@ def create_dpm_formula_info_html(dark_mode: bool = False) -> str:
                 </tr>
                 <tr>
                     <td style="padding: 4px 0;"><span style="background: #d32f2f; color: white; padding: 1px 4px; border-radius: 2px;">No Recovery</span></td>
-                    <td>SB/DB FAILCRAWLERs, Row (no RPx)</td>
+                    <td>SB/DB FAILCRAWLERs, Row MSN_STATUS</td>
                     <td>DRAM-related (no fix available)</td>
                 </tr>
             </table>
+            <div style="font-size: 8px; color: {muted_color}; margin-top: 6px; padding-top: 6px; border-top: 1px dashed {border_color};">
+                <b>Note:</b> ROW MSN_STATUS never gets BIOS recovery (even with BURST patterns like SINGLE_BURST_SINGLE_ROW).
+                Row-classified failures are potential DRAM issues — only RPx verification can recover them.
+            </div>
         </div>
 
         <!-- Priority Order -->
