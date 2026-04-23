@@ -3709,6 +3709,14 @@ def calculate_recovery_projection(
             'recovered_msns': recovered_msns
         })
 
+    # Calculate total failed MSNs (for actual yield calculation)
+    # Note: This may overcount if same module fails multiple MSN_STATUS types
+    # but it's a reasonable approximation for yield impact
+    total_failed_msns = sum(
+        float(row.get('raw_count', 0)) if pd.notna(row.get('raw_count')) else 0
+        for _, row in hybrid_dpm_df.iterrows()
+    )
+
     # Calculate module-based yield recovery (MSNs / MUIN × 100)
     # Sum recovered MSNs from breakdown by recovery type
     rpx_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['is_rpx_target'] and not b['is_hw_sop_target'])
@@ -3754,6 +3762,7 @@ def calculate_recovery_projection(
         'bios_recovered_msns': round(bios_recovered_msns, 1),
         'hw_sop_recovered_msns': round(hw_sop_recovered_msns, 1),
         'total_recovered_msns': round(total_recovered_msns, 1),
+        'total_failed_msns': round(total_failed_msns, 1),
         'breakdown': breakdown
     }
 
@@ -4364,6 +4373,9 @@ def calculate_slt_combined_recovery(
 
     SLT Yield = HMB1 Yield × QMON Yield
 
+    Uses module-based yield calculation:
+        Step Yield = (Total MUIN - Failed MSNs) / Total MUIN × 100
+
     Args:
         hmb1_recovery: Recovery data from HMB1
         qmon_recovery: Recovery data from QMON
@@ -4374,35 +4386,46 @@ def calculate_slt_combined_recovery(
     if not hmb1_recovery or not qmon_recovery:
         return None
 
-    # Convert DPM to yield for each step
-    # Yield = 100 - (DPM / 10,000)
-    def dpm_to_yield(dpm):
-        return 100 - (dpm / 10_000)
+    # Calculate module-based yield (CORRECT method)
+    # Yield = (Total MUIN - Failed MSNs) / Total MUIN × 100
+    def calc_module_yield(total_muin, failed_msns):
+        if total_muin <= 0:
+            return 100.0
+        return ((total_muin - failed_msns) / total_muin) * 100
 
-    def yield_to_dpm(yield_pct):
-        return (100 - yield_pct) * 10_000
+    # Get MUIN and failed MSN counts
+    hmb1_muin = hmb1_recovery.get('total_muin', 0)
+    qmon_muin = qmon_recovery.get('total_muin', 0)
+    hmb1_failed = hmb1_recovery.get('total_failed_msns', 0)
+    qmon_failed = qmon_recovery.get('total_failed_msns', 0)
+    hmb1_recovered = hmb1_recovery.get('total_recovered_msns', 0)
+    qmon_recovered = qmon_recovery.get('total_recovered_msns', 0)
 
-    # Current yields (before recovery)
-    hmb1_current_yield = dpm_to_yield(hmb1_recovery['total_dpm'])
-    qmon_current_yield = dpm_to_yield(qmon_recovery['total_dpm'])
+    # Current yields (before recovery) - module-based
+    hmb1_current_yield = calc_module_yield(hmb1_muin, hmb1_failed)
+    qmon_current_yield = calc_module_yield(qmon_muin, qmon_failed)
     slt_current_yield = (hmb1_current_yield / 100) * (qmon_current_yield / 100) * 100
 
-    # Projected yields (after recovery)
-    hmb1_remaining_dpm = hmb1_recovery['remaining_dpm']
-    qmon_remaining_dpm = qmon_recovery['remaining_dpm']
-    hmb1_projected_yield = dpm_to_yield(hmb1_remaining_dpm)
-    qmon_projected_yield = dpm_to_yield(qmon_remaining_dpm)
+    # Projected yields (after recovery) - module-based
+    # Failed after recovery = Failed - Recovered
+    hmb1_failed_after = max(0, hmb1_failed - hmb1_recovered)
+    qmon_failed_after = max(0, qmon_failed - qmon_recovered)
+    hmb1_projected_yield = calc_module_yield(hmb1_muin, hmb1_failed_after)
+    qmon_projected_yield = calc_module_yield(qmon_muin, qmon_failed_after)
     slt_projected_yield = (hmb1_projected_yield / 100) * (qmon_projected_yield / 100) * 100
 
-    # Recovery amounts
+    # Recovery amounts (yield gain in percentage points)
     hmb1_yield_gain = hmb1_projected_yield - hmb1_current_yield
     qmon_yield_gain = qmon_projected_yield - qmon_current_yield
     slt_yield_gain = slt_projected_yield - slt_current_yield
 
     return {
         'hmb1': {
+            'total_muin': hmb1_muin,
+            'total_failed_msns': hmb1_failed,
+            'total_recovered_msns': hmb1_recovered,
             'current_dpm': hmb1_recovery['total_dpm'],
-            'remaining_dpm': hmb1_remaining_dpm,
+            'remaining_dpm': hmb1_recovery['remaining_dpm'],
             'current_yield': round(hmb1_current_yield, 4),
             'projected_yield': round(hmb1_projected_yield, 4),
             'yield_gain': round(hmb1_yield_gain, 4),
@@ -4411,8 +4434,11 @@ def calculate_slt_combined_recovery(
             'hw_sop_dpm': hmb1_recovery['hw_sop_dpm'],
         },
         'qmon': {
+            'total_muin': qmon_muin,
+            'total_failed_msns': qmon_failed,
+            'total_recovered_msns': qmon_recovered,
             'current_dpm': qmon_recovery['total_dpm'],
-            'remaining_dpm': qmon_remaining_dpm,
+            'remaining_dpm': qmon_recovery['remaining_dpm'],
             'current_yield': round(qmon_current_yield, 4),
             'projected_yield': round(qmon_projected_yield, 4),
             'yield_gain': round(qmon_yield_gain, 4),
