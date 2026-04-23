@@ -3709,7 +3709,7 @@ def calculate_recovery_projection(
             recovered_dpm = row['DPM']
         elif is_dram_fc:
             # SB/DB FAILCRAWLERs = actual DRAM failures, no recovery possible
-            recovery_type = 'DRAM'
+            recovery_type = 'No Recovery'
             recovered_dpm = 0
         elif is_bios_100:
             recovery_type = 'BIOS'
@@ -3722,7 +3722,7 @@ def calculate_recovery_projection(
             recovered_dpm = row['DPM'] * rpx_recovery_rate
         elif is_dram_row:
             # ROW MSN_STATUS without other recovery = potential DRAM failure
-            recovery_type = 'DRAM'
+            recovery_type = 'No Recovery'
             recovered_dpm = 0
         else:
             recovery_type = None
@@ -3767,11 +3767,21 @@ def calculate_recovery_projection(
         for _, row in hybrid_dpm_df.iterrows()
     )
 
+    # Calculate summary DPMs FROM breakdown (using priority-based recovery_type assignments)
+    # This prevents double-counting that occurs when calculating independently
+    rpx_dpm_actual = sum(b['recovered_dpm'] for b in breakdown if b['recovery_type'] == 'RPx✓')
+    bios_dpm_actual = sum(b['recovered_dpm'] for b in breakdown if b['recovery_type'] in ('BIOS', 'BIOS*'))
+    hw_sop_dpm_actual = sum(b['recovered_dpm'] for b in breakdown if b['recovery_type'] == 'HW+SOP')
+    dram_dpm = sum(b['dpm'] for b in breakdown if b['recovery_type'] == 'No Recovery')  # DRAM-related, no recovery
+
+    # Combined = all recoverable DPM (excludes DRAM which has no recovery)
+    combined_dpm_actual = rpx_dpm_actual + bios_dpm_actual + hw_sop_dpm_actual
+    remaining_dpm_actual = total_dpm - combined_dpm_actual - dram_dpm  # Unknown failures
+
     # Calculate module-based yield recovery (MSNs / MUIN × 100)
-    # Sum recovered MSNs from breakdown by recovery type
-    rpx_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['is_rpx_target'] and not b['is_hw_sop_target'])
-    bios_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['is_bios_target'] and not b['is_hw_sop_target'])
-    hw_sop_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['is_hw_sop_target'])
+    rpx_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['recovery_type'] == 'RPx✓')
+    bios_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['recovery_type'] in ('BIOS', 'BIOS*'))
+    hw_sop_recovered_msns = sum(b['recovered_msns'] for b in breakdown if b['recovery_type'] == 'HW+SOP')
     total_recovered_msns = rpx_recovered_msns + bios_recovered_msns + hw_sop_recovered_msns
 
     # Calculate yield percentages (module-based denominator)
@@ -3787,22 +3797,24 @@ def calculate_recovery_projection(
         'step': step,
         'total_dpm': round(total_dpm, 2),
         'total_muin': total_muin,
-        'rpx_dpm': round(rpx_dpm, 2),
+        'rpx_dpm': round(rpx_dpm_actual, 2),
         'rpx_verified': True if verified_rpx_data else False,
         'rpx_verified_count': rpx_verified_count,
         'rpx_screened_count': rpx_screened_count,
         'rpx_recovery_rate': rpx_recovery_rate,
-        'bios_dpm': round(total_bios_dpm, 2),  # Total BIOS = 100% + 50%
-        'bios_100_dpm': round(bios_dpm, 2),
+        'bios_dpm': round(bios_dpm_actual, 2),
+        'bios_100_dpm': round(bios_dpm, 2),  # Keep for detail breakdown
         'bios_50_dpm': round(bios_partial_dpm, 2),
-        'hw_sop_dpm': round(hw_sop_dpm, 2),
-        'combined_dpm': round(combined_dpm, 2),
-        'remaining_dpm': round(remaining_dpm, 2),
-        'rpx_pct': round(rpx_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
-        'bios_pct': round(total_bios_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
-        'hw_sop_pct': round(hw_sop_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
-        'combined_pct': round(combined_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
-        'remaining_pct': round(remaining_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'hw_sop_dpm': round(hw_sop_dpm_actual, 2),
+        'dram_dpm': round(dram_dpm, 2),  # DRAM = no recovery
+        'combined_dpm': round(combined_dpm_actual, 2),
+        'remaining_dpm': round(remaining_dpm_actual, 2),
+        'rpx_pct': round(rpx_dpm_actual / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'bios_pct': round(bios_dpm_actual / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'hw_sop_pct': round(hw_sop_dpm_actual / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'dram_pct': round(dram_dpm / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'combined_pct': round(combined_dpm_actual / total_dpm * 100, 1) if total_dpm > 0 else 0,
+        'remaining_pct': round(remaining_dpm_actual / total_dpm * 100, 1) if total_dpm > 0 else 0,
         # Module-based yield recovery (percentage points)
         'rpx_yield': rpx_yield,
         'bios_yield': bios_yield,
@@ -4055,7 +4067,7 @@ def create_recovery_projection_html(
             elif item.get('is_rpx_target'):
                 recovery_badge = '<span style="background: #4caf50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">RPx</span>'
             elif item.get('is_dram'):
-                recovery_badge = '<span style="background: #d32f2f; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">DRAM</span>'
+                recovery_badge = '<span style="background: #d32f2f; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">No Recovery<br><span style="font-size: 6px; opacity: 0.8;">(DRAM)</span></span>'
             else:
                 recovery_badge = '<span style="color: #888;">-</span>'
                 recovered_dpm = 0
@@ -4080,7 +4092,7 @@ def create_recovery_projection_html(
 
     html += '''
         <div style="margin-top: 8px; font-size: 9px; color: #888; text-align: right;">
-            <b>RPx:</b> False miscompare | <b>BIOS:</b> MULTI_BANK_MULTI_DQ (100%) | <b>BIOS 50%:</b> Bank/Burst/Periph | <b>HW+SOP:</b> Hang | <b style="color:#d32f2f;">DRAM:</b> SB/DB/Row (no recovery)
+            <b>RPx:</b> False miscompare | <b>BIOS:</b> MULTI_BANK_MULTI_DQ (100%) | <b>BIOS 50%:</b> Bank/Burst/Periph | <b>HW+SOP:</b> Hang | <b style="color:#d32f2f;">No Recovery:</b> SB/DB/Row (DRAM-related)
         </div>
     </div>
     '''
@@ -4331,7 +4343,7 @@ def create_failcrawler_breakdown_html(
             return ('HW+SOP', 1.0, '#ff9800')
         # DRAM FAILCRAWLER: SB/DB = actual bit errors, no recovery possible
         if fc_upper in {f.upper() for f in DRAM_FAILCRAWLERS}:
-            return ('DRAM', 0.0, '#d32f2f')  # Red = no recovery, actual failure
+            return ('No Recovery', 0.0, '#d32f2f')  # Red = no recovery, actual failure
         # BIOS 100%: MULTI_BANK_MULTI_DQ (projected)
         if fc in BIOS_FIX_FAILCRAWLERS_100PCT:
             return ('BIOS', 1.0, '#2196f3')
@@ -4343,7 +4355,7 @@ def create_failcrawler_breakdown_html(
             return ('RPx✓', rpx_recovery_rate, '#9c27b0')  # Checkmark = verified
         # DRAM ROW: ROW MSN_STATUS without RPx = potential DRAM failure
         if msn in DRAM_MSN_STATUS:
-            return ('DRAM', 0.0, '#d32f2f')  # Red = no recovery
+            return ('No Recovery', 0.0, '#d32f2f')  # Red = no recovery
         return (None, 0.0, '#888')
 
     step_df['recovery_info'] = step_df.apply(get_recovery_info, axis=1)
