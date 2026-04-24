@@ -3992,7 +3992,7 @@ def create_recovery_projection_html(
         <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px;">
             <!-- New RPx Fix -->
             <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 8px; border-radius: 6px; border-left: 4px solid #4caf50;">
-                <div style="font-size: 16px; font-weight: bold; color: #2e7d32;">{rpx_dpm:.1f}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #2e7d32;">{rpx_dpm:.1f} <span style="font-size: 11px; font-weight: normal;">({rpx_pct:.0f}%)</span></div>
                 <div style="font-size: 9px; color: #388e3c;">New RPx Fix</div>
                 <div style="font-size: 8px; color: #666; margin-top: 2px;">
                     <span style="background: #4caf50; color: white; padding: 1px 3px; border-radius: 2px; font-size: 7px;">VERIFIED</span>
@@ -4001,7 +4001,7 @@ def create_recovery_projection_html(
 
             <!-- New BIOS Fix -->
             <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 8px; border-radius: 6px; border-left: 4px solid #1976d2;">
-                <div style="font-size: 16px; font-weight: bold; color: #1565c0;">{bios_dpm:.1f}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #1565c0;">{bios_dpm:.1f} <span style="font-size: 11px; font-weight: normal;">({bios_pct:.0f}%)</span></div>
                 <div style="font-size: 9px; color: #1976d2;">New BIOS Fix</div>
                 <div style="font-size: 8px; color: #666; margin-top: 2px;">
                     <span style="background: #ff9800; color: white; padding: 1px 3px; border-radius: 2px; font-size: 7px;">PROJECTED</span>
@@ -4010,7 +4010,7 @@ def create_recovery_projection_html(
 
             <!-- HW+SOP Fix -->
             <div style="background: linear-gradient(135deg, #fce4ec, #f8bbd0); padding: 8px; border-radius: 6px; border-left: 4px solid #c2185b;">
-                <div style="font-size: 16px; font-weight: bold; color: #ad1457;">{hw_sop_dpm:.1f}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #ad1457;">{hw_sop_dpm:.1f} <span style="font-size: 11px; font-weight: normal;">({hw_sop_pct:.0f}%)</span></div>
                 <div style="font-size: 9px; color: #c2185b;">HW+SOP Fix</div>
                 <div style="font-size: 8px; color: #666; margin-top: 2px;">
                     <span style="background: #ff9800; color: white; padding: 1px 3px; border-radius: 2px; font-size: 7px;">PROJECTED</span>
@@ -4019,16 +4019,14 @@ def create_recovery_projection_html(
 
             <!-- Combined -->
             <div style="background: linear-gradient(135deg, #ede7f6, #d1c4e9); padding: 8px; border-radius: 6px; border-left: 4px solid #7b1fa2;">
-                <div style="font-size: 16px; font-weight: bold; color: #6a1b9a;">{combined_dpm:.1f}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #6a1b9a;">{combined_dpm:.1f} <span style="font-size: 11px; font-weight: normal;">({combined_pct:.0f}%)</span></div>
                 <div style="font-size: 9px; color: #7b1fa2;">Total Recoverable</div>
-                <div style="font-size: 8px; color: #666; margin-top: 2px;">{combined_pct:.0f}% of total</div>
             </div>
 
             <!-- Remaining -->
             <div style="background: linear-gradient(135deg, #fff3e0, #ffe0b2); padding: 8px; border-radius: 6px; border-left: 4px solid #f57c00;">
-                <div style="font-size: 16px; font-weight: bold; color: #e65100;">{remaining_dpm:.1f}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #e65100;">{remaining_dpm:.1f} <span style="font-size: 11px; font-weight: normal;">({remaining_pct:.0f}%)</span></div>
                 <div style="font-size: 9px; color: #f57c00;">Remaining</div>
-                <div style="font-size: 8px; color: #666; margin-top: 2px;">{remaining_pct:.0f}% needs analysis</div>
             </div>
         </div>
 
