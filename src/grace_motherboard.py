@@ -795,10 +795,19 @@ def detect_sop_violations_msn(
     violation_msns = []
     not_reseated_count = 0
 
-    # SOP Logic:
+    # SOP Logic (HMB1 HANG Failure SOP):
     # - HUNG1 = First hang, OK to retest on same MOBO
     # - HUNG2 = Second hang, module MUST be moved to different MOBO after this
-    # - Violation = Any test AFTER HUNG2 on same MOBO (i.e., HUNG or another entry after HUNG2)
+    # - Violation = Any test AFTER HUNG2 on same MOBO
+    #
+    # Valid sequences (no violation):
+    #   - HUNG1 alone
+    #   - HUNG1 → HUNG2
+    #   - HANG alone (generic single hang)
+    #
+    # Violation sequences:
+    #   - HUNG1 → HUNG2 → any further hang (3+ entries)
+    #   - HUNG2 followed by any hang entry in the sequence
 
     for msn in hang_df['MSN'].unique():
         msn_data = hang_df[hang_df['MSN'] == msn]
@@ -817,14 +826,32 @@ def detect_sop_violations_msn(
             if same_site and len(msn_sbins) > 1:
                 not_reseated_count += 1
 
-        # Check for violation: test after HUNG2 on same machine
-        # HUNG (third+ hang) indicates retest after HUNG2 - this is the violation
-        has_hung_after_hung2 = any(s in ['HUNG', 'HANG'] for s in msn_sbins)
+        # Check for SOP violation by analyzing the sequence
+        is_violation = False
 
-        # Also violation if there are 3+ hang entries (HUNG1 -> HUNG2 -> another test)
-        has_three_or_more_hangs = len(msn_sbins) >= 3
+        # Find if HUNG2 exists and check if there's anything after it
+        hung2_variants = ['HUNG2', 'HANG2']
+        has_hung2 = any(s in hung2_variants for s in msn_sbins)
 
-        if has_hung_after_hung2 or has_three_or_more_hangs:
+        if has_hung2:
+            # Find the position of HUNG2 in the sequence
+            hung2_index = -1
+            for i, sbin in enumerate(msn_sbins):
+                if sbin in hung2_variants:
+                    hung2_index = i
+                    break
+
+            # Violation if there's any hang entry AFTER HUNG2
+            if hung2_index >= 0 and hung2_index < len(msn_sbins) - 1:
+                # There are entries after HUNG2 - this is a violation
+                is_violation = True
+
+        # Also check for 3+ hang entries on same MOBO (regardless of SBIN naming)
+        # This catches cases where SBIN naming might be inconsistent
+        if len(msn_sbins) >= 3:
+            is_violation = True
+
+        if is_violation:
             violation_msns.append(msn)
 
     return {
