@@ -4538,7 +4538,7 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
             if correlation_data:
                 corr_fig = create_msn_status_correlation_chart(correlation_data, dark_mode=False)
                 if corr_fig:
-                    st.plotly_chart(corr_fig, use_container_width=True)
+                    st.plotly_chart(corr_fig, use_container_width=True, key=f"corr_heatmap_{step}")
             else:
                 st.info("No correlation data available")
 
