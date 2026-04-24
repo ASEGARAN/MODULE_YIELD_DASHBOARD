@@ -4261,10 +4261,10 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
 def render_pareto_tab(filters: dict[str, Any]) -> None:
     """Render the Pareto Analysis tab with sub-tabs for FAILCRAWLER, Register Fallout, and cDPM Recovery."""
     st.header("Pareto Analysis")
-    st.info("📉 **FAILCRAWLER DPM:** cDPM by fail mode | **Register Fallout:** Top failed registers | **SLT cDPM Recovery:** HMB1/QMON recovery projections")
+    st.info("📉 **FAILCRAWLER DPM:** cDPM by fail mode | **Register Fallout:** Top failed registers | **SLT FID Recovery:** HMB1/QMON recovery projections")
 
     # Create sub-tabs
-    fc_tab, reg_tab, recovery_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout", "🔮 SLT cDPM Recovery"])
+    fc_tab, reg_tab, recovery_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout", "🔮 SLT FID Recovery"])
 
     with fc_tab:
         render_failcrawler_subtab(filters)
@@ -4277,10 +4277,10 @@ def render_pareto_tab(filters: dict[str, Any]) -> None:
 
 
 def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
-    """Render the SLT cDPM Recovery Simulation sub-tab with hybrid DPM and recovery projections."""
+    """Render the SLT FID Recovery Simulation sub-tab with FID DPM and recovery projections."""
     import streamlit.components.v1 as components
 
-    st.caption("**SLT cDPM Recovery Simulation** - Hybrid DPM approach with recovery projections (New RPx, New BIOS, HW+SOP)")
+    st.caption("**SLT FID Recovery Simulation** - FID DPM approach with recovery projections (New RPx, New BIOS, HW+SOP)")
 
     use_cache = st.session_state.get("use_cache", True)
 
@@ -4297,11 +4297,11 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
 
     # Show warning if HMFN is selected
     if has_hmfn:
-        st.warning("⚠️ **Note:** SLT cDPM Recovery analysis is only applicable for **HMB1** and **QMON** test steps. HMFN is excluded from this analysis.")
+        st.warning("⚠️ **Note:** SLT FID Recovery analysis is only applicable for **HMB1** and **QMON** test steps. HMFN is excluded from this analysis.")
 
     # Check if we have valid SLT steps
     if not slt_steps:
-        st.info("📋 Please select **HMB1** or **QMON** in the sidebar filters to use SLT cDPM Recovery analysis.")
+        st.info("📋 Please select **HMB1** or **QMON** in the sidebar filters to use SLT FID Recovery analysis.")
         return
 
     # Build filter display with optional density/speed
@@ -4520,11 +4520,11 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
             total_muin=step_total_muin, total_uin=step_total_uin
         )
 
-        # Layout: Hybrid DPM Table | Correlation Heatmap
+        # Layout: FID DPM Table | Correlation Heatmap
         col1, col2 = st.columns([1, 1.5])
 
         with col1:
-            # Hybrid DPM Table
+            # FID DPM Table
             dpm_html = create_hybrid_dpm_table_html(
                 hybrid_dpm_df=hybrid_dpm_df,
                 step=step,

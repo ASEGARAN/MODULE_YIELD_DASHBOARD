@@ -3354,18 +3354,17 @@ def calculate_hybrid_dpm(
     design_id: str = None
 ) -> pd.DataFrame:
     """
-    Calculate DPM using Kevin Roos's approach:
+    Calculate FID DPM:
     - ALL failure types: Unique failing MSNs / Total FIDs × 1M
     - Each MSN is counted ONCE per MSN_STATUS (no double-counting)
 
-    This aligns with Kevin's DPM table generator methodology where
-    DPM = (num_failing_msns / total_fids) * 1_000_000
+    Formula: DPM = (num_failing_msns / total_fids) * 1_000_000
 
     Args:
         msn_corr_df: FAILCRAWLER × MSN_STATUS correlation data
         fid_counts_df: FID-level data with unique module/FID counts
         step: Test step (HMFN, HMB1, QMON)
-        total_muin: Total modules tested (not used in Kevin's approach)
+        total_muin: Total modules tested (not used in FID DPM approach)
         total_uin: Total FIDs tested (denominator)
         design_id: Optional design ID filter
 
@@ -3452,14 +3451,14 @@ def calculate_recovery_projection(
     total_muin: int = 0
 ) -> dict:
     """
-    Calculate recovery projections based on hybrid DPM data.
+    Calculate recovery projections based on FID DPM data.
 
     Recovery Types:
     - New RPx (VERIFIED): False miscompare detection via script - actual verified data
     - New BIOS (PROJECTED): Targets MULTI_BANK_MULTI_DQ FAILCRAWLER (100%) and BANK/BURST/PERIPH (50%)
     - HW+SOP (PROJECTED): Targets Hang MSN_STATUS
 
-    DPM Calculation (Kevin Roos Method):
+    DPM Calculation:
         DPM = (Unique Failing MSNs / Total FIDs) × 1,000,000
         - Reflects fail mode severity relative to component population
 
@@ -3883,7 +3882,7 @@ def create_hybrid_dpm_table_html(
     <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="font-size: 12px; font-weight: 600; color: {text_color};">
-                📊 Hybrid DPM - {step}
+                📊 FID DPM - {step}
             </span>
             <span style="font-size: 10px; color: #888;">
                 Total UIN: {total_uin:,} FIDs
@@ -3931,7 +3930,7 @@ def create_hybrid_dpm_table_html(
         </tbody>
     </table>
     <div style="margin-top: 6px; font-size: 9px; color: #888;">
-        <b>DPM = Unique MSNs / Total FIDs × 1M</b> (Kevin Roos method) |
+        <b>DPM = Unique MSNs / Total FIDs × 1M</b> |
         <span style="background: #9c27b0; color: white; padding: 0 3px; border-radius: 2px;">M</span> Module-level |
         <span style="background: #00897b; color: white; padding: 0 3px; border-radius: 2px;">F</span> FID-level
     </div>
@@ -4143,10 +4142,10 @@ def create_dpm_formula_info_html(dark_mode: bool = False) -> str:
             📐 DPM & Yield Calculation Methodology
         </div>
 
-        <!-- Kevin Roos DPM Method -->
+        <!-- FID DPM Method -->
         <div style="background: {highlight_bg}; border-radius: 6px; padding: 10px; margin-bottom: 10px; border-left: 3px solid {accent_color};">
             <div style="font-size: 10px; font-weight: 600; color: {accent_color}; margin-bottom: 6px;">
-                DPM Calculation (Kevin Roos Method)
+                DPM Calculation
             </div>
             <div style="font-family: monospace; font-size: 11px; color: {text_color}; background: {bg_color}; padding: 6px; border-radius: 4px; margin-bottom: 6px;">
                 DPM = (Unique Failing MSNs / Total FIDs) × 1,000,000
