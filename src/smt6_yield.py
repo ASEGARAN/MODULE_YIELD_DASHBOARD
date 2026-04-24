@@ -425,6 +425,15 @@ def create_smt6_yield_chart(
     if df.empty:
         return None
 
+    # Aggregate by machine_id and workweek to combine data from multiple DIDs
+    # This ensures cumulative view when multiple DIDs are selected
+    df = df.groupby(['machine_id', 'workweek']).agg({
+        'uin_adj': 'sum',
+        'upass_adj': 'sum',
+    }).reset_index()
+    # Recalculate yield from aggregated counts
+    df['yield_pct'] = (df['upass_adj'] / df['uin_adj'] * 100).round(2)
+
     # Get unique workweeks and create fiscal labels
     workweeks = sorted(df['workweek'].unique())
 
@@ -521,8 +530,12 @@ def create_smt6_yield_chart(
     top_padding = 5 if show_data_labels else 2
     y_max = min(105, max_yield + top_padding)
 
-    # Update layout
-    title_did = f" - {design_id}" if design_id else ""
+    # Update layout - show "Combined" if multiple DIDs selected
+    if design_id:
+        design_ids = [d.strip().upper() for d in design_id.split(',')]
+        title_did = f" - {design_id}" if len(design_ids) == 1 else f" - Combined ({', '.join(design_ids)})"
+    else:
+        title_did = ""
     fig.update_layout(
         title=dict(
             text=f"SMT6 Machine Yield Trend{title_did}",
