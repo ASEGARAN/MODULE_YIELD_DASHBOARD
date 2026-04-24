@@ -18956,3 +18956,791 @@ tornado.websocket.WebSocketClosedError
 2026-04-23 20:56:56,936 - src.cache - INFO - Cleared 254 cache entries
 2026-04-23 20:57:14,199 - src.grace_motherboard - INFO - Running mtsums +fm command: /u/dramsoft/bin/mtsums -modff=socamm2 -ww=202607,202608,202609,202610,202611,202612,202613,202614,202615,202616 -step=hmb1,qmon +fm -format+=machine_id,mfg_workweek =islatest =isvalid +stdf +quiet +csv -dbase=Y6CP -module_speed=7500MTPS -test_facility=PENANG
 2026-04-23 20:57:53,703 - src.grace_motherboard - INFO - Fetched 3817 NVGRACE FM records
+2026-04-23 21:08:34,247 - __main__ - INFO - Fetch button clicked
+2026-04-23 21:08:34,247 - __main__ - INFO - ============================================================
+2026-04-23 21:08:34,247 - __main__ - INFO - FETCH DATA STARTED (PARALLEL, cache=ON)
+2026-04-23 21:08:34,247 - __main__ - INFO - Filters: {'form_factors': ['SOCAMM2'], 'test_steps': ['HMFN', 'HMB1', 'QMON'], 'design_ids': ['Y6CP', 'Y63N'], 'facility': 'all', 'start_ww': '202606', 'end_ww': '202615', 'densities': None, 'speeds': None}
+2026-04-23 21:08:34,250 - __main__ - INFO - Workweeks to fetch: ['202606', '202607', '202608', '202609', '202610', '202611', '202612', '202613', '202614', '202615']
+2026-04-23 21:08:34,251 - __main__ - INFO - Total frpt calls to make: 60 (running in parallel)
+2026-04-23 21:08:34,252 - src.frpt_runner - INFO - Running 60 commands in parallel with 8 workers
+2026-04-23 21:08:35,631 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202606
+2026-04-23 21:08:35,632 - src.frpt_runner - INFO - [1/60] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-23 21:08:40,117 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202612
+2026-04-23 21:08:40,118 - src.frpt_runner - INFO - [2/60] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-23 21:08:41,850 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202608
+2026-04-23 21:08:41,851 - src.frpt_runner - INFO - [3/60] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-23 21:08:44,857 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202609
+2026-04-23 21:08:44,858 - src.frpt_runner - INFO - [4/60] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-23 21:08:53,913 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202611
+2026-04-23 21:08:53,915 - src.frpt_runner - INFO - [5/60] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-23 21:08:54,747 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202607
+2026-04-23 21:08:54,748 - src.frpt_runner - INFO - [6/60] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-23 21:09:00,546 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202609
+2026-04-23 21:09:00,547 - src.frpt_runner - INFO - [7/60] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-23 21:09:02,817 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202606
+2026-04-23 21:09:02,829 - src.frpt_runner - INFO - [8/60] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-23 21:09:03,663 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202607
+2026-04-23 21:09:03,664 - src.frpt_runner - INFO - [9/60] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-23 21:09:06,643 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202614
+2026-04-23 21:09:06,644 - src.frpt_runner - INFO - [10/60] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-23 21:09:07,718 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202608
+2026-04-23 21:09:07,722 - src.frpt_runner - INFO - [11/60] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-23 21:09:08,662 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202610
+2026-04-23 21:09:08,664 - src.frpt_runner - INFO - [12/60] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-23 21:09:11,438 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202615
+2026-04-23 21:09:11,443 - src.frpt_runner - INFO - [13/60] Completed: HMFN/SOCAMM2/WW202615 - success=True
+2026-04-23 21:09:16,212 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202610
+2026-04-23 21:09:16,214 - src.frpt_runner - INFO - [14/60] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-23 21:09:16,734 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202611
+2026-04-23 21:09:16,746 - src.frpt_runner - INFO - [15/60] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-23 21:09:17,515 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202615
+2026-04-23 21:09:17,515 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202612
+2026-04-23 21:09:17,517 - src.frpt_runner - INFO - [16/60] Completed: HMB1/SOCAMM2/WW202615 - success=True
+2026-04-23 21:09:17,527 - src.frpt_runner - INFO - [17/60] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-23 21:09:20,459 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202606
+2026-04-23 21:09:20,460 - src.frpt_runner - INFO - [18/60] Completed: QMON/SOCAMM2/WW202606 - success=True
+2026-04-23 21:09:20,825 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202613
+2026-04-23 21:09:20,826 - src.frpt_runner - INFO - [19/60] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-23 21:09:22,150 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202609
+2026-04-23 21:09:22,151 - src.frpt_runner - INFO - [20/60] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-23 21:09:22,459 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202614
+2026-04-23 21:09:22,463 - src.frpt_runner - INFO - [21/60] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-23 21:09:25,051 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202607
+2026-04-23 21:09:25,054 - src.frpt_runner - INFO - [22/60] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-23 21:09:26,858 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202608
+2026-04-23 21:09:26,859 - src.frpt_runner - INFO - [23/60] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-23 21:09:29,448 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202606
+2026-04-23 21:09:29,452 - src.frpt_runner - INFO - [24/60] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-23 21:09:30,716 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202610
+2026-04-23 21:09:30,718 - src.frpt_runner - INFO - [25/60] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-23 21:09:31,632 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202615
+2026-04-23 21:09:31,635 - src.frpt_runner - INFO - [26/60] Completed: QMON/SOCAMM2/WW202615 - success=True
+2026-04-23 21:09:32,056 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202611
+2026-04-23 21:09:32,057 - src.frpt_runner - INFO - [27/60] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-23 21:09:32,527 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202612
+2026-04-23 21:09:32,528 - src.frpt_runner - INFO - [28/60] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-23 21:09:32,749 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202614
+2026-04-23 21:09:32,750 - src.frpt_runner - INFO - [29/60] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-23 21:09:32,966 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202607
+2026-04-23 21:09:32,967 - src.frpt_runner - INFO - [30/60] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-23 21:09:33,040 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202613
+2026-04-23 21:09:33,042 - src.frpt_runner - INFO - [31/60] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-23 21:09:33,134 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202608
+2026-04-23 21:09:33,148 - src.frpt_runner - INFO - [32/60] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-23 21:09:33,319 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202609
+2026-04-23 21:09:33,323 - src.frpt_runner - INFO - [33/60] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-23 21:09:34,362 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202610
+2026-04-23 21:09:34,382 - src.frpt_runner - INFO - [34/60] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-23 21:09:34,473 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202613
+2026-04-23 21:09:34,475 - src.frpt_runner - INFO - [35/60] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-23 21:09:34,745 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202612
+2026-04-23 21:09:34,747 - src.frpt_runner - INFO - [36/60] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-23 21:09:34,843 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202611
+2026-04-23 21:09:34,846 - src.frpt_runner - INFO - [37/60] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-23 21:09:34,918 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202606
+2026-04-23 21:09:34,919 - src.frpt_runner - INFO - [38/60] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-23 21:09:35,530 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202615
+2026-04-23 21:09:35,536 - src.frpt_runner - INFO - [39/60] Completed: HMFN/SOCAMM2/WW202615 - success=True
+2026-04-23 21:09:35,561 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202608
+2026-04-23 21:09:35,563 - src.frpt_runner - INFO - [40/60] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-23 21:09:35,857 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202607
+2026-04-23 21:09:35,863 - src.frpt_runner - INFO - [41/60] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-23 21:09:36,119 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202613
+2026-04-23 21:09:36,130 - src.frpt_runner - INFO - [42/60] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-23 21:09:36,413 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202610
+2026-04-23 21:09:36,416 - src.frpt_runner - INFO - [43/60] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-23 21:09:36,554 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202609
+2026-04-23 21:09:36,556 - src.frpt_runner - INFO - [44/60] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-23 21:09:36,644 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202611
+2026-04-23 21:09:36,645 - src.frpt_runner - INFO - [45/60] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-23 21:09:37,045 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202613
+2026-04-23 21:09:37,046 - src.frpt_runner - INFO - [46/60] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-23 21:09:37,327 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202614
+2026-04-23 21:09:37,329 - src.frpt_runner - INFO - [47/60] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-23 21:09:37,515 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202612
+2026-04-23 21:09:37,516 - src.frpt_runner - INFO - [48/60] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-23 21:09:38,113 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202606
+2026-04-23 21:09:38,114 - src.frpt_runner - INFO - [49/60] Completed: QMON/SOCAMM2/WW202606 - success=True
+2026-04-23 21:09:38,219 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202607
+2026-04-23 21:09:38,220 - src.frpt_runner - INFO - [50/60] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-23 21:09:38,228 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202608
+2026-04-23 21:09:38,241 - src.frpt_runner - INFO - [51/60] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-23 21:09:38,655 - src.cache - INFO - Cached result for HMFN/SOCAMM2/WW202614
+2026-04-23 21:09:38,656 - src.frpt_runner - INFO - [52/60] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-23 21:09:38,669 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202609
+2026-04-23 21:09:38,713 - src.frpt_runner - INFO - [53/60] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-23 21:09:38,915 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202610
+2026-04-23 21:09:38,918 - src.frpt_runner - INFO - [54/60] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-23 21:09:39,238 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202611
+2026-04-23 21:09:39,240 - src.frpt_runner - INFO - [55/60] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-23 21:09:39,245 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202613
+2026-04-23 21:09:39,250 - src.frpt_runner - INFO - [56/60] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-23 21:09:39,531 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202614
+2026-04-23 21:09:39,534 - src.frpt_runner - INFO - [57/60] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-23 21:09:39,816 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202612
+2026-04-23 21:09:39,817 - src.frpt_runner - INFO - [58/60] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-23 21:09:40,651 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202615
+2026-04-23 21:09:40,652 - src.frpt_runner - INFO - [59/60] Completed: HMB1/SOCAMM2/WW202615 - success=True
+2026-04-23 21:09:41,069 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202615
+2026-04-23 21:09:41,070 - src.frpt_runner - INFO - [60/60] Completed: QMON/SOCAMM2/WW202615 - success=True
+2026-04-23 21:09:41,073 - __main__ - INFO - Processing result: HMFN/WW202606 success=True stdout_len=2117
+2026-04-23 21:09:41,073 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202606
+2026-04-23 21:09:41,073 - __main__ - INFO - Processing result: HMFN/WW202612 success=True stdout_len=9720
+2026-04-23 21:09:41,073 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202612
+2026-04-23 21:09:41,073 - __main__ - INFO - Processing result: HMFN/WW202608 success=True stdout_len=3017
+2026-04-23 21:09:41,073 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202608
+2026-04-23 21:09:41,073 - __main__ - INFO - Processing result: HMFN/WW202609 success=True stdout_len=3433
+2026-04-23 21:09:41,073 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202609
+2026-04-23 21:09:41,073 - __main__ - INFO - Processing result: HMFN/WW202611 success=True stdout_len=6723
+2026-04-23 21:09:41,073 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202611
+2026-04-23 21:09:41,073 - __main__ - INFO - Processing result: HMFN/WW202607 success=True stdout_len=5212
+2026-04-23 21:09:41,073 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202607
+2026-04-23 21:09:41,074 - __main__ - INFO - Processing result: HMB1/WW202609 success=True stdout_len=2834
+2026-04-23 21:09:41,074 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202609
+2026-04-23 21:09:41,074 - __main__ - INFO - Processing result: HMB1/WW202606 success=True stdout_len=3075
+2026-04-23 21:09:41,074 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202606
+2026-04-23 21:09:41,074 - __main__ - INFO - Processing result: HMB1/WW202607 success=True stdout_len=2998
+2026-04-23 21:09:41,074 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202607
+2026-04-23 21:09:41,074 - __main__ - INFO - Processing result: HMFN/WW202614 success=True stdout_len=5863
+2026-04-23 21:09:41,074 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202614
+2026-04-23 21:09:41,074 - __main__ - INFO - Processing result: HMB1/WW202608 success=True stdout_len=3047
+2026-04-23 21:09:41,074 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202608
+2026-04-23 21:09:41,074 - __main__ - INFO - Processing result: HMFN/WW202610 success=True stdout_len=4011
+2026-04-23 21:09:41,074 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202610
+2026-04-23 21:09:41,075 - __main__ - INFO - Processing result: HMFN/WW202615 success=True stdout_len=4114
+2026-04-23 21:09:41,075 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202615
+2026-04-23 21:09:41,075 - __main__ - INFO - Processing result: HMB1/WW202610 success=True stdout_len=2998
+2026-04-23 21:09:41,075 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202610
+2026-04-23 21:09:41,075 - __main__ - INFO - Processing result: HMB1/WW202611 success=True stdout_len=3005
+2026-04-23 21:09:41,075 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202611
+2026-04-23 21:09:41,075 - __main__ - INFO - Processing result: HMB1/WW202615 success=True stdout_len=4031
+2026-04-23 21:09:41,075 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202615
+2026-04-23 21:09:41,075 - __main__ - INFO - Processing result: HMB1/WW202612 success=True stdout_len=2991
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202612
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: QMON/WW202606 success=True stdout_len=2991
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202606
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: HMB1/WW202613 success=True stdout_len=4115
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202613
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: QMON/WW202609 success=True stdout_len=2358
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202609
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: HMB1/WW202614 success=True stdout_len=4171
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202614
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: QMON/WW202607 success=True stdout_len=3124
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202607
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: QMON/WW202608 success=True stdout_len=3019
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202608
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: HMFN/WW202606 success=True stdout_len=397
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202606
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: QMON/WW202610 success=True stdout_len=3047
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202610
+2026-04-23 21:09:41,076 - __main__ - INFO - Processing result: QMON/WW202615 success=True stdout_len=4143
+2026-04-23 21:09:41,076 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202615
+2026-04-23 21:09:41,077 - __main__ - INFO - Processing result: QMON/WW202611 success=True stdout_len=2998
+2026-04-23 21:09:41,077 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202611
+2026-04-23 21:09:41,078 - __main__ - INFO - Processing result: QMON/WW202612 success=True stdout_len=2984
+2026-04-23 21:09:41,079 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202612
+2026-04-23 21:09:41,079 - __main__ - INFO - Processing result: QMON/WW202614 success=True stdout_len=4031
+2026-04-23 21:09:41,080 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202614
+2026-04-23 21:09:41,081 - __main__ - INFO - Processing result: HMFN/WW202607 success=True stdout_len=2117
+2026-04-23 21:09:41,082 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202607
+2026-04-23 21:09:41,082 - __main__ - INFO - Processing result: HMFN/WW202613 success=True stdout_len=6822
+2026-04-23 21:09:41,082 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202613
+2026-04-23 21:09:41,083 - __main__ - INFO - Processing result: HMFN/WW202608 success=True stdout_len=397
+2026-04-23 21:09:41,083 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202608
+2026-04-23 21:09:41,083 - __main__ - INFO - Processing result: HMFN/WW202609 success=True stdout_len=397
+2026-04-23 21:09:41,084 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202609
+2026-04-23 21:09:41,085 - __main__ - INFO - Processing result: HMFN/WW202610 success=True stdout_len=2535
+2026-04-23 21:09:41,085 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202610
+2026-04-23 21:09:41,086 - __main__ - INFO - Processing result: HMFN/WW202613 success=True stdout_len=397
+2026-04-23 21:09:41,086 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202613
+2026-04-23 21:09:41,087 - __main__ - INFO - Processing result: HMFN/WW202612 success=True stdout_len=2117
+2026-04-23 21:09:41,087 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202612
+2026-04-23 21:09:41,088 - __main__ - INFO - Processing result: HMFN/WW202611 success=True stdout_len=2117
+2026-04-23 21:09:41,089 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202611
+2026-04-23 21:09:41,089 - __main__ - INFO - Processing result: HMB1/WW202606 success=True stdout_len=374
+2026-04-23 21:09:41,089 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202606
+2026-04-23 21:09:41,090 - __main__ - INFO - Processing result: HMFN/WW202615 success=True stdout_len=2471
+2026-04-23 21:09:41,090 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202615
+2026-04-23 21:09:41,090 - __main__ - INFO - Processing result: HMB1/WW202608 success=True stdout_len=374
+2026-04-23 21:09:41,091 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202608
+2026-04-23 21:09:41,091 - __main__ - INFO - Processing result: HMB1/WW202607 success=True stdout_len=374
+2026-04-23 21:09:41,091 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202607
+2026-04-23 21:09:41,091 - __main__ - INFO - Processing result: QMON/WW202613 success=True stdout_len=4038
+2026-04-23 21:09:41,091 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202613
+2026-04-23 21:09:41,091 - __main__ - INFO - Processing result: HMB1/WW202610 success=True stdout_len=374
+2026-04-23 21:09:41,091 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202610
+2026-04-23 21:09:41,091 - __main__ - INFO - Processing result: HMB1/WW202609 success=True stdout_len=374
+2026-04-23 21:09:41,091 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202609
+2026-04-23 21:09:41,091 - __main__ - INFO - Processing result: HMB1/WW202611 success=True stdout_len=374
+2026-04-23 21:09:41,092 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202611
+2026-04-23 21:09:41,094 - __main__ - INFO - Processing result: HMB1/WW202613 success=True stdout_len=374
+2026-04-23 21:09:41,095 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202613
+2026-04-23 21:09:41,095 - __main__ - INFO - Processing result: HMB1/WW202614 success=True stdout_len=374
+2026-04-23 21:09:41,095 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202614
+2026-04-23 21:09:41,095 - __main__ - INFO - Processing result: HMB1/WW202612 success=True stdout_len=2618
+2026-04-23 21:09:41,095 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202612
+2026-04-23 21:09:41,096 - __main__ - INFO - Processing result: QMON/WW202606 success=True stdout_len=374
+2026-04-23 21:09:41,097 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202606
+2026-04-23 21:09:41,097 - __main__ - INFO - Processing result: QMON/WW202607 success=True stdout_len=374
+2026-04-23 21:09:41,098 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202607
+2026-04-23 21:09:41,099 - __main__ - INFO - Processing result: QMON/WW202608 success=True stdout_len=374
+2026-04-23 21:09:41,099 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202608
+2026-04-23 21:09:41,100 - __main__ - INFO - Processing result: HMFN/WW202614 success=True stdout_len=3618
+2026-04-23 21:09:41,100 - __main__ - INFO - Added result for HMFN/SOCAMM2/WW202614
+2026-04-23 21:09:41,102 - __main__ - INFO - Processing result: QMON/WW202609 success=True stdout_len=374
+2026-04-23 21:09:41,102 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202609
+2026-04-23 21:09:41,102 - __main__ - INFO - Processing result: QMON/WW202610 success=True stdout_len=374
+2026-04-23 21:09:41,103 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202610
+2026-04-23 21:09:41,105 - __main__ - INFO - Processing result: QMON/WW202611 success=True stdout_len=374
+2026-04-23 21:09:41,105 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202611
+2026-04-23 21:09:41,105 - __main__ - INFO - Processing result: QMON/WW202613 success=True stdout_len=374
+2026-04-23 21:09:41,106 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202613
+2026-04-23 21:09:41,106 - __main__ - INFO - Processing result: QMON/WW202614 success=True stdout_len=374
+2026-04-23 21:09:41,107 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202614
+2026-04-23 21:09:41,107 - __main__ - INFO - Processing result: QMON/WW202612 success=True stdout_len=2148
+2026-04-23 21:09:41,107 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202612
+2026-04-23 21:09:41,108 - __main__ - INFO - Processing result: HMB1/WW202615 success=True stdout_len=2984
+2026-04-23 21:09:41,109 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202615
+2026-04-23 21:09:41,109 - __main__ - INFO - Processing result: QMON/WW202615 success=True stdout_len=3096
+2026-04-23 21:09:41,110 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202615
+2026-04-23 21:09:41,112 - __main__ - INFO - Fetch complete. Results collected: 60, Errors: 0
+2026-04-23 21:09:41,112 - __main__ - INFO - Result 0 [HMFN/SOCAMM2]: 2117 bytes, 7 pipes, 1 data lines with pipe
+2026-04-23 21:09:41,113 - __main__ - INFO -   Sample line: 202606_Y6CP_SOCAMM2_192GB_7500MTPS       15       14       14       14   100.00 |   100.00
+2026-04-23 21:09:41,113 - __main__ - INFO - Result 1 [HMFN/SOCAMM2]: 9720 bytes, 9 pipes, 3 data lines with pipe
+2026-04-23 21:09:41,113 - __main__ - INFO -   Sample line: 202612_Y6CP_SOCAMM2_192GB_7500MTPS      268      173      266      173    65.04 |    65.04    13.91     1.50     0.75   
+2026-04-23 21:09:41,114 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:09:41,114 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:09:41,122 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,122 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-23 21:09:41,123 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=6, lines_without_pipe=40, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-23 21:09:41,127 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 3 rows, BINs=[]
+2026-04-23 21:09:41,127 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:09:41,128 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:09:41,132 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,132 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:09:41,133 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=11, bin_cols=['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:09:41,135 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,136 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-23 21:09:41,137 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=6, lines_without_pipe=22, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-23 21:09:41,140 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 3 rows, BINs=[]
+2026-04-23 21:09:41,141 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_56_TRAIN-DQ', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_99_OTHER']
+2026-04-23 21:09:41,142 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=5, lines_without_pipe=17, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_56_TRAIN-DQ', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_99_OTHER']
+2026-04-23 21:09:41,145 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,146 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,146 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,149 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,150 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,150 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,153 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,154 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,155 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,158 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,158 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_83_CHK-OPT-']
+2026-04-23 21:09:41,159 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=6, lines_without_pipe=17, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_30_SPD-EEPR', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_83_CHK-OPT-']
+2026-04-23 21:09:41,162 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 3 rows, BINs=[]
+2026-04-23 21:09:41,163 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,163 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,170 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,170 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-23 21:09:41,171 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=15, bin_cols=['Bin_1_GOOD', 'Bin_10_SHORT', 'Bin_20_CONT', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER']
+2026-04-23 21:09:41,174 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,174 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_16_LEAK-LO-', 'Bin_20_CONT', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_98_SYS']
+2026-04-23 21:09:41,175 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=5, lines_without_pipe=11, bin_cols=['Bin_1_GOOD', 'Bin_16_LEAK-LO-', 'Bin_20_CONT', 'Bin_48_TFF-EXCR', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_98_SYS']
+2026-04-23 21:09:41,177 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,178 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,178 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,181 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,182 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,183 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,186 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,186 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,186 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,189 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,190 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,191 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,194 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,194 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,195 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,197 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,198 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,198 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,201 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,202 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,203 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=3, bin_cols=['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,206 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,207 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,208 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,211 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,211 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,211 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,214 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,226 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,226 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,233 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,233 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,234 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,237 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,237 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,239 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,242 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,243 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,243 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,246 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,246 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,247 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,250 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,251 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,252 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,256 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,256 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:09:41,257 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:09:41,260 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,261 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_84_GEN-REP-', 'Bin_99_OTHER']
+2026-04-23 21:09:41,261 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=6, lines_without_pipe=22, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_48_TFF-EXCR', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_84_GEN-REP-', 'Bin_99_OTHER']
+2026-04-23 21:09:41,264 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 3 rows, BINs=[]
+2026-04-23 21:09:41,265 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:09:41,266 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=4, bin_cols=['Bin_1_GOOD', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:09:41,269 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,270 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:09:41,271 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:09:41,274 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,274 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:09:41,275 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:09:41,278 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,279 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_65_SLT']
+2026-04-23 21:09:41,281 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=4, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_65_SLT']
+2026-04-23 21:09:41,284 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,285 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,285 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,288 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,290 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,290 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=4, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,293 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,294 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_16_LEAK-LO-', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:09:41,296 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=5, lines_without_pipe=8, bin_cols=['Bin_1_GOOD', 'Bin_16_LEAK-LO-', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:09:41,298 - src.frpt_parser - INFO - parse_multiple: HMFN/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-23 21:09:41,300 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:09:41,300 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:09:41,304 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,305 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,305 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,308 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,311 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,311 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:09:41,313 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-23 21:09:41,335 - src.frpt_parser - INFO - parse_multiple: Combined 40 DataFrames -> 57 rows, BINs=[]
+2026-04-23 21:09:41,336 - __main__ - INFO - Parsed DataFrame: 57 rows, columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:09:41,337 - __main__ - INFO - BIN columns after parsing: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:09:41,367 - __main__ - INFO - Fetch successful: 57 records
+2026-04-23 21:09:41,710 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:09:41,711 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:09:41,725 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+0      100.00          NaN  ...              NaN              NaN
+1       65.04        13.91  ...              NaN              NaN
+2      100.00         0.00  ...              NaN              NaN
+3        0.00        17.54  ...              NaN              NaN
+4       98.05         0.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:09:41,727 - __main__ - INFO - Bin chart: Total non-zero bin values=192
+2026-04-23 21:12:53,189 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:12:53,190 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:12:53,204 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+0      100.00          NaN  ...              NaN              NaN
+1       65.04        13.91  ...              NaN              NaN
+2      100.00         0.00  ...              NaN              NaN
+3        0.00        17.54  ...              NaN              NaN
+4       98.05         0.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:12:53,205 - __main__ - INFO - Bin chart: Total non-zero bin values=192
+2026-04-23 21:12:53,412 - __main__ - INFO - ============================================================
+2026-04-23 21:12:53,413 - __main__ - INFO - FETCH PARETO DATA STARTED (cache=ON)
+2026-04-23 21:12:53,414 - __main__ - INFO - Total frpt calls for Pareto: 60
+2026-04-23 21:12:53,415 - src.frpt_runner - INFO - Running 60 commands in parallel with 8 workers
+2026-04-23 21:12:53,416 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202607
+2026-04-23 21:12:53,417 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202606
+2026-04-23 21:12:53,417 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202607
+2026-04-23 21:12:53,418 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202606
+2026-04-23 21:12:53,420 - src.frpt_runner - INFO - [1/60] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-23 21:12:53,420 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202609
+2026-04-23 21:12:53,421 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202610
+2026-04-23 21:12:53,422 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202612
+2026-04-23 21:12:53,422 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202608
+2026-04-23 21:12:53,423 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202613
+2026-04-23 21:12:53,424 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202611
+2026-04-23 21:12:53,425 - src.frpt_runner - INFO - [2/60] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-23 21:12:53,425 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202614
+2026-04-23 21:12:53,425 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202609
+2026-04-23 21:12:53,426 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202610
+2026-04-23 21:12:53,426 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202615
+2026-04-23 21:12:53,427 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202612
+2026-04-23 21:12:53,428 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202608
+2026-04-23 21:12:53,431 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202613
+2026-04-23 21:12:53,431 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202611
+2026-04-23 21:12:53,431 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202614
+2026-04-23 21:12:53,432 - src.frpt_runner - INFO - [3/60] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-23 21:12:53,433 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202606
+2026-04-23 21:12:53,434 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202615
+2026-04-23 21:12:53,434 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202607
+2026-04-23 21:12:53,436 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202609
+2026-04-23 21:12:53,437 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202608
+2026-04-23 21:12:53,437 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202606
+2026-04-23 21:12:53,438 - src.frpt_runner - INFO - [4/60] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-23 21:12:53,439 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202612
+2026-04-23 21:12:53,440 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202610
+2026-04-23 21:12:53,440 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202611
+2026-04-23 21:12:53,442 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202613
+2026-04-23 21:12:53,443 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202607
+2026-04-23 21:12:53,443 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202609
+2026-04-23 21:12:53,443 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202608
+2026-04-23 21:12:53,444 - src.frpt_runner - INFO - [5/60] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-23 21:12:53,445 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202612
+2026-04-23 21:12:53,445 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202610
+2026-04-23 21:12:53,445 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202611
+2026-04-23 21:12:53,446 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202614
+2026-04-23 21:12:53,446 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202613
+2026-04-23 21:12:53,449 - src.frpt_runner - INFO - [6/60] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-23 21:12:53,449 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202615
+2026-04-23 21:12:53,451 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202606
+2026-04-23 21:12:53,452 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202607
+2026-04-23 21:12:53,452 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202608
+2026-04-23 21:12:53,453 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202614
+2026-04-23 21:12:53,454 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202615
+2026-04-23 21:12:53,454 - src.frpt_runner - INFO - [7/60] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-23 21:12:53,455 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202609
+2026-04-23 21:12:53,458 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202608
+2026-04-23 21:12:53,456 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202610
+2026-04-23 21:12:53,457 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202612
+2026-04-23 21:12:53,458 - src.frpt_runner - INFO - [8/60] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-23 21:12:53,455 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202611
+2026-04-23 21:12:53,461 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202606
+2026-04-23 21:12:53,462 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202609
+2026-04-23 21:12:53,462 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202613
+2026-04-23 21:12:53,462 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202610
+2026-04-23 21:12:53,462 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202612
+2026-04-23 21:12:53,465 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202611
+2026-04-23 21:12:53,465 - src.frpt_runner - INFO - [9/60] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-23 21:12:53,466 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202615
+2026-04-23 21:12:53,466 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202606
+2026-04-23 21:12:53,470 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202613
+2026-04-23 21:12:53,472 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202609
+2026-04-23 21:12:53,472 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202608
+2026-04-23 21:12:53,473 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202607
+2026-04-23 21:12:53,478 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202614
+2026-04-23 21:12:53,480 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202610
+2026-04-23 21:12:53,480 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202615
+2026-04-23 21:12:53,481 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202607
+2026-04-23 21:12:53,481 - src.frpt_runner - INFO - [10/60] Completed: HMFN/SOCAMM2/WW202615 - success=True
+2026-04-23 21:12:53,493 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202609
+2026-04-23 21:12:53,494 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202608
+2026-04-23 21:12:53,495 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202607
+2026-04-23 21:12:53,495 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202614
+2026-04-23 21:12:53,496 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202610
+2026-04-23 21:12:53,496 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202606
+2026-04-23 21:12:53,497 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202611
+2026-04-23 21:12:53,498 - src.frpt_runner - INFO - [11/60] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-23 21:12:53,498 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202612
+2026-04-23 21:12:53,500 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202613
+2026-04-23 21:12:53,501 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202611
+2026-04-23 21:12:53,501 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202615
+2026-04-23 21:12:53,501 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202606
+2026-04-23 21:12:53,501 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202607
+2026-04-23 21:12:53,502 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202614
+2026-04-23 21:12:53,502 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202608
+2026-04-23 21:12:53,503 - src.frpt_runner - INFO - [12/60] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-23 21:12:53,503 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202612
+2026-04-23 21:12:53,504 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202613
+2026-04-23 21:12:53,505 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202609
+2026-04-23 21:12:53,505 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202615
+2026-04-23 21:12:53,505 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202606
+2026-04-23 21:12:53,505 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202607
+2026-04-23 21:12:53,505 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202608
+2026-04-23 21:12:53,506 - src.frpt_runner - INFO - [13/60] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-23 21:12:53,506 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202610
+2026-04-23 21:12:53,507 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202609
+2026-04-23 21:12:53,508 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202613
+2026-04-23 21:12:53,508 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202611
+2026-04-23 21:12:53,508 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202614
+2026-04-23 21:12:53,508 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202612
+2026-04-23 21:12:53,510 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202615
+2026-04-23 21:12:53,510 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202612
+2026-04-23 21:12:53,510 - src.frpt_runner - INFO - [14/60] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-23 21:12:53,510 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202610
+2026-04-23 21:12:53,511 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202613
+2026-04-23 21:12:53,511 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202611
+2026-04-23 21:12:53,511 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202614
+2026-04-23 21:12:53,512 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202606
+2026-04-23 21:12:53,512 - src.frpt_runner - INFO - [15/60] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-23 21:12:53,511 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202615
+2026-04-23 21:12:53,513 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202607
+2026-04-23 21:12:53,515 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202608
+2026-04-23 21:12:53,515 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202609
+2026-04-23 21:12:53,516 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202606
+2026-04-23 21:12:53,516 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202610
+2026-04-23 21:12:53,516 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202611
+2026-04-23 21:12:53,517 - src.frpt_runner - INFO - [16/60] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-23 21:12:53,517 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202614
+2026-04-23 21:12:53,517 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202612
+2026-04-23 21:12:53,518 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202607
+2026-04-23 21:12:53,518 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202608
+2026-04-23 21:12:53,518 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202609
+2026-04-23 21:12:53,519 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202610
+2026-04-23 21:12:53,519 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202611
+2026-04-23 21:12:53,520 - src.frpt_runner - INFO - [17/60] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-23 21:12:53,520 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202612
+2026-04-23 21:12:53,520 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202613
+2026-04-23 21:12:53,521 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202614
+2026-04-23 21:12:53,522 - src.frpt_runner - INFO - [18/60] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-23 21:12:53,522 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202613
+2026-04-23 21:12:53,522 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202614
+2026-04-23 21:12:53,523 - src.frpt_runner - INFO - [19/60] Completed: HMB1/SOCAMM2/WW202615 - success=True
+2026-04-23 21:12:53,527 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202615
+2026-04-23 21:12:53,527 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202615
+2026-04-23 21:12:53,535 - src.frpt_runner - INFO - [20/60] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-23 21:12:53,536 - src.frpt_runner - INFO - [21/60] Completed: QMON/SOCAMM2/WW202606 - success=True
+2026-04-23 21:12:53,536 - src.frpt_runner - INFO - [22/60] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-23 21:12:53,537 - src.frpt_runner - INFO - [23/60] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-23 21:12:53,538 - src.frpt_runner - INFO - [24/60] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-23 21:12:53,538 - src.frpt_runner - INFO - [25/60] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-23 21:12:53,539 - src.frpt_runner - INFO - [26/60] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-23 21:12:53,539 - src.frpt_runner - INFO - [27/60] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-23 21:12:53,540 - src.frpt_runner - INFO - [28/60] Completed: QMON/SOCAMM2/WW202615 - success=True
+2026-04-23 21:12:53,541 - src.frpt_runner - INFO - [29/60] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-23 21:12:53,542 - src.frpt_runner - INFO - [30/60] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-23 21:12:53,542 - src.frpt_runner - INFO - [31/60] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-23 21:12:53,542 - src.frpt_runner - INFO - [32/60] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-23 21:12:53,545 - src.frpt_runner - INFO - [33/60] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-23 21:12:53,546 - src.frpt_runner - INFO - [34/60] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-23 21:12:53,546 - src.frpt_runner - INFO - [35/60] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-23 21:12:53,548 - src.frpt_runner - INFO - [36/60] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-23 21:12:53,549 - src.frpt_runner - INFO - [37/60] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-23 21:12:53,549 - src.frpt_runner - INFO - [38/60] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-23 21:12:53,550 - src.frpt_runner - INFO - [39/60] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-23 21:12:53,550 - src.frpt_runner - INFO - [40/60] Completed: HMFN/SOCAMM2/WW202615 - success=True
+2026-04-23 21:12:53,551 - src.frpt_runner - INFO - [41/60] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-23 21:12:53,552 - src.frpt_runner - INFO - [42/60] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-23 21:12:53,553 - src.frpt_runner - INFO - [43/60] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-23 21:12:53,553 - src.frpt_runner - INFO - [44/60] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-23 21:12:53,554 - src.frpt_runner - INFO - [45/60] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-23 21:12:53,554 - src.frpt_runner - INFO - [46/60] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-23 21:12:53,555 - src.frpt_runner - INFO - [47/60] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-23 21:12:53,556 - src.frpt_runner - INFO - [48/60] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-23 21:12:53,556 - src.frpt_runner - INFO - [49/60] Completed: HMB1/SOCAMM2/WW202615 - success=True
+2026-04-23 21:12:53,557 - src.frpt_runner - INFO - [50/60] Completed: QMON/SOCAMM2/WW202606 - success=True
+2026-04-23 21:12:53,557 - src.frpt_runner - INFO - [51/60] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-23 21:12:53,558 - src.frpt_runner - INFO - [52/60] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-23 21:12:53,559 - src.frpt_runner - INFO - [53/60] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-23 21:12:53,560 - src.frpt_runner - INFO - [54/60] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-23 21:12:53,560 - src.frpt_runner - INFO - [55/60] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-23 21:12:53,561 - src.frpt_runner - INFO - [56/60] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-23 21:12:53,561 - src.frpt_runner - INFO - [57/60] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-23 21:12:53,562 - src.frpt_runner - INFO - [58/60] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-23 21:12:53,563 - src.frpt_runner - INFO - [59/60] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-23 21:12:53,563 - src.frpt_runner - INFO - [60/60] Completed: QMON/SOCAMM2/WW202615 - success=True
+2026-04-23 21:12:53,567 - __main__ - INFO - Pareto data: 292 register failures parsed
+2026-04-23 21:38:53,419 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:53,419 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:53,433 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+0      100.00          NaN  ...              NaN              NaN
+1       65.04        13.91  ...              NaN              NaN
+2      100.00         0.00  ...              NaN              NaN
+3        0.00        17.54  ...              NaN              NaN
+4       98.05         0.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:38:53,434 - __main__ - INFO - Bin chart: Total non-zero bin values=192
+2026-04-23 21:38:53,895 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:53,895 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:53,909 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+0      100.00          NaN  ...              NaN              NaN
+1       65.04        13.91  ...              NaN              NaN
+2      100.00         0.00  ...              NaN              NaN
+3        0.00        17.54  ...              NaN              NaN
+4       98.05         0.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:38:53,909 - __main__ - INFO - Bin chart: Total non-zero bin values=192
+2026-04-23 21:38:55,444 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:55,444 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:55,458 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+0      100.00          NaN  ...              NaN              NaN
+1       65.04        13.91  ...              NaN              NaN
+2      100.00         0.00  ...              NaN              NaN
+3        0.00        17.54  ...              NaN              NaN
+4       98.05         0.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:38:55,460 - __main__ - INFO - Bin chart: Total non-zero bin values=192
+2026-04-23 21:38:58,315 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:58,316 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:58,330 - __main__ - INFO - Bin chart: Sample bin data:
+    Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+2       100.00         0.00  ...              NaN              NaN
+3         0.00        17.54  ...              NaN              NaN
+7        18.60         4.65  ...              NaN              NaN
+8        98.82         0.00  ...              NaN              NaN
+10       95.83         1.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:38:58,331 - __main__ - INFO - Bin chart: Total non-zero bin values=66
+2026-04-23 21:38:59,234 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:59,234 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:38:59,247 - __main__ - INFO - Bin chart: Sample bin data:
+    Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+2       100.00         0.00  ...              NaN              NaN
+3         0.00        17.54  ...              NaN              NaN
+7        18.60         4.65  ...              NaN              NaN
+8        98.82         0.00  ...              NaN              NaN
+10       95.83         1.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:38:59,248 - __main__ - INFO - Bin chart: Total non-zero bin values=66
+2026-04-23 21:38:59,457 - __main__ - INFO - ============================================================
+2026-04-23 21:38:59,457 - __main__ - INFO - FETCH ELC DATA STARTED (cache=ON)
+2026-04-23 21:38:59,457 - __main__ - INFO - Filters: {'form_factors': ['SOCAMM2'], 'test_steps': ['HMFN', 'HMB1', 'QMON'], 'design_ids': ['Y63N'], 'facility': 'all', 'start_ww': '202606', 'end_ww': '202615', 'densities': None, 'speeds': ['9600MTPS']}
+2026-04-23 21:38:59,460 - __main__ - INFO - Workweeks to fetch: ['202606', '202607', '202608', '202609', '202610', '202611', '202612', '202613', '202614', '202615']
+2026-04-23 21:38:59,460 - __main__ - INFO - Total frpt calls for ELC: 30
+2026-04-23 21:38:59,461 - src.frpt_runner - INFO - Running 30 commands in parallel with 8 workers
+2026-04-23 21:38:59,466 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202610
+2026-04-23 21:38:59,466 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202609
+2026-04-23 21:38:59,468 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202610
+2026-04-23 21:38:59,467 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202606
+2026-04-23 21:38:59,467 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202611
+2026-04-23 21:38:59,473 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202611
+2026-04-23 21:38:59,468 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202609
+2026-04-23 21:38:59,469 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202612
+2026-04-23 21:38:59,466 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202608
+2026-04-23 21:38:59,469 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202606
+2026-04-23 21:38:59,470 - src.frpt_runner - INFO - [1/30] Completed: HMFN/SOCAMM2/WW202610 - success=True
+2026-04-23 21:38:59,471 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202613
+2026-04-23 21:38:59,472 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202614
+2026-04-23 21:38:59,467 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202607
+2026-04-23 21:38:59,474 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202612
+2026-04-23 21:38:59,475 - src.cache - INFO - Cache HIT for HMFN/SOCAMM2/WW202615
+2026-04-23 21:38:59,475 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202608
+2026-04-23 21:38:59,475 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202606
+2026-04-23 21:38:59,476 - src.frpt_runner - INFO - [2/30] Completed: HMFN/SOCAMM2/WW202611 - success=True
+2026-04-23 21:38:59,476 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202607
+2026-04-23 21:38:59,477 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202613
+2026-04-23 21:38:59,477 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202614
+2026-04-23 21:38:59,478 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202607
+2026-04-23 21:38:59,478 - src.frpt_runner - INFO - Using cached result for HMFN/SOCAMM2/WW202615
+2026-04-23 21:38:59,479 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202608
+2026-04-23 21:38:59,479 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202606
+2026-04-23 21:38:59,480 - src.frpt_runner - INFO - [3/30] Completed: HMFN/SOCAMM2/WW202609 - success=True
+2026-04-23 21:38:59,480 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202607
+2026-04-23 21:38:59,480 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202609
+2026-04-23 21:38:59,482 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202610
+2026-04-23 21:38:59,482 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202608
+2026-04-23 21:38:59,482 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202613
+2026-04-23 21:38:59,483 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202611
+2026-04-23 21:38:59,483 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202612
+2026-04-23 21:38:59,484 - src.frpt_runner - INFO - [4/30] Completed: HMFN/SOCAMM2/WW202606 - success=True
+2026-04-23 21:38:59,484 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202614
+2026-04-23 21:38:59,485 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202609
+2026-04-23 21:38:59,486 - src.cache - INFO - Cache HIT for HMB1/SOCAMM2/WW202615
+2026-04-23 21:38:59,486 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202610
+2026-04-23 21:38:59,486 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202613
+2026-04-23 21:38:59,487 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202611
+2026-04-23 21:38:59,487 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202606
+2026-04-23 21:38:59,487 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202612
+2026-04-23 21:38:59,488 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202614
+2026-04-23 21:38:59,488 - src.frpt_runner - INFO - [5/30] Completed: HMFN/SOCAMM2/WW202612 - success=True
+2026-04-23 21:38:59,489 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202607
+2026-04-23 21:38:59,489 - src.frpt_runner - INFO - Using cached result for HMB1/SOCAMM2/WW202615
+2026-04-23 21:38:59,490 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202608
+2026-04-23 21:38:59,490 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202606
+2026-04-23 21:38:59,490 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202609
+2026-04-23 21:38:59,491 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202610
+2026-04-23 21:38:59,491 - src.frpt_runner - INFO - [6/30] Completed: HMFN/SOCAMM2/WW202608 - success=True
+2026-04-23 21:38:59,492 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202607
+2026-04-23 21:38:59,492 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202611
+2026-04-23 21:38:59,493 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202612
+2026-04-23 21:38:59,493 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202608
+2026-04-23 21:38:59,493 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202609
+2026-04-23 21:38:59,493 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202610
+2026-04-23 21:38:59,494 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202614
+2026-04-23 21:38:59,495 - src.frpt_runner - INFO - [7/30] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-23 21:38:59,495 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202611
+2026-04-23 21:38:59,496 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202613
+2026-04-23 21:38:59,496 - src.cache - INFO - Cache HIT for QMON/SOCAMM2/WW202615
+2026-04-23 21:38:59,496 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202612
+2026-04-23 21:38:59,497 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202614
+2026-04-23 21:38:59,497 - src.frpt_runner - INFO - [8/30] Completed: HMFN/SOCAMM2/WW202614 - success=True
+2026-04-23 21:38:59,498 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202613
+2026-04-23 21:38:59,498 - src.frpt_runner - INFO - Using cached result for QMON/SOCAMM2/WW202615
+2026-04-23 21:38:59,499 - src.frpt_runner - INFO - [9/30] Completed: HMFN/SOCAMM2/WW202607 - success=True
+2026-04-23 21:38:59,500 - src.frpt_runner - INFO - [10/30] Completed: HMFN/SOCAMM2/WW202615 - success=True
+2026-04-23 21:38:59,500 - src.frpt_runner - INFO - [11/30] Completed: HMB1/SOCAMM2/WW202606 - success=True
+2026-04-23 21:38:59,501 - src.frpt_runner - INFO - [12/30] Completed: HMFN/SOCAMM2/WW202613 - success=True
+2026-04-23 21:38:59,501 - src.frpt_runner - INFO - [13/30] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-23 21:38:59,501 - src.frpt_runner - INFO - [14/30] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-23 21:38:59,502 - src.frpt_runner - INFO - [15/30] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-23 21:38:59,503 - src.frpt_runner - INFO - [16/30] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-23 21:38:59,503 - src.frpt_runner - INFO - [17/30] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-23 21:38:59,504 - src.frpt_runner - INFO - [18/30] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-23 21:38:59,504 - src.frpt_runner - INFO - [19/30] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-23 21:38:59,505 - src.frpt_runner - INFO - [20/30] Completed: HMB1/SOCAMM2/WW202615 - success=True
+2026-04-23 21:38:59,506 - src.frpt_runner - INFO - [21/30] Completed: QMON/SOCAMM2/WW202606 - success=True
+2026-04-23 21:38:59,507 - src.frpt_runner - INFO - [22/30] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-23 21:38:59,507 - src.frpt_runner - INFO - [23/30] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-23 21:38:59,507 - src.frpt_runner - INFO - [24/30] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-23 21:38:59,508 - src.frpt_runner - INFO - [25/30] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-23 21:38:59,508 - src.frpt_runner - INFO - [26/30] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-23 21:38:59,509 - src.frpt_runner - INFO - [27/30] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-23 21:38:59,510 - src.frpt_runner - INFO - [28/30] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-23 21:38:59,510 - src.frpt_runner - INFO - [29/30] Completed: QMON/SOCAMM2/WW202615 - success=True
+2026-04-23 21:38:59,511 - src.frpt_runner - INFO - [30/30] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-23 21:38:59,512 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:38:59,513 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=4, bin_cols=['Bin_1_GOOD', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:38:59,515 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:38:59,516 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:38:59,519 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:38:59,519 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:38:59,521 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_16_LEAK-LO-', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:38:59,522 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=5, lines_without_pipe=8, bin_cols=['Bin_1_GOOD', 'Bin_16_LEAK-LO-', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_65_SLT', 'Bin_66_REF']
+2026-04-23 21:38:59,523 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:38:59,524 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:38:59,525 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_65_SLT']
+2026-04-23 21:38:59,526 - src.frpt_parser - INFO - Parser [HMFN]: lines_with_pipe=4, lines_without_pipe=4, bin_cols=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_65_SLT']
+2026-04-23 21:38:59,528 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:38:59,528 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=4, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:38:59,531 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:38:59,531 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:38:59,533 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD']
+2026-04-23 21:38:59,534 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=2, bin_cols=['Bin_1_GOOD']
+2026-04-23 21:38:59,536 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:38:59,537 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-23 21:38:59,541 - __main__ - INFO - ELC data parsed: 11 rows
+2026-04-23 21:38:59,542 - __main__ - INFO - Filtered by speeds ['9600MTPS']: 10 rows
+2026-04-23 21:38:59,552 - __main__ - INFO - ELC yields calculated: 6 rows
+2026-04-23 21:39:07,970 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:39:07,970 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:39:07,986 - __main__ - INFO - Bin chart: Sample bin data:
+    Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+2       100.00         0.00  ...              NaN              NaN
+3         0.00        17.54  ...              NaN              NaN
+7        18.60         4.65  ...              NaN              NaN
+8        98.82         0.00  ...              NaN              NaN
+10       95.83         1.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:39:07,987 - __main__ - INFO - Bin chart: Total non-zero bin values=66
+2026-04-23 21:39:13,259 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:39:13,259 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_20_CONT', 'Bin_46_FID', 'Bin_60_GROSS', 'Bin_65_SLT', 'Bin_66_REF', 'Bin_70_MARG-NOM', 'Bin_99_OTHER', 'Bin_10_SHORT', 'Bin_30_SPD-EEPR', 'Bin_48_TFF-EXCR', 'Bin_56_TRAIN-DQ', 'Bin_86_CHK-UNBL', 'Bin_98_SYS', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST', 'Bin_83_CHK-OPT-', 'Bin_16_LEAK-LO-', 'Bin_84_GEN-REP-']
+2026-04-23 21:39:13,272 - __main__ - INFO - Bin chart: Sample bin data:
+    Bin_1_GOOD  Bin_20_CONT  ...  Bin_16_LEAK-LO-  Bin_84_GEN-REP-
+2       100.00         0.00  ...              NaN              NaN
+3         0.00        17.54  ...              NaN              NaN
+7        18.60         4.65  ...              NaN              NaN
+8        98.82         0.00  ...              NaN              NaN
+10       95.83         1.39  ...              NaN              NaN
+
+[5 rows x 19 columns]
+2026-04-23 21:39:13,273 - __main__ - INFO - Bin chart: Total non-zero bin values=66

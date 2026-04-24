@@ -4082,9 +4082,8 @@ def create_recovery_projection_html(
             recovered_dpm = item.get('recovered_dpm', 0)
             if item.get('is_hw_sop_target'):
                 recovery_badge = '<span style="background: #c2185b; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">HW+SOP</span>'
-            elif item.get('is_bios_partial'):
-                recovery_badge = '<span style="background: #64b5f6; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">BIOS 50%</span>'
-            elif item.get('is_bios_target'):
+            elif item.get('is_bios_target') or item.get('is_bios_partial'):
+                # Combined BIOS badge (100% + 50% under one label per VP request)
                 recovery_badge = '<span style="background: #1976d2; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">BIOS</span>'
             elif item.get('is_rpx_target'):
                 recovery_badge = '<span style="background: #4caf50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">RPx</span>'
@@ -4114,7 +4113,7 @@ def create_recovery_projection_html(
 
     html += '''
         <div style="margin-top: 8px; font-size: 9px; color: #888; text-align: right;">
-            <b>RPx:</b> False miscompare | <b>BIOS:</b> MULTI_BANK_MULTI_DQ (100%) | <b>BIOS 50%:</b> Bank/Burst/Periph | <b>HW+SOP:</b> Hang | <b style="color:#d32f2f;">No Recovery:</b> SB/DB/Row (DRAM-related)
+            <b>RPx:</b> False miscompare | <b>BIOS:</b> MULTI_BANK_MULTI_DQ + Bank/Burst/Periph patterns | <b>HW+SOP:</b> Hang | <b style="color:#d32f2f;">No Recovery:</b> SB/DB/Row (DRAM-related)
         </div>
     </div>
     '''
@@ -4243,9 +4242,9 @@ def create_dpm_formula_info_html(dark_mode: bool = False) -> str:
                     <td>100% BIOS timing fix</td>
                 </tr>
                 <tr style="border-bottom: 1px solid {border_color};">
-                    <td style="padding: 4px 0;"><span style="background: #64b5f6; color: white; padding: 1px 4px; border-radius: 2px;">BIOS*</span></td>
-                    <td>BANK/BURST/PERIPH patterns</td>
-                    <td>50% partial BIOS fix</td>
+                    <td style="padding: 4px 0;"><span style="background: #1976d2; color: white; padding: 1px 4px; border-radius: 2px;">BIOS</span></td>
+                    <td>MULTI_BANK_MULTI_DQ + BANK/BURST/PERIPH</td>
+                    <td>Combined BIOS fix (100% + 50%)</td>
                 </tr>
                 <tr style="border-bottom: 1px solid {border_color};">
                     <td style="padding: 4px 0;"><span style="background: #ff9800; color: white; padding: 1px 4px; border-radius: 2px;">HW+SOP</span></td>
@@ -4270,7 +4269,7 @@ def create_dpm_formula_info_html(dark_mode: bool = False) -> str:
                 ⚡ Recovery Priority Order
             </div>
             <div style="font-size: 9px; color: {text_color}; font-family: monospace; background: {bg_color}; padding: 6px; border-radius: 4px;">
-                HW+SOP → No Recovery (SB/DB) → BIOS → BIOS* → RPx → No Recovery (Row)
+                HW+SOP → No Recovery (SB/DB) → BIOS → RPx → No Recovery (Row)
             </div>
             <div style="font-size: 8px; color: {muted_color}; margin-top: 4px;">
                 SB/DB FAILCRAWLERs are actual bit errors — RPx can't fix silicon issues
