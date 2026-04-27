@@ -4741,20 +4741,11 @@ def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
 
     st.caption(f"**Filters:** {' | '.join(filter_parts)}")
 
-    # Info box explaining the purpose
-    st.info("""
-    **Purpose:** This tab validates the RCA classification, it doesn't re-derive it.
-
-    1. Select a **MSN_STATUS × FAILCRAWLER** combination to analyze
-    2. View the expected **debug flow** and validation criteria
-    3. Check **correlation evidence** across equipment, materials, and silicon dimensions
-    4. Review **address stability** for DRAM-related failures
-    5. Get a **confidence assessment** for the RCA conclusion
-    """)
-
     # Session state for sanity check data
     if 'sanity_check_data' not in st.session_state:
         st.session_state.sanity_check_data = pd.DataFrame()
+    if 'sanity_selected_combo' not in st.session_state:
+        st.session_state.sanity_selected_combo = None
 
     # Fetch button
     col1, col2 = st.columns([1, 4])
@@ -4783,6 +4774,7 @@ def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
 
             if df is not None and not df.empty:
                 st.session_state.sanity_check_data = df
+                st.session_state.sanity_selected_combo = None  # Reset selection
                 st.success(f"Loaded {len(df):,} failure records")
             else:
                 st.error("No data found for the selected filters")
@@ -4796,61 +4788,144 @@ def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
     df = st.session_state.sanity_check_data
 
     st.markdown("---")
-    st.markdown("### Select Combination to Validate")
 
-    # Get available MSN_STATUS and FAILCRAWLER values from data
-    available_msn_status = sorted(df['MSN_STATUS'].dropna().unique().tolist()) if 'MSN_STATUS' in df.columns else []
-    available_failcrawler = sorted(df['FAILCRAWLER'].dropna().unique().tolist()) if 'FAILCRAWLER' in df.columns else []
+    # =========================================================================
+    # WORKWEEK SELECTOR (Radio buttons)
+    # =========================================================================
+    st.markdown("### 📅 Select Workweek")
 
-    # Get available steps from data
-    available_steps = sorted(df['STEP'].dropna().unique().tolist()) if 'STEP' in df.columns else steps
+    # Get available workweeks from data
+    available_wws = sorted(df['MFG_WORKWEEK'].dropna().unique().tolist(), reverse=True) if 'MFG_WORKWEEK' in df.columns else []
 
-    # Selection controls
-    col1, col2, col3 = st.columns(3)
+    if available_wws:
+        # Format workweeks for display
+        ww_options = [str(int(ww)) for ww in available_wws]
 
-    with col1:
-        selected_step = st.selectbox(
-            "Step",
-            available_steps,
-            key="sanity_step"
+        # Default to latest week
+        selected_ww = st.radio(
+            "Workweek",
+            ww_options,
+            index=0,  # Latest week first
+            horizontal=True,
+            key="sanity_workweek",
+            label_visibility="collapsed"
+        )
+        selected_ww_int = int(selected_ww)
+
+        # Filter data to selected workweek
+        df_ww = df[df['MFG_WORKWEEK'] == selected_ww_int].copy()
+        st.caption(f"**WW{selected_ww}:** {len(df_ww):,} failure records")
+    else:
+        df_ww = df.copy()
+        selected_ww = "All"
+
+    # =========================================================================
+    # TOP COMBINATIONS TABLE (Click to analyze)
+    # =========================================================================
+    st.markdown("### 🎯 Top Combinations by Failure Count")
+    st.caption("Click a row to analyze that combination")
+
+    # Calculate combination counts
+    if 'STEP' in df_ww.columns and 'MSN_STATUS' in df_ww.columns and 'FAILCRAWLER' in df_ww.columns:
+        combo_counts = df_ww.groupby(['STEP', 'MSN_STATUS', 'FAILCRAWLER']).agg(
+            Fails=('MSN', 'count'),
+            Unique_MSN=('MSN', 'nunique')
+        ).reset_index()
+        combo_counts = combo_counts.sort_values('Fails', ascending=False).head(15)
+
+        # Add RCA type from debug flows
+        combo_counts['RCA_Type'] = combo_counts.apply(
+            lambda row: get_debug_flow(row['MSN_STATUS'], row['FAILCRAWLER']).get('rca_type', 'UNKNOWN'),
+            axis=1
         )
 
-    with col2:
-        selected_msn_status = st.selectbox(
-            "MSN_STATUS",
-            available_msn_status,
-            key="sanity_msn_status"
+        # Add expected recovery
+        combo_counts['Recovery'] = combo_counts.apply(
+            lambda row: f"{get_debug_flow(row['MSN_STATUS'], row['FAILCRAWLER']).get('expected_recovery', 0)}%",
+            axis=1
         )
 
-    with col3:
-        selected_failcrawler = st.selectbox(
-            "FAILCRAWLER",
-            available_failcrawler,
-            key="sanity_failcrawler"
+        # Create display dataframe
+        display_df = combo_counts[['STEP', 'MSN_STATUS', 'FAILCRAWLER', 'RCA_Type', 'Recovery', 'Fails', 'Unique_MSN']].copy()
+        display_df.columns = ['Step', 'MSN_STATUS', 'FAILCRAWLER', 'RCA Type', 'Recovery', 'FID Count', 'Unique MSN']
+        display_df = display_df.reset_index(drop=True)
+        display_df.index = display_df.index + 1  # 1-based index
+
+        # Use data_editor with selection
+        selection = st.dataframe(
+            display_df,
+            use_container_width=True,
+            height=min(400, 50 + len(display_df) * 35),
+            on_select="rerun",
+            selection_mode="single-row",
+            key="sanity_combo_table"
         )
+
+        # Get selected row
+        selected_rows = selection.selection.rows if selection.selection else []
+
+        if selected_rows:
+            selected_idx = selected_rows[0]
+            selected_row = combo_counts.iloc[selected_idx]
+            selected_step = selected_row['STEP']
+            selected_msn_status = selected_row['MSN_STATUS']
+            selected_failcrawler = selected_row['FAILCRAWLER']
+
+            st.session_state.sanity_selected_combo = {
+                'step': selected_step,
+                'msn_status': selected_msn_status,
+                'failcrawler': selected_failcrawler,
+                'workweek': selected_ww
+            }
+        elif st.session_state.sanity_selected_combo:
+            # Use previous selection if workweek matches
+            if st.session_state.sanity_selected_combo.get('workweek') == selected_ww:
+                selected_step = st.session_state.sanity_selected_combo['step']
+                selected_msn_status = st.session_state.sanity_selected_combo['msn_status']
+                selected_failcrawler = st.session_state.sanity_selected_combo['failcrawler']
+            else:
+                selected_step = None
+                selected_msn_status = None
+                selected_failcrawler = None
+        else:
+            selected_step = None
+            selected_msn_status = None
+            selected_failcrawler = None
+
+    else:
+        st.warning("Required columns (STEP, MSN_STATUS, FAILCRAWLER) not found in data")
+        return
+
+    # =========================================================================
+    # ANALYSIS SECTION (only if combination selected)
+    # =========================================================================
+    if not selected_step or not selected_msn_status or not selected_failcrawler:
+        st.info("👆 Click a row in the table above to analyze that combination")
+        return
+
+    st.markdown("---")
+    st.markdown(f"### 🔍 Analysis: {selected_msn_status} × {selected_failcrawler}")
 
     # Show the expected debug flow for this combination
     debug_flow = get_debug_flow(selected_msn_status, selected_failcrawler)
-
-    st.markdown("---")
 
     # Display debug flow info
     debug_flow_html = create_debug_flow_html(debug_flow, dark_mode=False)
     components.html(debug_flow_html, height=280, scrolling=False)
 
-    # Run sanity check
+    # Run sanity check on workweek-filtered data
     st.markdown("### Correlation Evidence")
 
     with st.spinner("Running sanity check analysis..."):
         result = run_sanity_check(
-            df=df,
+            df=df_ww,
             msn_status=selected_msn_status,
             failcrawler=selected_failcrawler,
             step=selected_step
         )
 
     if result['status'] == 'NO_DATA':
-        st.warning(f"No data found for {selected_msn_status} × {selected_failcrawler} at step {selected_step}")
+        st.warning(f"No data found for {selected_msn_status} × {selected_failcrawler} at step {selected_step} in WW{selected_ww}")
         return
 
     # Show summary with confidence
@@ -4871,12 +4946,12 @@ def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
     # Show raw data expander
     with st.expander("📋 View Raw Data"):
         # Filter data for the selected combination
-        filtered_df = df.copy()
-        if selected_msn_status and 'MSN_STATUS' in df.columns:
+        filtered_df = df_ww.copy()
+        if selected_msn_status and 'MSN_STATUS' in df_ww.columns:
             filtered_df = filtered_df[filtered_df['MSN_STATUS'] == selected_msn_status]
-        if selected_failcrawler and 'FAILCRAWLER' in df.columns:
+        if selected_failcrawler and 'FAILCRAWLER' in df_ww.columns:
             filtered_df = filtered_df[filtered_df['FAILCRAWLER'] == selected_failcrawler]
-        if selected_step and 'STEP' in df.columns:
+        if selected_step and 'STEP' in df_ww.columns:
             filtered_df = filtered_df[filtered_df['STEP'].str.upper() == selected_step.upper()]
 
         st.dataframe(
