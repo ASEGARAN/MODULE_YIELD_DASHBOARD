@@ -109,6 +109,10 @@ from src.sanity_check import (
     create_dimension_table_html,
     create_address_stability_html,
     create_debug_flow_html,
+    # SOCAMM2-specific analysis
+    create_die_count_analysis_html,
+    create_supplier_analysis_html,
+    create_guardrail_notes_html,
 )
 
 # AI Assistant module
@@ -4942,6 +4946,29 @@ def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
         st.markdown("### Address Stability Analysis")
         address_html = create_address_stability_html(result, dark_mode=False)
         components.html(address_html, height=250, scrolling=False)
+
+    # =========================================================================
+    # SOCAMM2-Specific Analysis Sections
+    # =========================================================================
+
+    # Show 16DP die count analysis
+    if result.get('die_count_analysis') and result['die_count_analysis'].get('conclusion') != 'INSUFFICIENT_DATA':
+        st.markdown("### 16DP Die Count Analysis")
+        die_count_html = create_die_count_analysis_html(result, dark_mode=False)
+        components.html(die_count_html, height=220, scrolling=False)
+
+    # Show supplier correlation analysis
+    if result.get('supplier_analysis'):
+        st.markdown("### Supplier Correlation Analysis")
+        supplier_html = create_supplier_analysis_html(result, dark_mode=False)
+        components.html(supplier_html, height=220, scrolling=False)
+
+    # Show SOCAMM2 guardrail notes
+    guardrail_notes = result.get('confidence', {}).get('guardrail_notes', [])
+    if guardrail_notes:
+        st.markdown("### SOCAMM2 Guardrail Notes")
+        guardrail_html = create_guardrail_notes_html(result, dark_mode=False)
+        components.html(guardrail_html, height=150, scrolling=False)
 
     # Show raw data expander
     with st.expander("📋 View Raw Data"):

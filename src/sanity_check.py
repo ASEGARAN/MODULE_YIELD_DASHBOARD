@@ -22,25 +22,30 @@ logger = logging.getLogger(__name__)
 # Maps each MSN_STATUS × FAILCRAWLER combination to expected debug dimensions
 
 DEBUG_FLOWS = {
+    # =========================================================================
     # HANG failures - always check machine first (HW+SOP expected)
+    # =========================================================================
     ('Hang', 'HANG'): {
         'rca_type': 'HW+SOP',
         'expected_recovery': 100,
-        'primary_checks': ['MACHINE_ID', 'TESTER', 'SLOT_ID'],
-        'secondary_checks': ['TEST_FACILITY'],
+        'primary_checks': ['MACHINE_ID', 'TESTER', 'SITE'],
+        'secondary_checks': ['TEST_FACILITY', 'TEST_VERSION'],
         'description': 'Hardware/SOP issue - check machine clustering',
         'validation_criteria': {
             'machine_clustering': 'Strong signal if >50% on single machine',
+            'site_clustering': 'Specific slot = socket/MOBO issue',
             'retest_pattern': 'Should improve after MOBO rotation per SOP',
         }
     },
 
-    # Mod-Sys with MULTI_BANK_MULTI_DQ - BIOS recoverable
+    # =========================================================================
+    # Mod-Sys failures - System-level, typically BIOS recoverable
+    # =========================================================================
     ('Mod-Sys', 'MULTI_BANK_MULTI_DQ'): {
         'rca_type': 'BIOS',
         'expected_recovery': 100,
-        'primary_checks': ['TEST_VERSION', 'FLOW'],
-        'secondary_checks': ['MACHINE_ID', 'TESTER'],
+        'primary_checks': ['TEST_VERSION', 'FLOW', 'MACHINE_ID'],
+        'secondary_checks': ['TESTER', 'SITE'],
         'description': 'System-level, BIOS-recoverable - check test config',
         'validation_criteria': {
             'config_correlation': 'Check if specific test version shows spike',
@@ -48,24 +53,50 @@ DEBUG_FLOWS = {
         }
     },
 
-    # DQ failures with single DQ pattern - could be BIOS or DRAM
+    ('Mod-Sys', 'HGDC'): {
+        'rca_type': 'BIOS',
+        'expected_recovery': 100,
+        'primary_checks': ['TEST_VERSION', 'MACHINE_ID', 'FLOW'],
+        'secondary_checks': ['SITE', 'TESTER'],
+        'description': 'HGDC (High Granularity Data Corruption) - system issue',
+        'validation_criteria': {
+            'test_version_spike': 'New test version may have issue',
+            'machine_spread': 'Spread across machines = not HW issue',
+        }
+    },
+
+    ('Mod-Sys', 'SINGLE_BURST_SINGLE_ROW'): {
+        'rca_type': 'BIOS_PARTIAL',
+        'expected_recovery': 50,
+        'primary_checks': ['FABLOT', 'ULOC', 'WAFER'],
+        'secondary_checks': ['MACHINE_ID', 'WREG'],
+        'description': 'Mod-Sys with single-row pattern - may be DRAM',
+        'validation_criteria': {
+            'fablot_clustering': 'Strong fablot signal = DRAM issue',
+            'wafer_clustering': 'Specific wafers = process issue',
+        }
+    },
+
+    # =========================================================================
+    # DQ failures - could be BIOS or DRAM depending on pattern
+    # =========================================================================
     ('DQ', 'SINGLE_BURST_SINGLE_ROW'): {
         'rca_type': 'BIOS_PARTIAL',
         'expected_recovery': 50,
-        'primary_checks': ['FABLOT', 'ULOC'],
-        'secondary_checks': ['MACHINE_ID', 'PCB_SUPPLIER'],
+        'primary_checks': ['FABLOT', 'ULOC', 'WAFER'],
+        'secondary_checks': ['MACHINE_ID', 'PCB_SUPPLIER', 'WREG'],
         'description': 'Single-bit DQ issue - check die/fablot clustering',
         'validation_criteria': {
             'address_stability': 'Same DQ line across retests = true defect',
             'fablot_clustering': '>3 fails from same fablot = silicon issue',
+            'wafer_region': 'Edge wafer region = process sensitivity',
         }
     },
 
-    # DQ with system-even-burst pattern
     ('DQ', 'SYS_EVEN_BURST_BIT'): {
         'rca_type': 'BIOS_PARTIAL',
         'expected_recovery': 50,
-        'primary_checks': ['MACHINE_ID', 'TEST_VERSION'],
+        'primary_checks': ['MACHINE_ID', 'TEST_VERSION', 'SITE'],
         'secondary_checks': ['FABLOT', 'ULOC'],
         'description': 'Even-burst DQ pattern - may be test artifact',
         'validation_criteria': {
@@ -74,12 +105,38 @@ DEBUG_FLOWS = {
         }
     },
 
+    ('DQ', 'SYS_ODD_BURST_BIT'): {
+        'rca_type': 'BIOS_PARTIAL',
+        'expected_recovery': 50,
+        'primary_checks': ['MACHINE_ID', 'TEST_VERSION', 'SITE'],
+        'secondary_checks': ['FABLOT', 'ULOC'],
+        'description': 'Odd-burst DQ pattern - may be test artifact',
+        'validation_criteria': {
+            'machine_correlation': 'Single machine = likely test issue',
+            'pattern_consistency': 'Odd bits across modules = system signature',
+        }
+    },
+
+    ('DQ', 'MULTI_HALFBANK_SINGLE_DQ'): {
+        'rca_type': 'BIOS_PARTIAL',
+        'expected_recovery': 50,
+        'primary_checks': ['FABLOT', 'ULOC', 'MACHINE_ID'],
+        'secondary_checks': ['WAFER', 'WREG', 'PCB'],
+        'description': 'Half-bank single DQ - localized issue',
+        'validation_criteria': {
+            'uloc_clustering': 'Same die position = solder/via issue',
+            'fablot_spread': 'Spread across fablots = not silicon',
+        }
+    },
+
+    # =========================================================================
     # Multi-DQ - typically BIOS recoverable
+    # =========================================================================
     ('Multi-DQ', 'MULTI_BANK_MULTI_DQ'): {
         'rca_type': 'BIOS',
         'expected_recovery': 100,
-        'primary_checks': ['TEST_VERSION', 'MACHINE_ID'],
-        'secondary_checks': ['FLOW'],
+        'primary_checks': ['TEST_VERSION', 'MACHINE_ID', 'FLOW'],
+        'secondary_checks': ['SITE', 'TESTER'],
         'description': 'Multi-DQ multi-bank - classic BIOS issue',
         'validation_criteria': {
             'bank_distribution': 'Spread across banks = system-level',
@@ -87,26 +144,28 @@ DEBUG_FLOWS = {
         }
     },
 
+    # =========================================================================
     # Row failures - typically DRAM defect, not recoverable
+    # =========================================================================
     ('Row', 'SINGLE_BURST_SINGLE_ROW'): {
         'rca_type': 'DRAM',
         'expected_recovery': 0,
-        'primary_checks': ['FABLOT', 'ULOC', 'DRAMFAIL'],
-        'secondary_checks': ['PCB_SUPPLIER', 'ASSEMBLY_FACILITY'],
-        'description': 'Row defect - check fablot clustering for DRAM issue',
+        'primary_checks': ['FABLOT', 'WAFER', 'ULOC'],
+        'secondary_checks': ['WREG', 'RETICLE_WAVE_ID', 'PROBE_REV'],
+        'description': 'Row defect - check fablot/wafer clustering for DRAM issue',
         'validation_criteria': {
             'dramfail_flag': 'DRAMFAIL=YES confirms DRAM defect',
             'fablot_clustering': 'Multiple fails same fablot = fab issue',
+            'wafer_clustering': 'Same wafer = wafer-level defect',
             'row_consistency': 'Same row address = true defect',
         }
     },
 
-    # Row with DB (Double Bit) - DRAM defect
     ('Row', 'DB'): {
         'rca_type': 'DRAM',
         'expected_recovery': 0,
-        'primary_checks': ['FABLOT', 'ULOC', 'DRAMFAIL'],
-        'secondary_checks': [],
+        'primary_checks': ['FABLOT', 'WAFER', 'ULOC'],
+        'secondary_checks': ['WREG', 'BURN_MAJOR_VERSION'],
         'description': 'Double-bit row failure - DRAM defect confirmed',
         'validation_criteria': {
             'dramfail_flag': 'DRAMFAIL=YES expected',
@@ -114,29 +173,61 @@ DEBUG_FLOWS = {
         }
     },
 
+    ('Row', 'ROW'): {
+        'rca_type': 'DRAM',
+        'expected_recovery': 0,
+        'primary_checks': ['FABLOT', 'WAFER', 'ULOC'],
+        'secondary_checks': ['WREG', 'RETICLE_WAVE_ID'],
+        'description': 'Full row failure - DRAM defect',
+        'validation_criteria': {
+            'fablot_clustering': 'Same fablot = fab process issue',
+            'reticle_wave': 'Same reticle wave = lithography issue',
+        }
+    },
+
+    # =========================================================================
     # SB_Int - Single Bit Intermittent, DRAM issue
+    # =========================================================================
     ('SB_Int', 'SB'): {
         'rca_type': 'DRAM',
         'expected_recovery': 0,
-        'primary_checks': ['FABLOT', 'ULOC'],
-        'secondary_checks': ['RETEST_COUNT'],
+        'primary_checks': ['FABLOT', 'WAFER', 'ULOC'],
+        'secondary_checks': ['WREG', 'VERIFIED'],
         'description': 'Intermittent single-bit - marginal DRAM',
         'validation_criteria': {
             'address_stability': 'Same bit across retests = true defect',
             'retest_pattern': 'Intermittent appearance = marginal cell',
+            'verified_flag': 'VERIFIED=Y confirms repeated failure',
         }
     },
 
+    # =========================================================================
     # Boot failures - not recoverable
+    # =========================================================================
     ('Boot', 'BOOT'): {
         'rca_type': 'NO_FIX',
         'expected_recovery': 0,
-        'primary_checks': ['MACHINE_ID', 'ASSEMBLY_FACILITY'],
-        'secondary_checks': ['PCB_SUPPLIER'],
+        'primary_checks': ['MACHINE_ID', 'ASSEMBLY_FACILITY', 'PCB'],
+        'secondary_checks': ['PCB_SUPPLIER', 'PCB_ARTWORK_REV', 'SITE'],
         'description': 'Boot failure - check connectivity/assembly',
         'validation_criteria': {
             'machine_correlation': 'Single machine could be MOBO issue',
             'assembly_correlation': 'Supplier clustering = assembly issue',
+            'pcb_correlation': 'PCB rev = design issue',
+        }
+    },
+
+    # =========================================================================
+    # Unknown / Other patterns
+    # =========================================================================
+    ('Mod-Sys', 'UNKNOWN'): {
+        'rca_type': 'UNCLASSIFIED',
+        'expected_recovery': 0,
+        'primary_checks': ['MACHINE_ID', 'FABLOT', 'TEST_VERSION'],
+        'secondary_checks': ['ASSEMBLY_FACILITY', 'PCB_SUPPLIER'],
+        'description': 'Unknown pattern - needs investigation',
+        'validation_criteria': {
+            'check_all_dimensions': 'No clear pattern expected',
         }
     },
 }
@@ -151,12 +242,35 @@ DEFAULT_DEBUG_FLOW = {
     'validation_criteria': {}
 }
 
+# =============================================================================
+# SOCAMM/SOCAMM2 Specific Guardrails
+# =============================================================================
+# These rules are critical for correct RCA in SOCAMM2 modules
+
+SOCAMM2_GUARDRAILS = {
+    'dram_requires_row_stability': True,  # Do not escalate DRAM without ROW stability
+    'modsys_requires_die_count': True,    # Do not trust MOD-SYS without die-count context
+    'fablot_is_dram_proof': True,         # Use FABLOT as DRAM proof, not labels
+    'uloc_clustering_is_env': True,       # Treat ULOC clustering as ENV evidence
+    'supplier_is_env_unless_proven': True,  # Treat supplier correlation as ENV unless proven otherwise
+}
+
+# Die count thresholds for 16DP modules
+DIE_COUNT_THRESHOLDS = {
+    'single_die': 2,      # 1-2 dies failing → possible DRAM
+    'multi_die': 3,       # 3+ dies failing → ENV / interface likely
+    'many_die': 8,        # 8+ dies failing → systemic (definitely not single DRAM)
+}
+
 
 # =============================================================================
 # Sanity Check Dimensions
 # =============================================================================
 
 SANITY_CHECK_DIMENSIONS = {
+    # =========================================================================
+    # Equipment Dimensions
+    # =========================================================================
     'MACHINE_ID': {
         'category': 'Equipment',
         'icon': '🔧',
@@ -169,6 +283,16 @@ SANITY_CHECK_DIMENSIONS = {
         'description': 'Tester correlation',
         'signal_threshold': 50,
     },
+    'SITE': {
+        'category': 'Equipment',
+        'icon': '🔌',
+        'description': 'Motherboard slot location',
+        'signal_threshold': 40,
+    },
+
+    # =========================================================================
+    # Location Dimensions
+    # =========================================================================
     'TEST_FACILITY': {
         'category': 'Location',
         'icon': '🏭',
@@ -181,6 +305,10 @@ SANITY_CHECK_DIMENSIONS = {
         'description': 'Assembly facility correlation',
         'signal_threshold': 60,
     },
+
+    # =========================================================================
+    # Materials / Supplier Dimensions
+    # =========================================================================
     'PCB_SUPPLIER': {
         'category': 'Materials',
         'icon': '📦',
@@ -193,16 +321,100 @@ SANITY_CHECK_DIMENSIONS = {
         'description': 'Register supplier correlation',
         'signal_threshold': 60,
     },
+    'PCB': {
+        'category': 'Materials',
+        'icon': '🔲',
+        'description': 'PCB design ID',
+        'signal_threshold': 70,
+    },
+    'PCB_ARTWORK_REV': {
+        'category': 'Materials',
+        'icon': '🔲',
+        'description': 'PCB artwork revision',
+        'signal_threshold': 60,
+    },
+
+    # =========================================================================
+    # Silicon / Process Dimensions (DRAM source)
+    # =========================================================================
     'FABLOT': {
         'category': 'Silicon',
         'icon': '💎',
         'description': 'Fab lot clustering (DRAM source)',
         'signal_threshold': 30,  # >30% from single fablot = strong signal
     },
+    'FAB': {
+        'category': 'Silicon',
+        'icon': '🏭',
+        'description': 'Fabrication facility',
+        'signal_threshold': 70,
+    },
+    'WAFER': {
+        'category': 'Silicon',
+        'icon': '💿',
+        'description': 'Wafer number within fablot',
+        'signal_threshold': 40,
+    },
+    'WREG': {
+        'category': 'Silicon',
+        'icon': '🎯',
+        'description': 'Wafer region (center vs edge)',
+        'signal_threshold': 50,
+    },
     'ULOC': {
         'category': 'Silicon',
         'icon': '📍',
-        'description': 'Unit location (die position)',
+        'description': 'Unit location (die position on module)',
+        'signal_threshold': 40,
+    },
+    'RETICLE_WAVE_ID': {
+        'category': 'Silicon',
+        'icon': '🌊',
+        'description': 'Reticle wave ID (process correlation)',
+        'signal_threshold': 50,
+    },
+
+    # =========================================================================
+    # Probe / Burn History Dimensions
+    # =========================================================================
+    'PROBE_REV': {
+        'category': 'Probe/Burn',
+        'icon': '🔬',
+        'description': 'Probe test revision',
+        'signal_threshold': 50,
+    },
+    'BURN_MAJOR_VERSION': {
+        'category': 'Probe/Burn',
+        'icon': '🔥',
+        'description': 'Burn major version',
+        'signal_threshold': 50,
+    },
+    'BURN_MACHINE_CONFIG': {
+        'category': 'Probe/Burn',
+        'icon': '🔥',
+        'description': 'Burn machine configuration',
+        'signal_threshold': 50,
+    },
+
+    # =========================================================================
+    # Test Configuration Dimensions
+    # =========================================================================
+    'TEST_VERSION': {
+        'category': 'Test Config',
+        'icon': '📋',
+        'description': 'Test version/flow',
+        'signal_threshold': 50,
+    },
+    'FLOW': {
+        'category': 'Test Config',
+        'icon': '📋',
+        'description': 'Test flow',
+        'signal_threshold': 60,
+    },
+    'SBIN': {
+        'category': 'Test Config',
+        'icon': '🏷️',
+        'description': 'Soft bin code',
         'signal_threshold': 40,
     },
 }
@@ -251,6 +463,7 @@ def fetch_sanity_check_data(
 
     # Comprehensive query with all dimensions using +fidag for FID-level data
     # Note: +fidag gives raw MSN/FID-level data, unlike +modfm which pivots by MSN_STATUS
+    # Reference: MTSums schema documentation for available attributes
     cmd = [
         '/u/dramsoft/bin/mtsums',
         '-FORCEAPI', '+quiet', '+csv', '+stdf',
@@ -260,17 +473,21 @@ def fetch_sanity_check_data(
         # Core fields
         '-format=MSN,FID,DESIGN_ID,STEP,MFG_WORKWEEK,FAILCRAWLER,MSN_STATUS',
         # Equipment dimensions
-        '-format+=MACHINE_ID,TESTER',
+        '-format+=MACHINE_ID,TESTER,SITE',
         # Location dimensions
         '-format+=TEST_FACILITY,ASSEMBLY_FACILITY',
-        # Materials dimensions
-        '-format+=PCB_SUPPLIER,REGISTER_SUPPLIER',
+        # Materials / Supplier dimensions
+        '-format+=PCB_SUPPLIER,REGISTER_SUPPLIER,PCB,PCB_ARTWORK_REV',
+        # Silicon / Process dimensions (DRAM source)
+        '-format+=ULOC,WAFER,WREG,FAB,RETICLE_WAVE_ID',
+        # Probe / Burn history dimensions
+        '-format+=PROBE_REV,BURN_MAJOR_VERSION,BURN_MACHINE_CONFIG',
         # Test config dimensions
-        '-format+=FLOW,TEST_VERSION',
-        # DRAM dimensions
-        '-format+=ULOC,DRAMFAIL',
+        '-format+=FLOW,TEST_VERSION,SBIN',
+        # Failcrawler details
+        '-format+=DRAMFAIL,FCFM,VERIFIED',
         # Address dimensions (for stability analysis)
-        '-format+=ROWCNT,COLCNT,DQCNT',
+        '-format+=ADDRMASK,ADDRCNT,BITCNT,ROWCNT,COLCNT,DQCNT',
         f'-step={step_str}',
         '-msn_status!=Pass',
     ]
@@ -447,6 +664,236 @@ def analyze_address_stability(df: pd.DataFrame) -> dict:
     return result
 
 
+def analyze_die_count_per_msn(df: pd.DataFrame) -> dict:
+    """
+    Analyze die count per MSN for 16DP awareness (SOCAMM2 specific).
+
+    For SOCAMM2 modules with 16 dies:
+    - 1-2 dies failing → possible DRAM (localized defect)
+    - 3-7 dies failing → mixed / interface issue
+    - 8+ dies failing → systemic ENV issue (not single DRAM)
+
+    Args:
+        df: DataFrame with failure data including MSN and ULOC
+
+    Returns:
+        Dictionary with die count analysis
+    """
+    result = {
+        'avg_dies_per_msn': 0,
+        'max_dies_per_msn': 0,
+        'single_die_msns': 0,
+        'multi_die_msns': 0,
+        'many_die_msns': 0,
+        'conclusion': 'INSUFFICIENT_DATA',
+        'interpretation': '',
+    }
+
+    if df.empty or 'MSN' not in df.columns or 'ULOC' not in df.columns:
+        return result
+
+    # Count unique dies (ULOCs) per MSN
+    dies_per_msn = df.groupby('MSN')['ULOC'].nunique()
+
+    if dies_per_msn.empty:
+        return result
+
+    result['avg_dies_per_msn'] = round(dies_per_msn.mean(), 1)
+    result['max_dies_per_msn'] = int(dies_per_msn.max())
+    result['total_msns'] = len(dies_per_msn)
+
+    # Categorize MSNs by die count
+    result['single_die_msns'] = int((dies_per_msn <= DIE_COUNT_THRESHOLDS['single_die']).sum())
+    result['multi_die_msns'] = int(((dies_per_msn > DIE_COUNT_THRESHOLDS['single_die']) &
+                                     (dies_per_msn < DIE_COUNT_THRESHOLDS['many_die'])).sum())
+    result['many_die_msns'] = int((dies_per_msn >= DIE_COUNT_THRESHOLDS['many_die']).sum())
+
+    # Calculate percentages
+    total = result['total_msns']
+    result['single_die_pct'] = round(result['single_die_msns'] / total * 100, 1) if total > 0 else 0
+    result['multi_die_pct'] = round(result['multi_die_msns'] / total * 100, 1) if total > 0 else 0
+    result['many_die_pct'] = round(result['many_die_msns'] / total * 100, 1) if total > 0 else 0
+
+    # Determine conclusion based on distribution
+    if result['many_die_pct'] > 50:
+        result['conclusion'] = 'SYSTEMIC_ENV'
+        result['interpretation'] = f"{result['many_die_pct']:.0f}% of MSNs have 8+ dies failing - systemic ENV issue"
+    elif result['single_die_pct'] > 60:
+        result['conclusion'] = 'LOCALIZED_DRAM'
+        result['interpretation'] = f"{result['single_die_pct']:.0f}% of MSNs have 1-2 dies failing - possible DRAM defect"
+    elif result['multi_die_pct'] > 40:
+        result['conclusion'] = 'INTERFACE_ISSUE'
+        result['interpretation'] = f"{result['multi_die_pct']:.0f}% of MSNs have 3-7 dies failing - interface/package issue"
+    else:
+        result['conclusion'] = 'MIXED'
+        result['interpretation'] = 'Mixed die count distribution - requires further investigation'
+
+    return result
+
+
+def analyze_supplier_dominance(df: pd.DataFrame) -> dict:
+    """
+    Analyze supplier dominance for ENV correlation (SOCAMM2 specific).
+
+    Checks PCB_SUPPLIER, and other supplier-related dimensions.
+    Strong supplier correlation → ENV-LIKELY
+
+    Args:
+        df: DataFrame with failure data
+
+    Returns:
+        Dictionary with supplier dominance analysis
+    """
+    result = {
+        'pcb_supplier': None,
+        'pcb_artwork_rev': None,
+        'assembly_facility': None,
+        'has_supplier_signal': False,
+        'dominant_supplier': None,
+        'interpretation': '',
+    }
+
+    if df.empty:
+        return result
+
+    total_fails = len(df)
+    suppliers_checked = []
+
+    # Check PCB supplier
+    if 'PCB_SUPPLIER' in df.columns and not df['PCB_SUPPLIER'].isna().all():
+        counts = df['PCB_SUPPLIER'].value_counts()
+        if len(counts) > 0:
+            top_value = counts.index[0]
+            top_pct = counts.iloc[0] / total_fails * 100
+            result['pcb_supplier'] = {
+                'value': str(top_value),
+                'count': int(counts.iloc[0]),
+                'pct': round(top_pct, 1),
+                'is_dominant': top_pct >= 70,
+            }
+            if top_pct >= 70:
+                suppliers_checked.append(('PCB_SUPPLIER', top_value, top_pct))
+
+    # Check PCB artwork revision
+    if 'PCB_ARTWORK_REV' in df.columns and not df['PCB_ARTWORK_REV'].isna().all():
+        counts = df['PCB_ARTWORK_REV'].value_counts()
+        if len(counts) > 0:
+            top_value = counts.index[0]
+            top_pct = counts.iloc[0] / total_fails * 100
+            result['pcb_artwork_rev'] = {
+                'value': str(top_value),
+                'count': int(counts.iloc[0]),
+                'pct': round(top_pct, 1),
+                'is_dominant': top_pct >= 70,
+            }
+
+    # Check assembly facility
+    if 'ASSEMBLY_FACILITY' in df.columns and not df['ASSEMBLY_FACILITY'].isna().all():
+        counts = df['ASSEMBLY_FACILITY'].value_counts()
+        if len(counts) > 0:
+            top_value = counts.index[0]
+            top_pct = counts.iloc[0] / total_fails * 100
+            result['assembly_facility'] = {
+                'value': str(top_value),
+                'count': int(counts.iloc[0]),
+                'pct': round(top_pct, 1),
+                'is_dominant': top_pct >= 70,
+            }
+            if top_pct >= 70:
+                suppliers_checked.append(('ASSEMBLY_FACILITY', top_value, top_pct))
+
+    # Determine if there's a supplier signal
+    if suppliers_checked:
+        result['has_supplier_signal'] = True
+        top_supplier = max(suppliers_checked, key=lambda x: x[2])
+        result['dominant_supplier'] = {
+            'dimension': top_supplier[0],
+            'value': str(top_supplier[1]),
+            'pct': round(top_supplier[2], 1),
+        }
+        result['interpretation'] = f"Strong supplier signal: {top_supplier[0]}={top_supplier[1]} ({top_supplier[2]:.0f}%) - ENV-LIKELY"
+    else:
+        result['interpretation'] = 'No dominant supplier correlation - supplier not a clear factor'
+
+    return result
+
+
+def apply_socamm2_guardrails(
+    confidence: dict,
+    address_stability: dict,
+    die_count_analysis: dict,
+    supplier_analysis: dict,
+    debug_flow: dict
+) -> dict:
+    """
+    Apply SOCAMM2-specific guardrails to adjust confidence.
+
+    Guardrails:
+    - Do not escalate DRAM without ROW stability
+    - Do not trust MOD-SYS without die-count context
+    - Use FABLOT as DRAM proof, not labels
+    - Treat ULOC clustering as ENV evidence
+    - Treat supplier correlation as ENV unless proven otherwise
+
+    Args:
+        confidence: Original confidence assessment
+        address_stability: Address stability analysis
+        die_count_analysis: Die count per MSN analysis
+        supplier_analysis: Supplier dominance analysis
+        debug_flow: Debug flow for the combination
+
+    Returns:
+        Adjusted confidence with guardrail notes
+    """
+    adjusted = confidence.copy()
+    guardrail_notes = []
+
+    rca_type = debug_flow.get('rca_type', 'UNCLASSIFIED')
+
+    # Guardrail 1: DRAM requires ROW stability
+    if rca_type == 'DRAM':
+        if address_stability and address_stability.get('conclusion') == 'RANDOM_ADDRESS':
+            adjusted['guardrail_adjustment'] = -20
+            guardrail_notes.append("⚠️ DRAM classification but ROW addresses are random - confidence reduced")
+
+    # Guardrail 2: MOD-SYS requires die-count context
+    if rca_type in ('BIOS', 'BIOS_PARTIAL'):
+        if die_count_analysis and die_count_analysis.get('conclusion') == 'SYSTEMIC_ENV':
+            guardrail_notes.append("✅ Many dies failing per MSN confirms ENV/system issue")
+        elif die_count_analysis and die_count_analysis.get('conclusion') == 'LOCALIZED_DRAM':
+            adjusted['guardrail_adjustment'] = -15
+            guardrail_notes.append("⚠️ Few dies failing per MSN - may be hidden DRAM issue")
+
+    # Guardrail 3: Supplier correlation indicates ENV
+    if supplier_analysis and supplier_analysis.get('has_supplier_signal'):
+        if rca_type == 'DRAM':
+            adjusted['guardrail_adjustment'] = adjusted.get('guardrail_adjustment', 0) - 15
+            guardrail_notes.append(f"⚠️ Strong supplier signal conflicts with DRAM classification")
+        elif rca_type in ('BIOS', 'HW+SOP'):
+            guardrail_notes.append(f"✅ Supplier signal supports ENV classification")
+
+    # Apply adjustments
+    if 'guardrail_adjustment' in adjusted:
+        adjusted['percentage'] = max(0, min(100, adjusted['percentage'] + adjusted['guardrail_adjustment']))
+
+        # Re-determine verdict based on adjusted percentage
+        if adjusted['percentage'] >= 70:
+            adjusted['verdict'] = 'HIGH_CONFIDENCE'
+            adjusted['verdict_color'] = '#27AE60'
+        elif adjusted['percentage'] >= 40:
+            adjusted['verdict'] = 'MODERATE_CONFIDENCE'
+            adjusted['verdict_color'] = '#F39C12'
+        else:
+            adjusted['verdict'] = 'LOW_CONFIDENCE'
+            adjusted['verdict_color'] = '#E74C3C'
+
+        adjusted['verdict_text'] = f"{adjusted['verdict'].replace('_', ' ').title()} (adjusted by SOCAMM2 guardrails)"
+
+    adjusted['guardrail_notes'] = guardrail_notes
+
+    return adjusted
+
+
 def run_sanity_check(
     df: pd.DataFrame,
     msn_status: str,
@@ -504,9 +951,28 @@ def run_sanity_check(
     if debug_flow['rca_type'] in ('DRAM', 'BIOS_PARTIAL'):
         address_stability = analyze_address_stability(filtered_df)
 
-    # Calculate confidence score
+    # =========================================================================
+    # SOCAMM2-Specific Analysis
+    # =========================================================================
+
+    # Analyze die count per MSN (16DP awareness)
+    die_count_analysis = analyze_die_count_per_msn(filtered_df)
+
+    # Analyze supplier dominance
+    supplier_analysis = analyze_supplier_dominance(filtered_df)
+
+    # Calculate base confidence score
     confidence = calculate_confidence(
         primary_results, secondary_results, address_stability, debug_flow
+    )
+
+    # Apply SOCAMM2 guardrails to adjust confidence
+    confidence = apply_socamm2_guardrails(
+        confidence=confidence,
+        address_stability=address_stability,
+        die_count_analysis=die_count_analysis,
+        supplier_analysis=supplier_analysis,
+        debug_flow=debug_flow
     )
 
     return {
@@ -519,6 +985,8 @@ def run_sanity_check(
         'primary_results': primary_results,
         'secondary_results': secondary_results,
         'address_stability': address_stability,
+        'die_count_analysis': die_count_analysis,
+        'supplier_analysis': supplier_analysis,
         'confidence': confidence,
     }
 
@@ -898,5 +1366,185 @@ def create_debug_flow_html(debug_flow: dict, dark_mode: bool = False) -> str:
         '''
 
     html += '</div>'
+
+    return html
+
+
+def create_die_count_analysis_html(result: dict, dark_mode: bool = False) -> str:
+    """
+    Create HTML for 16DP die count analysis (SOCAMM2 specific).
+
+    Args:
+        result: Sanity check result containing die_count_analysis
+        dark_mode: Whether to use dark mode colors
+
+    Returns:
+        HTML string for die count section
+    """
+    die_count = result.get('die_count_analysis')
+    if not die_count or die_count.get('conclusion') == 'INSUFFICIENT_DATA':
+        return ''
+
+    bg_color = '#1E1E1E' if dark_mode else '#FFFFFF'
+    text_color = '#E0E0E0' if dark_mode else '#333333'
+    border_color = '#444444' if dark_mode else '#E0E0E0'
+
+    conclusion_colors = {
+        'SYSTEMIC_ENV': '#3498DB',      # Blue - ENV
+        'LOCALIZED_DRAM': '#E74C3C',    # Red - DRAM
+        'INTERFACE_ISSUE': '#F39C12',   # Orange - Interface
+        'MIXED': '#9E9E9E',             # Grey - Mixed
+    }
+
+    conclusion_color = conclusion_colors.get(die_count['conclusion'], '#9E9E9E')
+
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+        <h4 style="margin: 0 0 0.75rem 0; color: {text_color};">🔢 16DP Die Count Analysis (SOCAMM2)</h4>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem;">
+            <div style="padding: 0.75rem; background: {'#2D2D2D' if dark_mode else '#F5F5F5'}; border-radius: 4px; text-align: center;">
+                <div style="font-size: 0.8rem; color: #888;">Avg Dies/MSN</div>
+                <div style="font-size: 1.5rem; color: {text_color}; font-weight: bold;">{die_count['avg_dies_per_msn']}</div>
+            </div>
+            <div style="padding: 0.75rem; background: {'#2D2D2D' if dark_mode else '#F5F5F5'}; border-radius: 4px; text-align: center;">
+                <div style="font-size: 0.8rem; color: #888;">1-2 Dies (DRAM)</div>
+                <div style="font-size: 1.5rem; color: #E74C3C; font-weight: bold;">{die_count['single_die_pct']}%</div>
+                <div style="font-size: 0.7rem; color: #888;">{die_count['single_die_msns']} MSNs</div>
+            </div>
+            <div style="padding: 0.75rem; background: {'#2D2D2D' if dark_mode else '#F5F5F5'}; border-radius: 4px; text-align: center;">
+                <div style="font-size: 0.8rem; color: #888;">3-7 Dies (Interface)</div>
+                <div style="font-size: 1.5rem; color: #F39C12; font-weight: bold;">{die_count['multi_die_pct']}%</div>
+                <div style="font-size: 0.7rem; color: #888;">{die_count['multi_die_msns']} MSNs</div>
+            </div>
+            <div style="padding: 0.75rem; background: {'#2D2D2D' if dark_mode else '#F5F5F5'}; border-radius: 4px; text-align: center;">
+                <div style="font-size: 0.8rem; color: #888;">8+ Dies (ENV)</div>
+                <div style="font-size: 1.5rem; color: #3498DB; font-weight: bold;">{die_count['many_die_pct']}%</div>
+                <div style="font-size: 0.7rem; color: #888;">{die_count['many_die_msns']} MSNs</div>
+            </div>
+        </div>
+
+        <div style="padding: 0.5rem; background: {'#2D2D2D' if dark_mode else '#F0F0F0'}; border-left: 4px solid {conclusion_color}; border-radius: 0 4px 4px 0;">
+            <strong style="color: {conclusion_color};">{die_count['conclusion'].replace('_', ' ')}</strong>
+            <span style="color: {text_color}; margin-left: 0.5rem;">
+                — {die_count.get('interpretation', '')}
+            </span>
+        </div>
+    </div>
+    '''
+
+    return html
+
+
+def create_supplier_analysis_html(result: dict, dark_mode: bool = False) -> str:
+    """
+    Create HTML for supplier dominance analysis.
+
+    Args:
+        result: Sanity check result containing supplier_analysis
+        dark_mode: Whether to use dark mode colors
+
+    Returns:
+        HTML string for supplier analysis section
+    """
+    supplier = result.get('supplier_analysis')
+    if not supplier:
+        return ''
+
+    bg_color = '#1E1E1E' if dark_mode else '#FFFFFF'
+    text_color = '#E0E0E0' if dark_mode else '#333333'
+    border_color = '#444444' if dark_mode else '#E0E0E0'
+
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+        <h4 style="margin: 0 0 0.75rem 0; color: {text_color};">📦 Supplier Correlation Analysis</h4>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+    '''
+
+    # PCB Supplier
+    if supplier.get('pcb_supplier'):
+        pcb = supplier['pcb_supplier']
+        is_dom = pcb.get('is_dominant', False)
+        html += f'''
+            <div style="padding: 0.75rem; background: {'#2D2D2D' if dark_mode else '#F5F5F5'}; border-radius: 4px; border-left: 4px solid {'#27AE60' if is_dom else '#9E9E9E'};">
+                <div style="font-size: 0.8rem; color: #888;">PCB Supplier</div>
+                <div style="font-size: 1.1rem; color: {text_color}; font-weight: bold; font-family: monospace;">{pcb['value']}</div>
+                <div style="font-size: 0.9rem; color: {'#27AE60' if is_dom else '#888'};">{pcb['pct']}% ({pcb['count']})</div>
+            </div>
+        '''
+
+    # PCB Artwork Rev
+    if supplier.get('pcb_artwork_rev'):
+        pcb_rev = supplier['pcb_artwork_rev']
+        is_dom = pcb_rev.get('is_dominant', False)
+        html += f'''
+            <div style="padding: 0.75rem; background: {'#2D2D2D' if dark_mode else '#F5F5F5'}; border-radius: 4px; border-left: 4px solid {'#27AE60' if is_dom else '#9E9E9E'};">
+                <div style="font-size: 0.8rem; color: #888;">PCB Artwork Rev</div>
+                <div style="font-size: 1.1rem; color: {text_color}; font-weight: bold; font-family: monospace;">{pcb_rev['value']}</div>
+                <div style="font-size: 0.9rem; color: {'#27AE60' if is_dom else '#888'};">{pcb_rev['pct']}% ({pcb_rev['count']})</div>
+            </div>
+        '''
+
+    # Assembly Facility
+    if supplier.get('assembly_facility'):
+        assy = supplier['assembly_facility']
+        is_dom = assy.get('is_dominant', False)
+        html += f'''
+            <div style="padding: 0.75rem; background: {'#2D2D2D' if dark_mode else '#F5F5F5'}; border-radius: 4px; border-left: 4px solid {'#27AE60' if is_dom else '#9E9E9E'};">
+                <div style="font-size: 0.8rem; color: #888;">Assembly Facility</div>
+                <div style="font-size: 1.1rem; color: {text_color}; font-weight: bold; font-family: monospace;">{assy['value']}</div>
+                <div style="font-size: 0.9rem; color: {'#27AE60' if is_dom else '#888'};">{assy['pct']}% ({assy['count']})</div>
+            </div>
+        '''
+
+    html += '</div>'
+
+    # Interpretation
+    signal_color = '#27AE60' if supplier.get('has_supplier_signal') else '#9E9E9E'
+    html += f'''
+        <div style="padding: 0.5rem; background: {'#2D2D2D' if dark_mode else '#F0F0F0'}; border-left: 4px solid {signal_color}; border-radius: 0 4px 4px 0;">
+            <span style="color: {text_color};">{supplier.get('interpretation', 'No supplier analysis available')}</span>
+        </div>
+    </div>
+    '''
+
+    return html
+
+
+def create_guardrail_notes_html(result: dict, dark_mode: bool = False) -> str:
+    """
+    Create HTML for SOCAMM2 guardrail notes.
+
+    Args:
+        result: Sanity check result containing confidence with guardrail_notes
+        dark_mode: Whether to use dark mode colors
+
+    Returns:
+        HTML string for guardrail notes
+    """
+    confidence = result.get('confidence', {})
+    notes = confidence.get('guardrail_notes', [])
+
+    if not notes:
+        return ''
+
+    bg_color = '#1E1E1E' if dark_mode else '#FFFFFF'
+    text_color = '#E0E0E0' if dark_mode else '#333333'
+    border_color = '#444444' if dark_mode else '#E0E0E0'
+
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+        <h4 style="margin: 0 0 0.75rem 0; color: {text_color};">🛡️ SOCAMM2 Guardrail Notes</h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: {text_color};">
+    '''
+
+    for note in notes:
+        html += f'<li style="margin: 0.25rem 0;">{note}</li>'
+
+    html += '''
+        </ul>
+    </div>
+    '''
 
     return html
