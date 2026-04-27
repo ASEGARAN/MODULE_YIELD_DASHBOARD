@@ -87,6 +87,14 @@ from src.failcrawler import (
     # Verified RPx Recovery
     fetch_slash_for_failures,
     calculate_verified_rpx_recovery,
+    # RCA Correlation Analysis
+    fetch_rca_correlation_data,
+    fetch_rca_volume_data,
+    calculate_rca_analysis,
+    get_top_failcrawler_categories,
+    create_rca_summary_html,
+    create_rca_correlation_table_html,
+    RCA_DIMENSIONS,
 )
 
 # AI Assistant module
@@ -392,6 +400,10 @@ def init_session_state() -> None:
         st.session_state.failcrawler_last_fetch_time = None
     if "failcrawler_filters" not in st.session_state:
         st.session_state.failcrawler_filters = {}
+    if "failcrawler_rca_data" not in st.session_state:
+        st.session_state.failcrawler_rca_data = pd.DataFrame()
+    if "failcrawler_rca_volume" not in st.session_state:
+        st.session_state.failcrawler_rca_volume = pd.DataFrame()
     # SMT6 yield session state
     if "smt6_data" not in st.session_state:
         st.session_state.smt6_data = pd.DataFrame()
@@ -3823,6 +3835,20 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                     workweeks=workweeks
                 )
 
+                # Fetch RCA correlation data for root cause analysis
+                rca_df = fetch_rca_correlation_data(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks
+                )
+
+                # Fetch RCA volume data for normalization
+                rca_vol_df = fetch_rca_volume_data(
+                    design_ids=filters['design_ids'],
+                    steps=steps_to_show,
+                    workweeks=workweeks
+                )
+
                 st.session_state.failcrawler_data = fc_df
                 st.session_state.failcrawler_msn_corr_data = msn_corr_df
                 st.session_state.failcrawler_fid_counts = fid_counts_df
@@ -3830,9 +3856,11 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 st.session_state.failcrawler_cdpm_data = cdpm_df
                 st.session_state.failcrawler_mdpm_data = mdpm_df
                 st.session_state.failcrawler_fcfm_data = fcfm_df
+                st.session_state.failcrawler_rca_data = rca_df
+                st.session_state.failcrawler_rca_volume = rca_vol_df
                 st.session_state.failcrawler_last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 st.session_state.failcrawler_filters = filters.copy()
-                st.success(f"Loaded {len(fc_df):,} FAILCRAWLER + {len(cdpm_df):,} cDPM + {len(mdpm_df):,} MDPM records!")
+                st.success(f"Loaded {len(fc_df):,} FAILCRAWLER + {len(cdpm_df):,} cDPM + {len(rca_df):,} RCA records!")
                 st.rerun()
 
         except Exception as e:
@@ -3924,6 +3952,77 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 top_movers_html = create_top_movers_html(fc_changes, step, threshold=25.0, dark_mode=False)
                 if top_movers_html:
                     components.html(top_movers_html, height=80, scrolling=False)
+
+            # RCA Correlation Analysis - show auto-flag and top contributing factor
+            rca_df = st.session_state.get('failcrawler_rca_data', pd.DataFrame())
+            total_uin_df = st.session_state.get('failcrawler_total_uin', pd.DataFrame())
+
+            if not rca_df.empty and 'MFG_WORKWEEK' in rca_df.columns:
+                # Get current and previous workweek
+                step_rca = rca_df[rca_df['STEP'].str.upper() == step.upper()]
+                if not step_rca.empty:
+                    available_wws = sorted(step_rca['MFG_WORKWEEK'].unique())
+                    if len(available_wws) >= 2:
+                        current_ww = int(available_wws[-1])
+                        previous_ww = int(available_wws[-2])
+
+                        # Get total UIN for DPM calculation
+                        total_uin_current = 0
+                        total_uin_previous = 0
+                        if not total_uin_df.empty and 'STEP' in total_uin_df.columns:
+                            step_uin = total_uin_df[total_uin_df['STEP'].str.upper() == step.upper()]
+                            if not step_uin.empty:
+                                curr_uin = step_uin[step_uin['MFG_WORKWEEK'] == current_ww]
+                                prev_uin = step_uin[step_uin['MFG_WORKWEEK'] == previous_ww]
+                                if not curr_uin.empty and 'TOTAL_MUIN' in curr_uin.columns:
+                                    total_uin_current = int(curr_uin['TOTAL_MUIN'].sum())
+                                if not prev_uin.empty and 'TOTAL_MUIN' in prev_uin.columns:
+                                    total_uin_previous = int(prev_uin['TOTAL_MUIN'].sum())
+
+                        # Get top FAILCRAWLER categories for category-level RCA
+                        top_fc_categories = get_top_failcrawler_categories(rca_df, step, current_ww, min_concentration_pct=35.0)
+
+                        # Get volume data for normalization
+                        rca_vol_df = st.session_state.get('failcrawler_rca_volume', pd.DataFrame())
+
+                        # Calculate RCA analysis
+                        rca_results = []
+                        if top_fc_categories:
+                            # Category-level RCA for each significant FAILCRAWLER
+                            for fc_cat in top_fc_categories[:3]:  # Limit to top 3
+                                rca_result = calculate_rca_analysis(
+                                    rca_df, step, current_ww, previous_ww,
+                                    total_uin_current, total_uin_previous,
+                                    failcrawler_category=fc_cat,
+                                    volume_df=rca_vol_df
+                                )
+                                if rca_result:
+                                    rca_results.append(rca_result)
+                        else:
+                            # Fall back to step-level RCA if no dominant category
+                            rca_result = calculate_rca_analysis(
+                                rca_df, step, current_ww, previous_ww,
+                                total_uin_current, total_uin_previous,
+                                volume_df=rca_vol_df
+                            )
+                            if rca_result:
+                                rca_results.append(rca_result)
+
+                        # Display RCA Summary banner(s)
+                        for rca_result in rca_results:
+                            if rca_result.get('auto_flag') in ('ENV-LIKELY', 'DRAM-LIKELY'):
+                                summary_html = create_rca_summary_html(rca_result, dark_mode=False)
+                                if summary_html:
+                                    components.html(summary_html, height=60, scrolling=False)
+
+                        # Expandable RCA Correlation Details
+                        if rca_results:
+                            with st.expander(f"🔍 **{step} RCA Correlation Details** (WW{current_ww} vs WW{previous_ww})", expanded=False):
+                                for rca_result in rca_results:
+                                    corr_html = create_rca_correlation_table_html(rca_result, dark_mode=False)
+                                    if corr_html:
+                                        components.html(corr_html, height=350, scrolling=True)
+                                        st.markdown("---")
 
             # Create chart (uses light mode colors for compatibility with dashboard theme)
             fig = create_failcrawler_chart(

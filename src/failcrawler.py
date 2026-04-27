@@ -413,6 +413,252 @@ def calculate_failcrawler_wow_changes(
     return changes
 
 
+def create_rca_summary_html(rca_result: dict, dark_mode: bool = False) -> str:
+    """
+    Create HTML for RCA Summary Panel with auto-flag badge and explanation.
+
+    Displays the auto-flag (ENV-LIKELY, DRAM-LIKELY, UNCLASSIFIED) and the
+    reason/top contributing factor.
+
+    Args:
+        rca_result: Result from calculate_rca_analysis()
+        dark_mode: Whether to use dark mode colors
+
+    Returns:
+        HTML string for the summary panel
+    """
+    if not rca_result:
+        return ""
+
+    # Color scheme
+    if dark_mode:
+        bg_color = '#1e1e1e'
+        border_color = '#333'
+        text_color = '#e0e0e0'
+        muted_color = '#888'
+    else:
+        bg_color = '#ffffff'
+        border_color = '#e0e0e0'
+        text_color = '#333'
+        muted_color = '#666'
+
+    # Flag colors and icons
+    flag_styles = {
+        'ENV-LIKELY': {'bg': '#fff3cd', 'border': '#ffc107', 'icon': '🟡', 'text': '#856404'},
+        'DRAM-LIKELY': {'bg': '#f8d7da', 'border': '#dc3545', 'icon': '🔴', 'text': '#721c24'},
+        'UNCLASSIFIED': {'bg': '#e9ecef', 'border': '#6c757d', 'icon': '⚪', 'text': '#495057'}
+    }
+
+    flag = rca_result.get('auto_flag', 'UNCLASSIFIED')
+    style = flag_styles.get(flag, flag_styles['UNCLASSIFIED'])
+
+    step = rca_result.get('step', '')
+    failcrawler = rca_result.get('failcrawler', '')
+    scope_label = f"{step} / {failcrawler}" if failcrawler else step
+    flag_reason = rca_result.get('flag_reason', '')
+    top_factor = rca_result.get('top_factor', {})
+
+    # Build explanation string
+    if top_factor:
+        dim = top_factor.get('dimension', '').replace('_', ' ').title()
+        val = top_factor.get('value', '')
+        conc = top_factor.get('concentration', 0)
+        wow = top_factor.get('wow_delta', 0)
+        wow_str = f"{wow}×" if wow < 999 else "NEW"
+        explanation = f"{conc}% from {dim}={val}, {wow_str} WoW"
+    else:
+        explanation = flag_reason
+
+    html = f'''
+    <div style="
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: {style['bg']};
+        border: 1px solid {style['border']};
+        border-left: 4px solid {style['border']};
+        border-radius: 6px;
+        font-family: 'Segoe UI', sans-serif;
+        margin-bottom: 10px;
+    ">
+        <span style="font-size: 20px;">{style['icon']}</span>
+        <div style="flex: 1;">
+            <div style="font-weight: 600; color: {style['text']}; font-size: 13px;">
+                {flag} — {scope_label}
+            </div>
+            <div style="font-size: 11px; color: {muted_color}; margin-top: 2px;">
+                {explanation}
+            </div>
+        </div>
+        <div style="font-size: 10px; color: {muted_color};">
+            WW{rca_result.get('current_ww', '')} vs WW{rca_result.get('previous_ww', '')}
+        </div>
+    </div>
+    '''
+
+    return html
+
+
+def create_rca_correlation_table_html(
+    rca_result: dict,
+    dark_mode: bool = False,
+    max_rows: int = 10
+) -> str:
+    """
+    Create HTML table for RCA correlation analysis with volume normalization.
+
+    Shows: Vol% | Fail% | Ratio (signal) | WoW Δ
+    Ratio = Fail% / Vol% - identifies disproportionate failures.
+
+    Args:
+        rca_result: Result from calculate_rca_analysis()
+        dark_mode: Whether to use dark mode colors
+        max_rows: Maximum rows to display
+
+    Returns:
+        HTML string for the correlation table
+    """
+    if not rca_result or not rca_result.get('correlations'):
+        return ""
+
+    correlations = rca_result['correlations'][:max_rows]
+    has_volume = rca_result.get('has_volume_data', False)
+
+    # Color scheme
+    if dark_mode:
+        bg_color = '#1e1e1e'
+        header_bg = '#2d2d2d'
+        border_color = '#444'
+        text_color = '#e0e0e0'
+        muted_color = '#888'
+    else:
+        bg_color = '#ffffff'
+        header_bg = '#f8f9fa'
+        border_color = '#dee2e6'
+        text_color = '#333'
+        muted_color = '#666'
+
+    step = rca_result.get('step', '')
+    failcrawler = rca_result.get('failcrawler', '')
+    title = f"{step} / {failcrawler}" if failcrawler else f"{step} Overall"
+
+    # Build table rows
+    rows_html = ""
+    for i, corr in enumerate(correlations):
+        dim = corr.get('dimension', '').replace('_', ' ').title()
+        val = corr.get('value', '')
+        fail_muin = corr.get('fail_muin', 0)
+        fail_pct = corr.get('fail_pct', 0)
+        vol_pct = corr.get('vol_pct', 0)
+        ratio = corr.get('ratio', 0)
+        wow_delta = corr.get('wow_delta', 0)
+
+        # Ratio color coding - key signal for disproportionate failures
+        if ratio >= 2.0:
+            ratio_color = '#dc3545'
+            ratio_bg = '#f8d7da'
+            signal = '⚠️'
+        elif ratio >= 1.5:
+            ratio_color = '#fd7e14'
+            ratio_bg = '#fff3cd'
+            signal = '⚠️'
+        elif ratio >= 0.5:
+            ratio_color = muted_color
+            ratio_bg = 'transparent'
+            signal = '→'
+        elif ratio > 0:
+            ratio_color = '#28a745'
+            ratio_bg = '#d4edda'
+            signal = '✅'
+        else:
+            ratio_color = muted_color
+            ratio_bg = 'transparent'
+            signal = '—'
+
+        # WoW delta color coding
+        if wow_delta >= 3.0:
+            wow_color = '#dc3545'
+            wow_str = f"▲{wow_delta}×" if wow_delta < 999 else "▲NEW"
+        elif wow_delta >= 1.5:
+            wow_color = '#fd7e14'
+            wow_str = f"▲{wow_delta}×"
+        elif wow_delta >= 1.0:
+            wow_color = muted_color
+            wow_str = f"→{wow_delta}×"
+        elif wow_delta > 0:
+            wow_color = '#28a745'
+            wow_str = f"▼{wow_delta}×"
+        else:
+            wow_color = muted_color
+            wow_str = "—"
+
+        row_bg = header_bg if i == 0 else bg_color
+
+        if has_volume:
+            rows_html += f'''
+            <tr style="background: {row_bg};">
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; color: {muted_color};">{dim}</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; font-weight: 500;">{val}</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; text-align: right;">{vol_pct:.1f}%</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; text-align: right;">{fail_pct:.1f}%</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; text-align: right;">
+                    <span style="background: {ratio_bg}; color: {ratio_color}; padding: 1px 4px; border-radius: 3px; font-weight: 600;">{signal}{ratio:.1f}×</span>
+                </td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; text-align: right; color: {wow_color};">{wow_str}</td>
+            </tr>'''
+        else:
+            rows_html += f'''
+            <tr style="background: {row_bg};">
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; color: {muted_color};">{dim}</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; font-weight: 500;">{val}</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; text-align: right;">{fail_muin:,}</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; text-align: right;">{fail_pct:.1f}%</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid {border_color}; font-size: 10px; text-align: right; color: {wow_color};">{wow_str}</td>
+            </tr>'''
+
+    total_fail_muin = rca_result.get('total_fail_muin', 0)
+    total_volume = rca_result.get('total_volume', 0)
+
+    if has_volume:
+        header_html = '''<tr style="background: {hbg};">
+            <th style="padding: 5px 6px; text-align: left; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Dimension</th>
+            <th style="padding: 5px 6px; text-align: left; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Value</th>
+            <th style="padding: 5px 6px; text-align: right; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Vol%</th>
+            <th style="padding: 5px 6px; text-align: right; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Fail%</th>
+            <th style="padding: 5px 6px; text-align: right; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Ratio</th>
+            <th style="padding: 5px 6px; text-align: right; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">WoW</th>
+        </tr>'''.format(hbg=header_bg, mc=muted_color, bc=border_color)
+        vol_info = f" | Vol: {total_volume:,}"
+    else:
+        header_html = '''<tr style="background: {hbg};">
+            <th style="padding: 5px 6px; text-align: left; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Dimension</th>
+            <th style="padding: 5px 6px; text-align: left; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Value</th>
+            <th style="padding: 5px 6px; text-align: right; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Fail</th>
+            <th style="padding: 5px 6px; text-align: right; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">Fail%</th>
+            <th style="padding: 5px 6px; text-align: right; font-size: 9px; font-weight: 600; color: {mc}; border-bottom: 1px solid {bc};">WoW</th>
+        </tr>'''.format(hbg=header_bg, mc=muted_color, bc=border_color)
+        vol_info = ""
+
+    html = f'''
+    <div style="background: {bg_color}; border: 1px solid {border_color}; border-radius: 6px; overflow: hidden; font-family: 'Segoe UI', sans-serif;">
+        <div style="background: {header_bg}; padding: 6px 10px; border-bottom: 1px solid {border_color};">
+            <span style="font-weight: 600; font-size: 11px; color: {text_color};">🔍 RCA — {title}</span>
+            <span style="font-size: 9px; color: {muted_color}; margin-left: 8px;">Fails: {total_fail_muin:,}{vol_info}</span>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>{header_html}</thead>
+            <tbody>{rows_html}</tbody>
+        </table>
+        <div style="padding: 4px 10px; font-size: 8px; color: {muted_color}; border-top: 1px solid {border_color};">
+            Ratio = Fail% ÷ Vol% | ⚠️ &gt;1.5× disproportionate | ✅ &lt;0.5× under-represented
+        </div>
+    </div>
+    '''
+
+    return html
+
+
 def create_top_movers_html(
     changes: list[dict],
     step: str,
@@ -1243,6 +1489,435 @@ def fetch_msn_status_correlation_data(
     except Exception as e:
         logger.exception(f"Error fetching MSN_STATUS correlation data: {e}")
         return pd.DataFrame()
+
+
+def fetch_rca_volume_data(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch total volume (MUIN) by RCA dimensions for normalization.
+
+    This fetches ALL modules (including Pass) to calculate volume percentages
+    for each RCA dimension. Used to normalize failure concentrations.
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with total MUIN per RCA dimension
+    """
+    design_id_str = ','.join(design_ids)
+    step_str = ','.join([s.lower() for s in steps])
+    workweek_str = ','.join([str(ww) for ww in workweeks])
+
+    # Volume query - ALL modules (no msn_status filter)
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        '-FORCEAPI', '+quiet', '+csv', '+stdf',
+        '-exclude_baseline=NULL',
+        f'-DESIGN_ID={design_id_str}',
+        f'-mfg_workweek={workweek_str}',
+        '-round=1',
+        '-format=DESIGN_ID,STEP,MFG_WORKWEEK,MUIN',
+        '-format+=MACHINE_ID,TESTER,TEST_FACILITY,ASSEMBLY_FACILITY',
+        '-format+=PCB_SUPPLIER,REGISTER_SUPPLIER,FLOW,TEST_VERSION',
+        f'-step={step_str}',
+        '+modfm'
+    ]
+
+    logger.info(f"Fetching RCA volume data for normalization...")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=600
+        )
+
+        if result.returncode != 0:
+            logger.error(f"mtsums RCA volume error: {result.stderr.decode() if result.stderr else 'Unknown'}")
+            return pd.DataFrame()
+
+        output = result.stdout.decode()
+        if not output.strip():
+            logger.warning("mtsums RCA volume returned empty output")
+            return pd.DataFrame()
+
+        df = pd.read_csv(StringIO(output))
+        df.columns = [col.upper() for col in df.columns]
+
+        logger.info(f"Fetched {len(df)} RCA volume records")
+        return df
+
+    except subprocess.TimeoutExpired:
+        logger.error("mtsums RCA volume command timed out")
+        return pd.DataFrame()
+    except Exception as e:
+        logger.exception(f"Error fetching RCA volume data: {e}")
+        return pd.DataFrame()
+
+
+def fetch_rca_correlation_data(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str]
+) -> pd.DataFrame:
+    """
+    Fetch RCA correlation data for root cause analysis.
+
+    Fetches FAILCRAWLER data with environment dimensions for correlation analysis:
+    - machine_id, tester (test equipment)
+    - test_facility, assembly_facility (facilities)
+    - pcb_supplier, register_supplier (suppliers)
+    - flow, test_version (test configuration)
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+
+    Returns:
+        DataFrame with FAILCRAWLER data and RCA dimensions
+    """
+    design_id_str = ','.join(design_ids)
+    step_str = ','.join([s.lower() for s in steps])
+    workweek_str = ','.join([str(ww) for ww in workweeks])
+
+    # RCA correlation query with environment dimensions
+    # Uses +modfm for module-level failcrawler data with MUIN counts
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        '-FORCEAPI', '+quiet', '+csv', '+stdf',
+        '-exclude_baseline=NULL',
+        f'-DESIGN_ID={design_id_str}',
+        f'-mfg_workweek={workweek_str}',
+        '-round=1',
+        '-format=DESIGN_ID,STEP,MFG_WORKWEEK,FAILCRAWLER,MUFAIL,MUIN',
+        '-format+=MACHINE_ID,TESTER,TEST_FACILITY,ASSEMBLY_FACILITY',
+        '-format+=PCB_SUPPLIER,REGISTER_SUPPLIER,FLOW,TEST_VERSION',
+        f'-step={step_str}',
+        '-msn_status!=Pass',
+        '+modfm'
+    ]
+
+    logger.info(f"Fetching RCA correlation data for {len(design_ids)} DIDs, {len(steps)} steps, {len(workweeks)} weeks...")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=600
+        )
+
+        if result.returncode != 0:
+            logger.error(f"mtsums RCA error: {result.stderr.decode() if result.stderr else 'Unknown'}")
+            return pd.DataFrame()
+
+        output = result.stdout.decode()
+        if not output.strip():
+            logger.warning("mtsums RCA returned empty output")
+            return pd.DataFrame()
+
+        df = pd.read_csv(StringIO(output))
+        df.columns = [col.upper() for col in df.columns]
+
+        logger.info(f"Fetched {len(df)} RCA correlation records")
+        return df
+
+    except subprocess.TimeoutExpired:
+        logger.error("mtsums RCA command timed out after 10 minutes")
+        return pd.DataFrame()
+    except Exception as e:
+        logger.exception(f"Error fetching RCA correlation data: {e}")
+        return pd.DataFrame()
+
+
+# RCA Dimension columns for correlation analysis
+RCA_DIMENSIONS = [
+    'MACHINE_ID',
+    'TESTER',
+    'TEST_FACILITY',
+    'ASSEMBLY_FACILITY',
+    'PCB_SUPPLIER',
+    'REGISTER_SUPPLIER',
+    'FLOW',
+    'TEST_VERSION'
+]
+
+
+def calculate_rca_analysis(
+    rca_df: pd.DataFrame,
+    step: str,
+    current_ww: int,
+    previous_ww: int,
+    total_uin_current: int,
+    total_uin_previous: int,
+    failcrawler_category: str = None,
+    volume_df: pd.DataFrame = None
+) -> dict:
+    """
+    Calculate RCA correlation analysis for a specific step and optionally FAILCRAWLER category.
+
+    Computes concentration % and WoW DPM change for each RCA dimension to identify
+    the most likely contributing factor to a failure spike.
+
+    Volume Normalization:
+    - If volume_df is provided, calculates vol% for each factor
+    - Signal = fail% / vol% ratio (>1.5 = disproportionate failures)
+    - A factor with 75% failures but 75% volume is proportional (not a signal)
+    - A factor with 5% failures but 1% volume is 5× disproportionate (strong signal)
+
+    Auto-flag logic:
+    - ENV-LIKELY: >1.5× disproportionate ratio OR >3× WoW DPM increase
+    - UNCLASSIFIED: Neither condition met (Phase 2 will add DRAM-LIKELY)
+
+    Args:
+        rca_df: DataFrame from fetch_rca_correlation_data()
+        step: Test step (e.g., 'HMB1', 'QMON')
+        current_ww: Current workweek (YYYYWW)
+        previous_ww: Previous workweek for comparison
+        total_uin_current: Total UIN for current week (denominator for DPM)
+        total_uin_previous: Total UIN for previous week
+        failcrawler_category: Optional - analyze specific FAILCRAWLER category
+        volume_df: Optional - DataFrame from fetch_rca_volume_data() for normalization
+
+    Returns:
+        Dictionary with RCA analysis results including volume-normalized metrics
+    """
+    if rca_df.empty:
+        return None
+
+    # Filter to step
+    step_upper = step.upper()
+    df = rca_df[rca_df['STEP'].str.upper() == step_upper].copy()
+
+    if df.empty:
+        return None
+
+    # Filter to FAILCRAWLER category if specified
+    scope = 'step'
+    if failcrawler_category:
+        df = df[df['FAILCRAWLER'] == failcrawler_category].copy()
+        scope = 'category'
+        if df.empty:
+            return None
+
+    # Split by workweek
+    df_current = df[df['MFG_WORKWEEK'] == current_ww].copy()
+    df_previous = df[df['MFG_WORKWEEK'] == previous_ww].copy()
+
+    if df_current.empty:
+        return None
+
+    # Calculate total failing MUIN for current week (for concentration %)
+    total_fail_muin_current = df_current['MUIN'].sum() if 'MUIN' in df_current.columns else len(df_current)
+
+    if total_fail_muin_current == 0:
+        return None
+
+    # Get volume data for normalization if available
+    vol_by_dim = {}
+    total_volume = 0
+    if volume_df is not None and not volume_df.empty:
+        vol_df = volume_df[
+            (volume_df['STEP'].str.upper() == step_upper) &
+            (volume_df['MFG_WORKWEEK'] == current_ww)
+        ].copy()
+        if not vol_df.empty:
+            total_volume = vol_df['MUIN'].sum()
+            for dimension in RCA_DIMENSIONS:
+                if dimension in vol_df.columns:
+                    vol_by_dim[dimension] = vol_df.groupby(dimension)['MUIN'].sum().to_dict()
+
+    # Analyze each RCA dimension
+    correlations = []
+
+    for dimension in RCA_DIMENSIONS:
+        if dimension not in df_current.columns:
+            continue
+
+        # Group by dimension value for current week
+        dim_current = df_current.groupby(dimension)['MUIN'].sum().reset_index()
+        dim_current.columns = ['value', 'fail_muin']
+
+        # Calculate fail concentration %
+        dim_current['fail_pct'] = (dim_current['fail_muin'] / total_fail_muin_current * 100).round(1)
+
+        # Calculate volume % if available
+        if dimension in vol_by_dim and total_volume > 0:
+            dim_current['vol_muin'] = dim_current['value'].map(vol_by_dim[dimension]).fillna(0)
+            dim_current['vol_pct'] = (dim_current['vol_muin'] / total_volume * 100).round(1)
+            # Calculate disproportionate ratio (fail% / vol%)
+            dim_current['ratio'] = dim_current.apply(
+                lambda row: round(row['fail_pct'] / row['vol_pct'], 1) if row['vol_pct'] > 0 else 0,
+                axis=1
+            )
+        else:
+            dim_current['vol_muin'] = 0
+            dim_current['vol_pct'] = 0
+            dim_current['ratio'] = 0
+
+        # Calculate DPM for current week
+        if total_uin_current and total_uin_current > 0:
+            dim_current['dpm_current'] = (dim_current['fail_muin'] / total_uin_current * 1_000_000).round(0)
+        else:
+            dim_current['dpm_current'] = 0
+
+        # Get previous week data for WoW comparison
+        if not df_previous.empty and dimension in df_previous.columns:
+            dim_previous = df_previous.groupby(dimension)['MUIN'].sum().reset_index()
+            dim_previous.columns = ['value', 'fail_muin_prev']
+
+            if total_uin_previous and total_uin_previous > 0:
+                dim_previous['dpm_previous'] = (dim_previous['fail_muin_prev'] / total_uin_previous * 1_000_000).round(0)
+            else:
+                dim_previous['dpm_previous'] = 0
+
+            # Merge current and previous
+            dim_merged = dim_current.merge(dim_previous, on='value', how='left')
+            dim_merged['dpm_previous'] = dim_merged['dpm_previous'].fillna(0)
+        else:
+            dim_merged = dim_current.copy()
+            dim_merged['dpm_previous'] = 0
+
+        # Calculate WoW delta (ratio)
+        dim_merged['wow_delta'] = dim_merged.apply(
+            lambda row: round(row['dpm_current'] / row['dpm_previous'], 1)
+            if row['dpm_previous'] > 0 else (float('inf') if row['dpm_current'] > 0 else 0),
+            axis=1
+        )
+
+        # Add to correlations list
+        for _, row in dim_merged.iterrows():
+            value = row['value']
+            if pd.isna(value) or str(value).strip() == '' or str(value).upper() in ('NAN', 'NONE', 'NULL'):
+                continue
+
+            correlations.append({
+                'dimension': dimension,
+                'value': str(value),
+                'fail_muin': int(row['fail_muin']),
+                'fail_pct': float(row['fail_pct']),
+                'vol_muin': int(row['vol_muin']) if row['vol_muin'] > 0 else 0,
+                'vol_pct': float(row['vol_pct']),
+                'ratio': float(row['ratio']),
+                'wow_delta': float(row['wow_delta']) if row['wow_delta'] != float('inf') else 999.9
+            })
+
+    if not correlations:
+        return None
+
+    # Sort by disproportionate ratio (if available), then by fail_pct
+    # Factors with high ratio = disproportionate failures relative to volume
+    has_volume = any(c['vol_pct'] > 0 for c in correlations)
+    if has_volume:
+        correlations.sort(key=lambda x: (x['ratio'], x['fail_pct']), reverse=True)
+    else:
+        correlations.sort(key=lambda x: x['fail_pct'], reverse=True)
+
+    # Find top factor by disproportionate ratio (if volume data available)
+    # Otherwise fall back to highest fail_pct
+    top_factor = correlations[0]
+
+    # Determine auto-flag
+    auto_flag = 'UNCLASSIFIED'
+    flag_reason = 'No dominant factor identified'
+
+    # Check ENV-LIKELY conditions with volume normalization
+    if has_volume:
+        # Condition 1: Disproportionate ratio >1.5 (fail% is 1.5× higher than vol%)
+        disproportionate = [c for c in correlations if c['ratio'] > 1.5 and c['fail_pct'] > 5]
+        if disproportionate:
+            top_disp = disproportionate[0]
+            auto_flag = 'ENV-LIKELY'
+            flag_reason = f"{top_disp['ratio']}× disproportionate ({top_disp['fail_pct']}% fails vs {top_disp['vol_pct']}% vol) on {top_disp['dimension']}={top_disp['value']}"
+            top_factor = top_disp
+    else:
+        # No volume data - fall back to concentration-based logic
+        if top_factor['fail_pct'] > 70:
+            auto_flag = 'ENV-LIKELY'
+            flag_reason = f"{top_factor['fail_pct']}% concentration on {top_factor['dimension']}={top_factor['value']}"
+
+    # Condition 2: >3× WoW increase on any factor with significant volume
+    if auto_flag == 'UNCLASSIFIED':
+        for corr in correlations:
+            if corr['wow_delta'] > 3.0 and corr['fail_pct'] > 10:
+                auto_flag = 'ENV-LIKELY'
+                flag_reason = f"{corr['wow_delta']}× WoW increase on {corr['dimension']}={corr['value']}"
+                top_factor = corr
+                break
+
+    return {
+        'step': step_upper,
+        'failcrawler': failcrawler_category,
+        'scope': scope,
+        'auto_flag': auto_flag,
+        'flag_reason': flag_reason,
+        'top_factor': top_factor,
+        'correlations': correlations[:20],  # Limit to top 20 for display
+        'total_fail_muin': total_fail_muin_current,
+        'total_volume': total_volume,
+        'has_volume_data': has_volume,
+        'current_ww': current_ww,
+        'previous_ww': previous_ww
+    }
+
+
+def get_top_failcrawler_categories(
+    rca_df: pd.DataFrame,
+    step: str,
+    workweek: int,
+    min_concentration_pct: float = 35.0
+) -> list[str]:
+    """
+    Get FAILCRAWLER categories that have significant concentration for RCA analysis.
+
+    Used to determine whether to do category-level or step-level RCA.
+    If no category has >= min_concentration_pct, fall back to step-level.
+
+    Args:
+        rca_df: DataFrame from fetch_rca_correlation_data()
+        step: Test step
+        workweek: Workweek to analyze
+        min_concentration_pct: Minimum concentration % to be considered significant
+
+    Returns:
+        List of FAILCRAWLER categories meeting threshold, sorted by MUIN descending
+    """
+    if rca_df.empty or 'FAILCRAWLER' not in rca_df.columns:
+        return []
+
+    # Filter to step and workweek
+    df = rca_df[
+        (rca_df['STEP'].str.upper() == step.upper()) &
+        (rca_df['MFG_WORKWEEK'] == workweek)
+    ].copy()
+
+    if df.empty:
+        return []
+
+    # Group by FAILCRAWLER
+    fc_summary = df.groupby('FAILCRAWLER')['MUIN'].sum().reset_index()
+    total_muin = fc_summary['MUIN'].sum()
+
+    if total_muin == 0:
+        return []
+
+    fc_summary['concentration'] = (fc_summary['MUIN'] / total_muin * 100).round(1)
+
+    # Filter to categories meeting threshold
+    significant = fc_summary[fc_summary['concentration'] >= min_concentration_pct]
+
+    # Sort by MUIN descending
+    significant = significant.sort_values('MUIN', ascending=False)
+
+    return significant['FAILCRAWLER'].tolist()
 
 
 def fetch_total_uin_by_step(
