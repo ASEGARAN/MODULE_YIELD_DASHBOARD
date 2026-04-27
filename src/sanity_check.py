@@ -276,10 +276,11 @@ def fetch_sanity_check_data(
     ]
 
     # Add optional filters
+    # Note: mtsums uses -module_density and -module_speed (not -density/-speed)
     if densities:
-        cmd.append(f'-density={",".join(densities)}')
+        cmd.append(f'-module_density={",".join(densities)}')
     if speeds:
-        cmd.append(f'-speed={",".join(speeds)}')
+        cmd.append(f'-module_speed={",".join(speeds)}')
 
     # Use +fidag for FID-level aggregation (raw data per MSN/FID)
     cmd.append('+fidag')
