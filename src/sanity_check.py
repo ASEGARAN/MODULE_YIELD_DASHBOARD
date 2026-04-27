@@ -435,6 +435,90 @@ def get_debug_flow(msn_status: str, failcrawler: str) -> dict:
     return DEBUG_FLOWS.get(key, DEFAULT_DEBUG_FLOW)
 
 
+def fetch_fid_attributes(
+    design_ids: list[str],
+    steps: list[str],
+    workweeks: list[str],
+    densities: list[str] = None,
+    speeds: list[str] = None
+) -> pd.DataFrame:
+    """
+    Fetch FID-level attributes that cannot be combined with failcrawler query.
+
+    These attributes (PROBE_REV, BURN_*, WAFER, RETICLE_WAVE_ID) are crucial for
+    silicon-level correlation analysis but mtsums doesn't allow them with +fidag failcrawler.
+
+    Args:
+        design_ids: List of design IDs
+        steps: List of test steps
+        workweeks: List of workweeks
+        densities: Optional list of densities
+        speeds: Optional list of speeds
+
+    Returns:
+        DataFrame with FID-level attributes keyed by FID
+    """
+    design_id_str = ','.join(design_ids)
+    step_str = ','.join([s.lower() for s in steps])
+    workweek_str = ','.join([str(ww) for ww in workweeks])
+
+    # Query FID attributes using +fidattr (without failcrawler)
+    cmd = [
+        '/u/dramsoft/bin/mtsums',
+        '-FORCEAPI', '+quiet', '+csv', '+stdf',
+        '-exclude_baseline=NULL',
+        f'-DESIGN_ID={design_id_str}',
+        f'-mfg_workweek={workweek_str}',
+        # Key fields for joining
+        '-format=MSN,FID',
+        # FID attributes that conflict with failcrawler
+        '-format+=WAFER,PROBE_REV,BURN_MAJOR_VERSION,BURN_MACHINE_CONFIG,RETICLE_WAVE_ID',
+        f'-step={step_str}',
+        '-msn_status!=Pass',
+    ]
+
+    # Add optional filters
+    if densities:
+        cmd.append(f'-module_density={",".join(densities)}')
+    if speeds:
+        cmd.append(f'-module_speed={",".join(speeds)}')
+
+    # Use +fidattr for FID attribute data (no failcrawler)
+    cmd.append('+fidattr')
+
+    logger.info("Fetching FID attributes (WAFER, PROBE_REV, BURN_*, RETICLE_WAVE_ID)...")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=300
+        )
+
+        if result.returncode != 0:
+            logger.warning(f"FID attributes query failed: {result.stderr.decode() if result.stderr else 'Unknown'}")
+            return pd.DataFrame()
+
+        output = result.stdout.decode()
+        if not output.strip():
+            return pd.DataFrame()
+
+        df = pd.read_csv(StringIO(output))
+        df.columns = [col.upper() for col in df.columns]
+
+        # Deduplicate - keep first occurrence per FID
+        if 'FID' in df.columns:
+            df = df.drop_duplicates(subset=['FID'], keep='first')
+
+        logger.info(f"Fetched {len(df)} FID attribute records")
+        return df
+
+    except Exception as e:
+        logger.warning(f"Error fetching FID attributes: {e}")
+        return pd.DataFrame()
+
+
 def fetch_sanity_check_data(
     design_ids: list[str],
     steps: list[str],
@@ -445,7 +529,11 @@ def fetch_sanity_check_data(
     """
     Fetch failure data with all sanity check dimensions.
 
-    Includes both environment and silicon dimensions for comprehensive validation.
+    Uses TWO queries to get complete data:
+    1. Failcrawler query (+fidag) - gets failure patterns and most dimensions
+    2. FID attributes query (+fidattr) - gets WAFER, PROBE_REV, BURN_*, RETICLE_WAVE_ID
+
+    These are merged on FID to provide comprehensive silicon-level correlation data.
 
     Args:
         design_ids: List of design IDs
@@ -455,15 +543,17 @@ def fetch_sanity_check_data(
         speeds: Optional list of speeds
 
     Returns:
-        DataFrame with failure data and sanity check dimensions
+        DataFrame with failure data and all sanity check dimensions merged
     """
     design_id_str = ','.join(design_ids)
     step_str = ','.join([s.lower() for s in steps])
     workweek_str = ','.join([str(ww) for ww in workweeks])
 
-    # Comprehensive query with all dimensions using +fidag for FID-level data
+    # ==========================================================================
+    # Query 1: Failcrawler data with +fidag
+    # ==========================================================================
     # Note: +fidag gives raw MSN/FID-level data, unlike +modfm which pivots by MSN_STATUS
-    # Reference: MTSums schema documentation for available attributes
+    # IMPORTANT: Can't request failcrawler and fidattr data at the same time in mtsums
     cmd = [
         '/u/dramsoft/bin/mtsums',
         '-FORCEAPI', '+quiet', '+csv', '+stdf',
@@ -479,9 +569,7 @@ def fetch_sanity_check_data(
         # Materials / Supplier dimensions
         '-format+=PCB_SUPPLIER,REGISTER_SUPPLIER,PCB,PCB_ARTWORK_REV',
         # Silicon / Process dimensions (DRAM source)
-        '-format+=ULOC,WAFER,WREG,FAB,RETICLE_WAVE_ID',
-        # Probe / Burn history dimensions
-        '-format+=PROBE_REV,BURN_MAJOR_VERSION,BURN_MACHINE_CONFIG',
+        '-format+=ULOC,WREG,FAB',
         # Test config dimensions
         '-format+=FLOW,TEST_VERSION,SBIN',
         # Failcrawler details
@@ -502,7 +590,7 @@ def fetch_sanity_check_data(
     # Use +fidag for FID-level aggregation (raw data per MSN/FID)
     cmd.append('+fidag')
 
-    logger.info(f"Fetching sanity check data...")
+    logger.info("Fetching sanity check data (failcrawler query)...")
 
     try:
         result = subprocess.run(
@@ -527,7 +615,33 @@ def fetch_sanity_check_data(
         if 'FID' in df.columns:
             df['FABLOT'] = df['FID'].apply(lambda x: str(x).split(':')[0] if pd.notna(x) else '')
 
-        logger.info(f"Fetched {len(df)} sanity check records")
+        logger.info(f"Fetched {len(df)} failcrawler records")
+
+        # ==========================================================================
+        # Query 2: FID attributes (separate query due to mtsums limitation)
+        # ==========================================================================
+        fid_attr_df = fetch_fid_attributes(
+            design_ids=design_ids,
+            steps=steps,
+            workweeks=workweeks,
+            densities=densities,
+            speeds=speeds
+        )
+
+        # Merge FID attributes if we got them
+        if not fid_attr_df.empty and 'FID' in df.columns and 'FID' in fid_attr_df.columns:
+            # Get only the new columns (exclude MSN, FID which are already in df)
+            new_cols = [c for c in fid_attr_df.columns if c not in ['MSN', 'FID']]
+            if new_cols:
+                merge_cols = ['FID'] + new_cols
+                df = df.merge(
+                    fid_attr_df[merge_cols],
+                    on='FID',
+                    how='left'
+                )
+                logger.info(f"Merged FID attributes: {new_cols}")
+
+        logger.info(f"Total sanity check records: {len(df)}")
         return df
 
     except Exception as e:
