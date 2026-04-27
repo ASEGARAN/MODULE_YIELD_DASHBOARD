@@ -3839,14 +3839,18 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 rca_df = fetch_rca_correlation_data(
                     design_ids=filters['design_ids'],
                     steps=steps_to_show,
-                    workweeks=workweeks
+                    workweeks=workweeks,
+                    densities=filters.get('densities'),
+                    speeds=filters.get('speeds')
                 )
 
                 # Fetch RCA volume data for normalization
                 rca_vol_df = fetch_rca_volume_data(
                     design_ids=filters['design_ids'],
                     steps=steps_to_show,
-                    workweeks=workweeks
+                    workweeks=workweeks,
+                    densities=filters.get('densities'),
+                    speeds=filters.get('speeds')
                 )
 
                 st.session_state.failcrawler_data = fc_df

@@ -1494,7 +1494,9 @@ def fetch_msn_status_correlation_data(
 def fetch_rca_volume_data(
     design_ids: list[str],
     steps: list[str],
-    workweeks: list[str]
+    workweeks: list[str],
+    densities: list[str] = None,
+    speeds: list[str] = None
 ) -> pd.DataFrame:
     """
     Fetch total volume (MUIN) by RCA dimensions for normalization.
@@ -1506,6 +1508,8 @@ def fetch_rca_volume_data(
         design_ids: List of design IDs
         steps: List of test steps
         workweeks: List of workweeks
+        densities: Optional list of densities (e.g., ['64GB', '128GB'])
+        speeds: Optional list of speeds (e.g., ['7500MT/s', '8533MT/s'])
 
     Returns:
         DataFrame with total MUIN per RCA dimension
@@ -1526,8 +1530,19 @@ def fetch_rca_volume_data(
         '-format+=MACHINE_ID,TESTER,TEST_FACILITY,ASSEMBLY_FACILITY',
         '-format+=PCB_SUPPLIER,REGISTER_SUPPLIER,FLOW,TEST_VERSION',
         f'-step={step_str}',
-        '+modfm'
     ]
+
+    # Add optional density filter
+    if densities:
+        density_str = ','.join(densities)
+        cmd.append(f'-density={density_str}')
+
+    # Add optional speed filter
+    if speeds:
+        speed_str = ','.join(speeds)
+        cmd.append(f'-speed={speed_str}')
+
+    cmd.append('+modfm')
 
     logger.info(f"Fetching RCA volume data for normalization...")
 
@@ -1565,7 +1580,9 @@ def fetch_rca_volume_data(
 def fetch_rca_correlation_data(
     design_ids: list[str],
     steps: list[str],
-    workweeks: list[str]
+    workweeks: list[str],
+    densities: list[str] = None,
+    speeds: list[str] = None
 ) -> pd.DataFrame:
     """
     Fetch RCA correlation data for root cause analysis.
@@ -1580,6 +1597,8 @@ def fetch_rca_correlation_data(
         design_ids: List of design IDs
         steps: List of test steps
         workweeks: List of workweeks
+        densities: Optional list of densities (e.g., ['64GB', '128GB'])
+        speeds: Optional list of speeds (e.g., ['7500MT/s', '8533MT/s'])
 
     Returns:
         DataFrame with FAILCRAWLER data and RCA dimensions
@@ -1602,8 +1621,19 @@ def fetch_rca_correlation_data(
         '-format+=PCB_SUPPLIER,REGISTER_SUPPLIER,FLOW,TEST_VERSION',
         f'-step={step_str}',
         '-msn_status!=Pass',
-        '+modfm'
     ]
+
+    # Add optional density filter
+    if densities:
+        density_str = ','.join(densities)
+        cmd.append(f'-density={density_str}')
+
+    # Add optional speed filter
+    if speeds:
+        speed_str = ','.join(speeds)
+        cmd.append(f'-speed={speed_str}')
+
+    cmd.append('+modfm')
 
     logger.info(f"Fetching RCA correlation data for {len(design_ids)} DIDs, {len(steps)} steps, {len(workweeks)} weeks...")
 
