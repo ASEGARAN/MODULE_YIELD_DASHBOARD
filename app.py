@@ -97,6 +97,20 @@ from src.failcrawler import (
     RCA_DIMENSIONS,
 )
 
+# Sanity Check module for RCA validation
+from src import sanity_check
+importlib.reload(sanity_check)
+from src.sanity_check import (
+    fetch_sanity_check_data,
+    run_sanity_check,
+    get_debug_flow,
+    DEBUG_FLOWS,
+    create_sanity_check_summary_html,
+    create_dimension_table_html,
+    create_address_stability_html,
+    create_debug_flow_html,
+)
+
 # AI Assistant module
 from src import ai_assistant
 importlib.reload(ai_assistant)
@@ -4362,12 +4376,12 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
 
 
 def render_pareto_tab(filters: dict[str, Any]) -> None:
-    """Render the Pareto Analysis tab with sub-tabs for FAILCRAWLER, Register Fallout, and cDPM Recovery."""
+    """Render the Pareto Analysis tab with sub-tabs for FAILCRAWLER, Register Fallout, cDPM Recovery, and Sanity Check."""
     st.header("Pareto Analysis")
-    st.info("📉 **FAILCRAWLER DPM:** cDPM by fail mode | **Register Fallout:** Top failed registers | **SLT FID Recovery:** HMB1/QMON recovery projections")
+    st.info("📉 **FAILCRAWLER DPM:** cDPM by fail mode | **Register Fallout:** Top failed registers | **SLT FID Recovery:** HMB1/QMON recovery projections | **Sanity Check:** Validate RCA conclusions")
 
     # Create sub-tabs
-    fc_tab, reg_tab, recovery_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout", "🔮 SLT FID Recovery"])
+    fc_tab, reg_tab, recovery_tab, sanity_tab = st.tabs(["FAILCRAWLER DPM", "Register Fallout", "🔮 SLT FID Recovery", "🔍 Sanity Check"])
 
     with fc_tab:
         render_failcrawler_subtab(filters)
@@ -4377,6 +4391,9 @@ def render_pareto_tab(filters: dict[str, Any]) -> None:
 
     with recovery_tab:
         render_cdpm_recovery_subtab(filters)
+
+    with sanity_tab:
+        render_sanity_check_subtab(filters)
 
 
 def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
@@ -4693,6 +4710,181 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
             """)
         else:
             st.warning("Unable to calculate combined SLT recovery")
+
+
+def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
+    """
+    Render the Correlation Sanity Check sub-tab.
+
+    This tab validates RCA conclusions from MSN_STATUS × FAILCRAWLER analysis.
+    It acts as a confirmation layer, not a parallel RCA engine.
+    """
+    import streamlit.components.v1 as components
+
+    st.caption("**Correlation Sanity Check** — Validates RCA conclusions from MSN_STATUS × FAILCRAWLER analysis")
+
+    # Calculate workweeks from filters
+    try:
+        workweeks = Settings.get_workweek_range(filters["start_ww"], filters["end_ww"])
+    except Exception:
+        workweeks = []
+
+    steps = filters.get("test_steps", ["HMFN", "HMB1", "QMON"])
+
+    # Build filter display
+    filter_parts = [', '.join(filters['design_ids']), ', '.join(steps)]
+    if filters.get('densities'):
+        filter_parts.append(f"Density: {', '.join(filters['densities'])}")
+    if filters.get('speeds'):
+        filter_parts.append(f"Speed: {', '.join(filters['speeds'])}")
+    filter_parts.append(f"WW{filters['start_ww']}-{filters['end_ww']}")
+
+    st.caption(f"**Filters:** {' | '.join(filter_parts)}")
+
+    # Info box explaining the purpose
+    st.info("""
+    **Purpose:** This tab validates the RCA classification, it doesn't re-derive it.
+
+    1. Select a **MSN_STATUS × FAILCRAWLER** combination to analyze
+    2. View the expected **debug flow** and validation criteria
+    3. Check **correlation evidence** across equipment, materials, and silicon dimensions
+    4. Review **address stability** for DRAM-related failures
+    5. Get a **confidence assessment** for the RCA conclusion
+    """)
+
+    # Session state for sanity check data
+    if 'sanity_check_data' not in st.session_state:
+        st.session_state.sanity_check_data = pd.DataFrame()
+
+    # Fetch button
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        fetch_btn = st.button(
+            "🔄 Fetch Data",
+            type="primary",
+            use_container_width=True,
+            key="fetch_sanity_check_btn"
+        )
+    with col2:
+        if not st.session_state.sanity_check_data.empty:
+            st.caption(f"✅ {len(st.session_state.sanity_check_data):,} failure records loaded")
+        else:
+            st.caption("Fetches failure data with all correlation dimensions")
+
+    if fetch_btn:
+        with st.spinner("Fetching sanity check data..."):
+            df = fetch_sanity_check_data(
+                design_ids=filters['design_ids'],
+                steps=steps,
+                workweeks=workweeks,
+                densities=filters.get('densities'),
+                speeds=filters.get('speeds')
+            )
+
+            if df is not None and not df.empty:
+                st.session_state.sanity_check_data = df
+                st.success(f"Loaded {len(df):,} failure records")
+            else:
+                st.error("No data found for the selected filters")
+                st.session_state.sanity_check_data = pd.DataFrame()
+
+    # Analysis section - only show if data loaded
+    if st.session_state.sanity_check_data.empty:
+        st.info("Click 'Fetch Data' to load failure data for sanity check analysis.")
+        return
+
+    df = st.session_state.sanity_check_data
+
+    st.markdown("---")
+    st.markdown("### Select Combination to Validate")
+
+    # Get available MSN_STATUS and FAILCRAWLER values from data
+    available_msn_status = sorted(df['MSN_STATUS'].dropna().unique().tolist()) if 'MSN_STATUS' in df.columns else []
+    available_failcrawler = sorted(df['FAILCRAWLER'].dropna().unique().tolist()) if 'FAILCRAWLER' in df.columns else []
+
+    # Get available steps from data
+    available_steps = sorted(df['STEP'].dropna().unique().tolist()) if 'STEP' in df.columns else steps
+
+    # Selection controls
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        selected_step = st.selectbox(
+            "Step",
+            available_steps,
+            key="sanity_step"
+        )
+
+    with col2:
+        selected_msn_status = st.selectbox(
+            "MSN_STATUS",
+            available_msn_status,
+            key="sanity_msn_status"
+        )
+
+    with col3:
+        selected_failcrawler = st.selectbox(
+            "FAILCRAWLER",
+            available_failcrawler,
+            key="sanity_failcrawler"
+        )
+
+    # Show the expected debug flow for this combination
+    debug_flow = get_debug_flow(selected_msn_status, selected_failcrawler)
+
+    st.markdown("---")
+
+    # Display debug flow info
+    debug_flow_html = create_debug_flow_html(debug_flow, dark_mode=False)
+    components.html(debug_flow_html, height=280, scrolling=False)
+
+    # Run sanity check
+    st.markdown("### Correlation Evidence")
+
+    with st.spinner("Running sanity check analysis..."):
+        result = run_sanity_check(
+            df=df,
+            msn_status=selected_msn_status,
+            failcrawler=selected_failcrawler,
+            step=selected_step
+        )
+
+    if result['status'] == 'NO_DATA':
+        st.warning(f"No data found for {selected_msn_status} × {selected_failcrawler} at step {selected_step}")
+        return
+
+    # Show summary with confidence
+    summary_html = create_sanity_check_summary_html(result, dark_mode=False)
+    components.html(summary_html, height=250, scrolling=False)
+
+    # Show dimension correlation table
+    st.markdown("### Dimension Correlation Table")
+    dim_table_html = create_dimension_table_html(result, dark_mode=False)
+    components.html(dim_table_html, height=350, scrolling=True)
+
+    # Show address stability (for DRAM-type failures)
+    if result.get('address_stability'):
+        st.markdown("### Address Stability Analysis")
+        address_html = create_address_stability_html(result, dark_mode=False)
+        components.html(address_html, height=250, scrolling=False)
+
+    # Show raw data expander
+    with st.expander("📋 View Raw Data"):
+        # Filter data for the selected combination
+        filtered_df = df.copy()
+        if selected_msn_status and 'MSN_STATUS' in df.columns:
+            filtered_df = filtered_df[filtered_df['MSN_STATUS'] == selected_msn_status]
+        if selected_failcrawler and 'FAILCRAWLER' in df.columns:
+            filtered_df = filtered_df[filtered_df['FAILCRAWLER'] == selected_failcrawler]
+        if selected_step and 'STEP' in df.columns:
+            filtered_df = filtered_df[filtered_df['STEP'].str.upper() == selected_step.upper()]
+
+        st.dataframe(
+            filtered_df.head(100),
+            use_container_width=True,
+            height=400
+        )
+        st.caption(f"Showing first 100 of {len(filtered_df):,} records")
 
 
 def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
