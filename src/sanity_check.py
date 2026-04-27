@@ -249,18 +249,18 @@ def fetch_sanity_check_data(
     step_str = ','.join([s.lower() for s in steps])
     workweek_str = ','.join([str(ww) for ww in workweeks])
 
-    # Comprehensive query with all dimensions
+    # Comprehensive query with all dimensions using +fidag for FID-level data
+    # Note: +fidag gives raw MSN/FID-level data, unlike +modfm which pivots by MSN_STATUS
     cmd = [
         '/u/dramsoft/bin/mtsums',
         '-FORCEAPI', '+quiet', '+csv', '+stdf',
         '-exclude_baseline=NULL',
         f'-DESIGN_ID={design_id_str}',
         f'-mfg_workweek={workweek_str}',
-        '-round=1',
         # Core fields
-        '-format=DESIGN_ID,STEP,MFG_WORKWEEK,MSN,FID,FAILCRAWLER,MSN_STATUS',
+        '-format=MSN,FID,DESIGN_ID,STEP,MFG_WORKWEEK,FAILCRAWLER,MSN_STATUS',
         # Equipment dimensions
-        '-format+=MACHINE_ID,TESTER,SLOT_ID',
+        '-format+=MACHINE_ID,TESTER',
         # Location dimensions
         '-format+=TEST_FACILITY,ASSEMBLY_FACILITY',
         # Materials dimensions
@@ -270,7 +270,7 @@ def fetch_sanity_check_data(
         # DRAM dimensions
         '-format+=ULOC,DRAMFAIL',
         # Address dimensions (for stability analysis)
-        '-format+=ADDRMASK,ROWCNT,COLCNT,DQCNT',
+        '-format+=ROWCNT,COLCNT,DQCNT',
         f'-step={step_str}',
         '-msn_status!=Pass',
     ]
@@ -281,7 +281,8 @@ def fetch_sanity_check_data(
     if speeds:
         cmd.append(f'-speed={",".join(speeds)}')
 
-    cmd.append('+modfm')
+    # Use +fidag for FID-level aggregation (raw data per MSN/FID)
+    cmd.append('+fidag')
 
     logger.info(f"Fetching sanity check data...")
 
