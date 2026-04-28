@@ -710,12 +710,17 @@ def create_top_movers_html(
             tag_color = '#F39C12'  # Yellow for 25-50%
 
         fc_color = FAILCRAWLER_COLORS.get(m['failcrawler'], '#888888')
+        # Show actual cDPM values alongside percentage for user clarity
+        prev_val = m.get('previous_value', 0)
+        curr_val = m.get('current_value', 0)
         mover_tags.append(
             f"<span style='background-color: {fc_color}20; color: {text_color}; "
             f"padding: 4px 8px; border-radius: 4px; margin: 2px; display: inline-block; "
             f"border-left: 3px solid {tag_color};'>"
             f"<span style='color: {fc_color}; font-weight: bold;'>■</span> "
-            f"{m['failcrawler']} <span style='color: {tag_color}; font-weight: bold;'>↑+{m['change_pct']:.0f}%</span>"
+            f"{m['failcrawler']} "
+            f"<span style='color: #999; font-size: 11px;'>{prev_val:.0f}→{curr_val:.0f}</span> "
+            f"<span style='color: {tag_color}; font-weight: bold;'>↑{m['change_pct']:.0f}%</span>"
             f"</span>"
         )
 
