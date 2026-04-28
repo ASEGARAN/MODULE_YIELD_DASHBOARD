@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Color palette for FAILCRAWLER categories - optimized for both light and dark mode
 # Using vibrant, high-contrast colors that are visible on any background
 FAILCRAWLER_COLORS = {
+    # Primary FAILCRAWLERs (most common)
     'MULTI_BANK_MULTI_DQ': '#3498DB',      # Bright blue
     'SINGLE_BURST_SINGLE_ROW': '#E74C3C',  # Bright red
     'HGDC': '#F39C12',                      # Orange
@@ -29,8 +30,39 @@ FAILCRAWLER_COLORS = {
     'ROW': '#FF9800',                       # Amber
     'SINGLE_BANK_MULTI_DQ': '#795548',     # Brown
     'MULTI_BURST_SINGLE_ROW': '#607D8B',   # Blue grey
-    'Other': '#9E9E9E'                      # Grey
+    # Additional FAILCRAWLERs
+    'CPU_THERMAL': '#FF5722',              # Deep orange
+    'MOD_SYS': '#673AB7',                  # Deep purple
+    'DECODE': '#2196F3',                   # Blue
+    'BOOT': '#B71C1C',                     # Dark red
+    'PERIPH': '#00897B',                   # Teal dark
+    'COL': '#5D4037',                      # Brown dark
+    'SINGLE_BURST_MULTI_ROW': '#78909C',  # Blue grey light
+    'MULTI_BANK_SINGLE_DQ': '#8BC34A',    # Light green
+    'ALL_BURST_SINGLE_ROW': '#FFC107',    # Amber light
+    'ALL_BURST_MULTI_ROW': '#FF8F00',     # Amber dark
+    'SINGLE_HALFBANK_SINGLE_DQ': '#26A69A', # Teal light
+    'SINGLE_HALFBANK_MULTI_DQ': '#26C6DA', # Cyan light
+    'MULTI_BURST_MULTI_ROW': '#AB47BC',   # Purple light
+    'ALL_BANK_SINGLE_DQ': '#7E57C2',      # Deep purple light
+    'ALL_BANK_MULTI_DQ': '#5C6BC0',       # Indigo
+    'SYS_ODD_BURST_BIT': '#EC407A',       # Pink light
+    'CMD_ADDR': '#42A5F5',                 # Blue light
+    'CA': '#29B6F6',                       # Light blue
+    'CK': '#66BB6A',                       # Green light
+    'DRAMFAIL': '#EF5350',                 # Red light
+    'NO_FAIL': '#BDBDBD',                  # Grey light
+    'UNKNOWN': '#757575',                  # Grey medium
+    'Other': '#9E9E9E'                     # Grey
 }
+
+# Extended color palette for dynamically assigning colors to unknown FAILCRAWLERs
+EXTENDED_COLORS = [
+    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+    '#FF9F40', '#C9CBCF', '#7BC225', '#E7298A', '#66C2A5',
+    '#FC8D62', '#8DA0CB', '#E78AC3', '#A6D854', '#FFD92F',
+    '#E5C494', '#B3B3B3', '#1B9E77', '#D95F02', '#7570B3',
+]
 
 # Top FAILCRAWLERs to display (rest grouped into Other)
 TOP_FAILCRAWLERS = [
@@ -2382,16 +2414,24 @@ def create_failcrawler_chart(data: dict, design_id: str = None, dark_mode: bool 
     fig = go.Figure()
 
     # Add stacked bars for each FAILCRAWLER on primary y-axis FIRST
-    fcs_to_plot = [fc for fc in TOP_FAILCRAWLERS if fc in main_fcs]
+    # Use all FAILCRAWLERs from main_fcs (already sorted by DPM contribution)
+    fcs_to_plot = main_fcs
+    extended_color_idx = 0  # Track extended colors for unknown FAILCRAWLERs
     for fc in fcs_to_plot:
         if fc in pivot_dpm.columns:
             y_vals = [float(v) if pd.notna(v) else 0.0 for v in pivot_dpm[fc]]
+            # Get color from main palette, or use extended palette for unknown FAILCRAWLERs
+            if fc in FAILCRAWLER_COLORS:
+                fc_color = FAILCRAWLER_COLORS[fc]
+            else:
+                fc_color = EXTENDED_COLORS[extended_color_idx % len(EXTENDED_COLORS)]
+                extended_color_idx += 1
             fig.add_trace(
                 go.Bar(
                     x=fiscal_labels,
                     y=y_vals,
                     name=fc,
-                    marker=dict(color=FAILCRAWLER_COLORS.get(fc, '#888888')),
+                    marker=dict(color=fc_color),
                     yaxis='y'
                 )
             )
@@ -2518,7 +2558,8 @@ def create_failcrawler_summary_table(data: dict) -> pd.DataFrame:
         return pd.DataFrame()
 
     pivot_dpm = data['pivot_dpm']
-    main_fcs = [fc for fc in TOP_FAILCRAWLERS if fc in data['main_fcs']]
+    # Use all FAILCRAWLERs from main_fcs (already sorted by DPM contribution)
+    main_fcs = data['main_fcs']
 
     # Calculate totals per FAILCRAWLER
     summary = []
@@ -2562,17 +2603,25 @@ def create_pareto_summary_html(data: dict, dark_mode: bool = True) -> str:
         return ""
 
     pivot_dpm = data['pivot_dpm']
-    main_fcs = [fc for fc in TOP_FAILCRAWLERS if fc in data['main_fcs']]
+    # Use all FAILCRAWLERs from main_fcs (already sorted by DPM contribution)
+    main_fcs = data['main_fcs']
 
     # Calculate totals per FAILCRAWLER
     summary = []
+    extended_color_idx = 0
     for fc in main_fcs:
         if fc in pivot_dpm.columns:
             total = pivot_dpm[fc].sum()
+            # Get color from main palette, or use extended palette
+            if fc in FAILCRAWLER_COLORS:
+                fc_color = FAILCRAWLER_COLORS[fc]
+            else:
+                fc_color = EXTENDED_COLORS[extended_color_idx % len(EXTENDED_COLORS)]
+                extended_color_idx += 1
             summary.append({
                 'FAILCRAWLER': fc,
                 'Total cDPM': total,
-                'Color': FAILCRAWLER_COLORS.get(fc, '#888888')
+                'Color': fc_color
             })
 
     # Sort by total descending
@@ -2655,7 +2704,8 @@ def create_weekly_cdpm_table_html(data: dict, dark_mode: bool = True) -> str:
     pivot_dpm = data['pivot_dpm']
     total_dpm = data['total_dpm']
     volume = data['volume']
-    main_fcs = [fc for fc in TOP_FAILCRAWLERS if fc in data['main_fcs']]
+    # Use all FAILCRAWLERs from main_fcs (already sorted by DPM contribution)
+    main_fcs = data['main_fcs']
 
     # Style colors based on mode - darker text for light mode visibility
     bg_color = '#2d2d2d' if dark_mode else '#ffffff'
@@ -2668,8 +2718,13 @@ def create_weekly_cdpm_table_html(data: dict, dark_mode: bool = True) -> str:
 
     # Build header row with FAILCRAWLER columns
     fc_headers = ''
+    extended_color_idx = 0
     for fc in main_fcs:
-        color = FAILCRAWLER_COLORS.get(fc, '#888888')
+        if fc in FAILCRAWLER_COLORS:
+            color = FAILCRAWLER_COLORS[fc]
+        else:
+            color = EXTENDED_COLORS[extended_color_idx % len(EXTENDED_COLORS)]
+            extended_color_idx += 1
         fc_headers += f'<th style="border: 1px solid {border_color}; padding: 8px; text-align: right; background-color: {color}20; color: {text_color};">{fc}</th>'
 
     html = f'''
