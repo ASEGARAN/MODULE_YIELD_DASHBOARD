@@ -115,6 +115,11 @@ from src.sanity_check import (
     create_guardrail_notes_html,
 )
 
+# Depop & Reball Tracker module
+from src.depop_reball import ui as depop_reball_ui
+importlib.reload(depop_reball_ui)
+from src.depop_reball.ui import render_depop_reball_tab
+
 # AI Assistant module
 from src import ai_assistant
 importlib.reload(ai_assistant)
@@ -6381,7 +6386,7 @@ def main() -> None:
                 st.sidebar.error(f"HTML generation failed: {str(e)}")
 
     # Create tabs with Home tab first
-    tab_home, tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 Home", "📊 Yield Analysis", "📈 Module ELC Yield", "📉 Pareto Analysis", "🔍 Fail Viewer", "🔧 Machine Trends"])
+    tab_home, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🏠 Home", "📊 Yield Analysis", "📈 Module ELC Yield", "📉 Pareto Analysis", "🔍 Fail Viewer", "🔧 Machine Trends", "🔩 De-pop & Re-ball"])
 
     # ==================== HOME TAB ====================
     with tab_home:
@@ -6394,7 +6399,7 @@ def main() -> None:
             </div>
         """
 
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
         with col1:
             st.markdown(card_style.format(
                 icon="📊",
@@ -6424,6 +6429,12 @@ def main() -> None:
                 icon="🔧",
                 title="Machine Trends",
                 desc="SMT6 tester yield & GRACE motherboard health"
+            ), unsafe_allow_html=True)
+        with col6:
+            st.markdown(card_style.format(
+                icon="🔩",
+                title="De-pop & Re-ball",
+                desc="Track requests, success rates, HOLD/GO decisions"
             ), unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -6655,6 +6666,9 @@ def main() -> None:
 
     with tab5:
         render_machine_trend_tab(filters)
+
+    with tab6:
+        render_depop_reball_tab()
 
 
 if __name__ == "__main__":
