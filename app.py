@@ -1472,7 +1472,7 @@ def render_yield_trend_chart(processor: DataProcessor) -> None:
         fig.update_yaxes(title_text="Yield %", range=[y_min, 100], secondary_y=False)
         fig.update_yaxes(title_text="Volume (UIN)", secondary_y=True)
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     except Exception as e:
         logger.error("Failed to render trend chart: %s", e)
@@ -1768,7 +1768,7 @@ def render_did_breakdown(processor: DataProcessor) -> None:
                         spark_color = "#00ff88" if trend_diff and trend_diff > 0 else "#ff6b8a" if trend_diff and trend_diff < 0 else "#00d4ff"
                         spark_fig = create_sparkline(hmfn_spark, color=spark_color, height=35)
                         if spark_fig:
-                            st.plotly_chart(spark_fig, use_container_width=True, config={'displayModeBar': False}, key=f"spark_{did}")
+                            st.plotly_chart(spark_fig, width='stretch', config={'displayModeBar': False}, key=f"spark_{did}")
 
                 # Three metrics side by side
                 c1, c2, c3 = st.columns(3)
@@ -1778,19 +1778,19 @@ def render_did_breakdown(processor: DataProcessor) -> None:
                     with c1:
                         gauge_fig = create_gauge_chart(hmfn_yield, targets['hmfn'], "HMFN", height=140)
                         if gauge_fig:
-                            st.plotly_chart(gauge_fig, use_container_width=True, config={'displayModeBar': False}, key=f"gauge_hmfn_{did}")
+                            st.plotly_chart(gauge_fig, width='stretch', config={'displayModeBar': False}, key=f"gauge_hmfn_{did}")
                         st.caption(f"n={fmt_vol(hmfn_uin)}")
 
                     with c2:
                         gauge_fig = create_gauge_chart(slt_yield, targets['slt'], "SLT", height=140)
                         if gauge_fig:
-                            st.plotly_chart(gauge_fig, use_container_width=True, config={'displayModeBar': False}, key=f"gauge_slt_{did}")
+                            st.plotly_chart(gauge_fig, width='stretch', config={'displayModeBar': False}, key=f"gauge_slt_{did}")
                         st.caption(f"n={fmt_vol(slt_uin)}")
 
                     with c3:
                         gauge_fig = create_gauge_chart(elc_yield, targets['elc'], "ELC", height=140)
                         if gauge_fig:
-                            st.plotly_chart(gauge_fig, use_container_width=True, config={'displayModeBar': False}, key=f"gauge_elc_{did}")
+                            st.plotly_chart(gauge_fig, width='stretch', config={'displayModeBar': False}, key=f"gauge_elc_{did}")
                         st.caption(f"n={fmt_vol(elc_uin)}")
                 else:
                     # Metrics view (default)
@@ -1846,7 +1846,7 @@ def render_summary_table(processor: DataProcessor) -> None:
 
         st.dataframe(
             table_data,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 "Units In": st.column_config.NumberColumn(format="%d"),
@@ -2035,7 +2035,7 @@ def render_bin_distribution_chart(processor: DataProcessor) -> None:
             ),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     except Exception as e:
         logger.error("Failed to render bin chart: %s", e)
         st.error("Failed to render bin distribution chart")
@@ -2142,7 +2142,7 @@ def render_density_speed_heatmap(processor: DataProcessor) -> None:
                         coloraxis_showscale=False,  # Hide color bar to save space
                     )
 
-                    st.plotly_chart(fig, use_container_width=True, key=f"heatmap_{design_id}_{step}")
+                    st.plotly_chart(fig, width='stretch', key=f"heatmap_{design_id}_{step}")
 
             st.divider()
 
@@ -2179,7 +2179,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
         fetch_smt6 = st.button(
             "Fetch Machine Data",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             key="fetch_smt6_btn"
         )
     with col2:
@@ -2371,7 +2371,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                     y_axis_min=float(y_axis_min)
                 )
                 if fig:
-                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
+                    st.plotly_chart(fig, width='stretch', config={'displayModeBar': True})
 
         # =====================================================================
         # SOCKET/SITE ANALYSIS - COMPACT UNIFIED VERSION
@@ -2595,7 +2595,7 @@ def render_smt6_yield_section(filters: dict[str, Any]) -> None:
                             </script>
                             '''
                             components.html(js_code, height=0)
-                        st.plotly_chart(fig, use_container_width=True, config=heatmap_config)
+                        st.plotly_chart(fig, width='stretch', config=heatmap_config)
 
             with summary_col:
                 with st.expander(f"📊 Site Health Summary ({ww_label})", expanded=has_issues):
@@ -2853,7 +2853,7 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
         fetch_elc = st.button(
             "Fetch ELC Data",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             key="fetch_elc_btn"
         )
     with col2:
@@ -3439,7 +3439,7 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                             font=dict(size=10, color=pann["color"]),
                         )
 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
                 # Debug info for annotations (temporary)
                 if st.session_state.get("elc_annotations"):
@@ -3548,7 +3548,7 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                         if detailed_changes or i == 0:
                             changes_data.append({"Curve": transition, "": "🟢" if is_active else "", "Change": remark})
                     if changes_data:
-                        st.dataframe(pd.DataFrame(changes_data[::-1]), use_container_width=True, hide_index=True, height=180)
+                        st.dataframe(pd.DataFrame(changes_data[::-1]), width='stretch', hide_index=True, height=180)
                         st.caption(f"_Config: {target_key}_")
                 else:
                     st.caption("_No history_")
@@ -3561,7 +3561,7 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
             display_cols = ["design_id", "form_factor", "density", "speed", "workweek", "HMFN", "HMB1", "QMON", "SLT", "ELC"]
             available_display = [c for c in display_cols if c in elc_df.columns]
             sorted_df = elc_df[available_display].sort_values(by=["workweek"] if "workweek" in elc_df.columns else available_display[:1], ascending=True)
-            st.dataframe(sorted_df, use_container_width=True, hide_index=True, height=280)
+            st.dataframe(sorted_df, width='stretch', hide_index=True, height=280)
 
             # Export buttons (side by side)
             export_cols = st.columns(3)
@@ -3625,7 +3625,7 @@ def render_elc_yield_tab(filters: dict[str, Any]) -> None:
                     xaxis_title="Speed",
                     yaxis_title="Density"
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
     else:
         st.info("Click 'Fetch ELC Data' to load HMFN, HMB1, and QMON yield data for ELC calculation.")
@@ -3797,7 +3797,7 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
         fetch_fc = st.button(
             "🔄 Fetch Live Data",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             key="fetch_failcrawler_btn"
         )
     with col2:
@@ -4117,7 +4117,7 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 }
 
                 # Render chart
-                st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+                st.plotly_chart(fig, width='stretch', config=plotly_config)
 
             # Pareto Summary table (80/20 analysis)
             with st.expander(f"📋 {step} Pareto Summary (80/20 Analysis)", expanded=False):
@@ -4219,7 +4219,7 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                         # Heatmap: FAILCRAWLER × MSN_STATUS
                         corr_fig = create_msn_status_correlation_chart(correlation_data, dark_mode=False)
                         if corr_fig:
-                            st.plotly_chart(corr_fig, use_container_width=True)
+                            st.plotly_chart(corr_fig, width='stretch')
 
                     with corr_col2:
                         # Ranked table: MSN_STATUS by CDPM contribution
@@ -4260,7 +4260,7 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
         fetch_pareto = st.button(
             "Fetch Pareto Data",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             key="fetch_pareto_btn"
         )
     with col2:
@@ -4372,7 +4372,7 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
                 # Display table
                 st.dataframe(
                     pivot_df,
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
 
@@ -4415,7 +4415,7 @@ def render_register_fallout_subtab(filters: dict[str, Any]) -> None:
                 )
 
                 fig.update_layout(height=400)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
                 st.markdown("---")
 
@@ -4494,7 +4494,7 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
         fetch_btn = st.button(
             "🔄 Fetch Recovery Data" if not fc_data_loaded else "🔄 Refresh Data",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             key="fetch_recovery_btn"
         )
     with col2:
@@ -4708,7 +4708,7 @@ def render_cdpm_recovery_subtab(filters: dict[str, Any]) -> None:
             if correlation_data:
                 corr_fig = create_msn_status_correlation_chart(correlation_data, dark_mode=False)
                 if corr_fig:
-                    st.plotly_chart(corr_fig, use_container_width=True, key=f"corr_heatmap_{step}")
+                    st.plotly_chart(corr_fig, width='stretch', key=f"corr_heatmap_{step}")
             else:
                 st.info("No correlation data available")
 
@@ -4803,7 +4803,7 @@ def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
         fetch_btn = st.button(
             "🔄 Fetch Data",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             key="fetch_sanity_check_btn"
         )
     with col2:
@@ -4904,7 +4904,7 @@ def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
         # Use data_editor with selection
         selection = st.dataframe(
             display_df,
-            use_container_width=True,
+            width='stretch',
             height=min(400, 50 + len(display_df) * 35),
             on_select="rerun",
             selection_mode="single-row",
@@ -5029,7 +5029,7 @@ def render_sanity_check_subtab(filters: dict[str, Any]) -> None:
 
         st.dataframe(
             filtered_df.head(100),
-            use_container_width=True,
+            width='stretch',
             height=400
         )
         st.caption(f"Showing first 100 of {len(filtered_df):,} records")
@@ -5228,7 +5228,7 @@ def render_grace_motherboard_section(filters: dict[str, Any]) -> None:
                 barmode='group'
             )
 
-            st.plotly_chart(fig_trend, use_container_width=True)
+            st.plotly_chart(fig_trend, width='stretch')
         else:
             st.warning(f"No data found for WW{selected_ww}")
 
@@ -5337,7 +5337,7 @@ mtsums -modff=socamm,socamm2 -ww={start_ww},{end_ww} -step=hmb1,qmon +fm -format
                             f'WW{prev_ww}': '{:.2f}',
                             'Delta': '{:+.2f}'
                         })
-                        st.dataframe(styled_wow, use_container_width=True, hide_index=True, height=450)
+                        st.dataframe(styled_wow, width='stretch', hide_index=True, height=450)
 
                     # ========== RIGHT COLUMN: 100% Fail Analysis ==========
                     with right_col:
@@ -6012,7 +6012,7 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                         st.warning(f"Could not load repair data: {e}")
                         logger.exception("Repair loading error")
 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
             with viz_tab2:
                 st.markdown("### Fail Density Heatmap")
@@ -6026,21 +6026,21 @@ def render_fail_viewer_tab(filters: dict[str, Any]) -> None:
                     width=900,
                     height=700
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
             with viz_tab3:
                 st.markdown("### Fail Distribution by DQ")
                 fig = create_dq_distribution(fail_df, title="Fails per DQ")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
             with viz_tab4:
                 st.markdown("### Fail Distribution by Bank")
                 fig = create_bank_distribution(processed_df, part_type=effective_part_type, title="Fails per Bank")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
             # Data table
             with st.expander("View Raw Data"):
-                st.dataframe(processed_df.head(1000), use_container_width=True)
+                st.dataframe(processed_df.head(1000), width='stretch')
                 if len(processed_df) > 1000:
                     st.caption(f"Showing first 1000 of {len(processed_df)} rows")
 
@@ -6072,7 +6072,7 @@ def main() -> None:
 
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        if st.button("Clear Cache", use_container_width=True):
+        if st.button("Clear Cache", width='stretch'):
             cleared = cache.clear()
             st.sidebar.success(f"Cleared {cleared} entries")
     with col2:
@@ -6101,7 +6101,7 @@ def main() -> None:
     )
     export_tab_key = export_tab_options[selected_export_tab]
 
-    if st.sidebar.button("Generate PDF Report", use_container_width=True, type="primary"):
+    if st.sidebar.button("Generate PDF Report", width='stretch', type="primary"):
         with st.sidebar.status(f"Generating {selected_export_tab} PDF...", expanded=True) as status:
             try:
                 # Debug: Log selected tab
@@ -6234,7 +6234,7 @@ def main() -> None:
                         data=pdf_bytes,
                         file_name=filename,
                         mime="application/pdf",
-                        use_container_width=True
+                        width='stretch'
                     )
 
             except Exception as e:
@@ -6242,7 +6242,7 @@ def main() -> None:
                 st.sidebar.error(f"PDF generation failed: {str(e)}")
 
     # HTML Export option (uses same tab selector as PDF)
-    if st.sidebar.button("Generate HTML Report", use_container_width=True):
+    if st.sidebar.button("Generate HTML Report", width='stretch'):
         with st.sidebar.status(f"Generating {selected_export_tab} HTML...", expanded=True) as status:
             try:
                 from src.html_export import create_shareable_html
@@ -6419,7 +6419,7 @@ def main() -> None:
                         data=html_content,
                         file_name=f"yield_report_{timestamp}.html",
                         mime="text/html",
-                        use_container_width=True
+                        width='stretch'
                     )
 
             except Exception as e:
@@ -6501,7 +6501,7 @@ def main() -> None:
         """, unsafe_allow_html=True)
 
         user_query = st.text_input(
-            "",
+            "AI Assistant Query",
             placeholder="e.g., 'check weekly yield', 'find top failures', 'motherboard hang issues'...",
             key="help_query",
             label_visibility="collapsed"
@@ -6599,14 +6599,14 @@ def main() -> None:
             st.markdown("<br>", unsafe_allow_html=True)
             fb_col1, fb_col2, fb_col3 = st.columns([1, 1, 4])
             with fb_col1:
-                if st.button("👍 Helpful", key="fb_yes", use_container_width=True):
+                if st.button("👍 Helpful", key="fb_yes", width='stretch'):
                     # Log successful suggestion
                     with open(log_file, 'a', newline='') as f:
                         writer = csv.writer(f)
                         writer.writerow([datetime.now().isoformat(), user_query, response['tab'], matched_kw_str, best_score, 'helpful'])
                     st.success("Thanks! Logged as helpful.")
             with fb_col2:
-                if st.button("👎 Wrong", key="fb_no", use_container_width=True):
+                if st.button("👎 Wrong", key="fb_no", width='stretch'):
                     # Log unsuccessful suggestion
                     with open(log_file, 'a', newline='') as f:
                         writer = csv.writer(f)
@@ -6629,7 +6629,7 @@ def main() -> None:
             fetch_button = st.button(
                 "Fetch Module Yield Data",
                 type="primary",
-                use_container_width=True,
+                width='stretch',
                 disabled=st.session_state.fetch_in_progress,
                 key="fetch_module_yield_btn"
             )

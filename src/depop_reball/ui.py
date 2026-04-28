@@ -274,7 +274,7 @@ def render_success_rate_chart(weekly_metrics: pd.DataFrame):
         hovermode='x unified',
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def render_outcome_stacked_bar(weekly_metrics: pd.DataFrame):
@@ -324,7 +324,7 @@ def render_outcome_stacked_bar(weekly_metrics: pd.DataFrame):
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def render_failure_pareto(attempts_df: pd.DataFrame):
@@ -363,7 +363,7 @@ def render_failure_pareto(attempts_df: pd.DataFrame):
         margin=dict(l=40, r=40, t=60, b=40),
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def render_unit_position_analysis(attempts_df: pd.DataFrame):
@@ -421,7 +421,7 @@ def render_unit_position_analysis(attempts_df: pd.DataFrame):
         xaxis=dict(categoryorder='array', categoryarray=valid_ulocs),
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def render_product_comparison(attempts_df: pd.DataFrame):
@@ -476,7 +476,7 @@ def render_product_comparison(attempts_df: pd.DataFrame):
             margin=dict(l=40, r=40, t=60, b=40),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with col2:
         # Weekly trend by product
@@ -502,7 +502,7 @@ def render_product_comparison(attempts_df: pd.DataFrame):
             margin=dict(l=40, r=40, t=60, b=40),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 
 def render_msn_table(requests_df: pd.DataFrame, attempts_df: pd.DataFrame):
@@ -574,7 +574,7 @@ def render_msn_table(requests_df: pd.DataFrame, attempts_df: pd.DataFrame):
 
     st.dataframe(
         display_df.style.apply(highlight_status, axis=1),
-        use_container_width=True,
+        width='stretch',
         height=400,
     )
 
