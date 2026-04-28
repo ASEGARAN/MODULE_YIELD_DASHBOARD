@@ -338,14 +338,19 @@ def create_alert_summary_html(excursions: list[dict], dark_mode: bool = False) -
 
 def calculate_failcrawler_wow_changes(
     fcdpm_df: pd.DataFrame,
-    step: str
+    step: str,
+    design_id: str = None
 ) -> list[dict]:
     """
     Calculate WoW changes for each FAILCRAWLER category.
 
+    Calculates per step, optionally filtered by design_id.
+    When design_id is None (All DIDs), sums cDPM across all DIDs for each workweek.
+
     Args:
         fcdpm_df: FAILCRAWLER DPM data (wide format with FC columns)
         step: Test step to filter
+        design_id: Optional DESIGN_ID to filter (None = all DIDs summed)
 
     Returns:
         List of dictionaries with FAILCRAWLER name, current/previous values, and change %
@@ -361,6 +366,12 @@ def calculate_failcrawler_wow_changes(
     step_df = fcdpm_df[fcdpm_df[step_col].str.upper() == step.upper()].copy()
     if step_df.empty or 'MFG_WORKWEEK' not in step_df.columns:
         return []
+
+    # Filter by DESIGN_ID if specified
+    if design_id and 'DESIGN_ID' in step_df.columns:
+        step_df = step_df[step_df['DESIGN_ID'] == design_id].copy()
+        if step_df.empty:
+            return []
 
     # Get sorted workweeks
     workweeks = sorted(step_df['MFG_WORKWEEK'].unique())
@@ -383,8 +394,10 @@ def calculate_failcrawler_wow_changes(
     previous_df = step_df[step_df['MFG_WORKWEEK'] == previous_ww]
 
     for fc_col in fc_cols:
-        current_val = pd.to_numeric(current_df[fc_col], errors='coerce').mean() if fc_col in current_df.columns else 0
-        previous_val = pd.to_numeric(previous_df[fc_col], errors='coerce').mean() if fc_col in previous_df.columns else 0
+        # Sum values across DIDs for the workweek (not mean - cDPM should be summed or use weighted avg)
+        # For single DID, sum == the value; for All DIDs, we sum to get combined impact
+        current_val = pd.to_numeric(current_df[fc_col], errors='coerce').sum() if fc_col in current_df.columns else 0
+        previous_val = pd.to_numeric(previous_df[fc_col], errors='coerce').sum() if fc_col in previous_df.columns else 0
 
         # Skip if both are 0 or negligible
         if current_val < 0.1 and previous_val < 0.1:

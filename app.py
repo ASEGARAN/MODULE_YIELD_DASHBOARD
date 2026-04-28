@@ -3973,8 +3973,8 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 if summary_html:
                     components.html(summary_html, height=170, scrolling=False)
 
-            # Show Top Movers (FAILCRAWLERs with >25% WoW increase)
-            fc_changes = calculate_failcrawler_wow_changes(fc_df, step)
+            # Show Top Movers (FAILCRAWLERs with >25% WoW increase) - filtered by selected DID
+            fc_changes = calculate_failcrawler_wow_changes(fc_df, step, design_id=filter_design_id)
             if fc_changes:
                 top_movers_html = create_top_movers_html(fc_changes, step, threshold=25.0, dark_mode=False)
                 if top_movers_html:
