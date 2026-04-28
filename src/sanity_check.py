@@ -202,19 +202,52 @@ DEBUG_FLOWS = {
     },
 
     # =========================================================================
-    # Boot failures - not recoverable
+    # Boot failures - comprehensive debug flow
     # =========================================================================
     ('Boot', 'BOOT'): {
         'rca_type': 'NO_FIX',
         'expected_recovery': 0,
-        'primary_checks': ['MACHINE_ID', 'ASSEMBLY_FACILITY', 'PCB'],
-        'secondary_checks': ['PCB_SUPPLIER', 'PCB_ARTWORK_REV', 'SITE'],
-        'description': 'Boot failure - check connectivity/assembly',
+        'primary_checks': ['MACHINE_ID', 'ASSEMBLY_FACILITY', 'PCB', 'ULOC'],
+        'secondary_checks': ['PCB_SUPPLIER', 'PCB_ARTWORK_REV', 'SITE', 'FABLOT'],
+        'description': 'Boot failure - check connectivity, signals, and die mapping',
         'validation_criteria': {
-            'machine_correlation': 'Single machine could be MOBO issue',
-            'assembly_correlation': 'Supplier clustering = assembly issue',
+            'machine_correlation': 'Single machine = MOBO issue, rotate per SOP',
+            'assembly_correlation': 'Supplier clustering = assembly/solder issue',
             'pcb_correlation': 'PCB rev = design issue',
-        }
+            'uloc_clustering': 'Same ULOC = specific die/component issue',
+        },
+        'debug_steps': [
+            '1. Check test chronology: mhist <MSN> -sbin',
+            '2. Get failure details: frpt -xf <SUM> -mod_id=/<MSN>/ +# +module',
+            '3. Get FAILCRAWLER/ULOC: mfm <MSN> -step=hmb1 +failcrawler',
+            '4. Extract failing signals from SBIN/test log',
+            '5. Map signals to die using subchannel prefix (LP1C → U4)',
+            '6. Cross-reference with PCB schematic for pin locations',
+        ],
+        'signal_to_die_mapping': {
+            'LP0A/LP0B': 'U1 (Channel 0, SC 0-1)',
+            'LP0C/LP0D': 'U2 (Channel 0, SC 2-3)',
+            'LP1A/LP1B': 'U3 (Channel 1, SC 4-5)',
+            'LP1C/LP1D': 'U4 (Channel 1, SC 6-7)',
+        },
+        'failure_type_actions': {
+            'CONT': 'Connectivity failure → De-pop/Reball for solder joint evaluation',
+            'SPD': 'Serial Presence Detect → Check EEPROM/resistor network',
+            'DQ': 'Data line failure → pFA request for IV curve + thermal imaging',
+            'NO_BOOT': 'Module did not initialize → Check VI, run HMFN retest 5X',
+        },
+        'pcb_references': {
+            'Y62P': 'PCB 3928 - 694 ball SOCAMM, U1-U4 = LPDDR0A-1D',
+            'Y63N': 'PCB 3957 - 315 ball SOCAMM2, U1-U4 = LPDDR0A-0H',
+            'Y6CP': 'PCB 3957 - 315 ball SOCAMM2, U1-U4 = LPDDR0A-0H',
+        },
+        'key_learnings': [
+            'No Boot = No Summary (ENG failures do not generate mtsums records)',
+            'Use mfm +failcrawler for detailed DQ/address-level analysis',
+            'Multiple signals on same die = die/solder issue, not system',
+            'HMFN Pass + HMB1 No Boot = stress-related marginal defect',
+            'Gold plate contamination is common - always check VI',
+        ],
     },
 
     # =========================================================================
@@ -240,6 +273,194 @@ DEFAULT_DEBUG_FLOW = {
     'secondary_checks': ['ASSEMBLY_FACILITY', 'PCB_SUPPLIER'],
     'description': 'Unknown pattern - run full correlation check',
     'validation_criteria': {}
+}
+
+# =============================================================================
+# No-Boot Failure Debug Guide
+# =============================================================================
+# Comprehensive methodology for debugging boot failures with PCB signal tracing
+
+NO_BOOT_DEBUG_GUIDE = {
+    # =========================================================================
+    # Step 1: Extract Test Chronology
+    # =========================================================================
+    'step1_chronology': {
+        'title': 'Extract Test Chronology',
+        'commands': [
+            'mhist <MSN1> <MSN2> -sbin                    # Module history with SBIN',
+        ],
+        'what_to_look_for': [
+            'HMFN PASS → HMB1 FAIL pattern = stress-related marginal defect',
+            'Intermittent failures (1/5 pass) = connectivity or timing issue',
+            'SBIN 20 CONT = continuity failure, check solder joints',
+            'SBIN 3 FUNC = functional failure, check signal integrity',
+        ],
+    },
+
+    # =========================================================================
+    # Step 2: Get Failure Details from frpt
+    # =========================================================================
+    'step2_frpt': {
+        'title': 'Get Production Failure Details',
+        'commands': [
+            'frpt -xf <HMB1_SUMMARY> -mod_id=/<MSN>/ +# -quick=/summary,mod_id/ +module',
+            'frpt -xf <HMFN_SUMMARY> -mod_id=/<MSN>/ +# +module    # If HMFN failed',
+        ],
+        'fields_to_extract': [
+            'SBIN - Soft bin number indicates failure type',
+            'FAILCRAWLER - Failure classification',
+            'ULOC - Unit location (U1D0, U2D2, etc.)',
+            'FID - Failing component ID for tracing',
+            'SLOT - Socket slot position',
+            'TESTER - Machine ID for correlation',
+        ],
+    },
+
+    # =========================================================================
+    # Step 3: Get FAILCRAWLER Details from mtsums/mfm
+    # =========================================================================
+    'step3_failcrawler': {
+        'title': 'Get Detailed FAILCRAWLER Analysis',
+        'commands': [
+            'mfm <MSN1> <MSN2> -step=hmb1 +failcrawler    # RECOMMENDED - detailed per-address info',
+            'mtsums <MSN> -step=hmb1 +quiet +csv -format=MSN,FID,ULOC,FAILCRAWLER,FID_STATUS,DRAMFAIL,DQCNT',
+        ],
+        'mfm_advantages': [
+            'ULOC + exact DQ line (not just aggregate)',
+            'Per-address detail (ROW, COL, DQ)',
+            'Failed test patterns for signal analysis',
+            'Can identify specific signal to probe',
+        ],
+        'key_fields': {
+            'FID_STATUS': 'DQ/Row/Boot/Hang - failure classification',
+            'DRAMFAIL': 'YES = DRAM defect, NO = system classification',
+            'DQCNT': 'Number of DQ lines failing',
+            'FAILCRAWLER': 'SYS_EVEN_BURST_BIT, MULTI_HALFBANK_SINGLE_DQ, etc.',
+        },
+    },
+
+    # =========================================================================
+    # Step 4: Map Signals to Die (PCB Signal Tracing)
+    # =========================================================================
+    'step4_signal_mapping': {
+        'title': 'Map Failing Signals to Die Location',
+        'signal_prefix_to_die': {
+            'LPDDR0A / LP0A': {'die': 'U1', 'channel': 0, 'subchannel': '0,1'},
+            'LPDDR0B / LP0B': {'die': 'U1', 'channel': 0, 'subchannel': '0,1'},
+            'LPDDR0C / LP0C': {'die': 'U2', 'channel': 0, 'subchannel': '2,3'},
+            'LPDDR0D / LP0D': {'die': 'U2', 'channel': 0, 'subchannel': '2,3'},
+            'LPDDR1A / LP1A': {'die': 'U3', 'channel': 1, 'subchannel': '4,5'},
+            'LPDDR1B / LP1B': {'die': 'U3', 'channel': 1, 'subchannel': '4,5'},
+            'LPDDR1C / LP1C': {'die': 'U4', 'channel': 1, 'subchannel': '6,7'},
+            'LPDDR1D / LP1D': {'die': 'U4', 'channel': 1, 'subchannel': '6,7'},
+        },
+        'signal_translation': {
+            'LP1C_WCLK0_N': 'LPDDR1C_WCK0_N (Write Clock)',
+            'LP1C_CA3': 'LPDDR1C_CA[3] (Command/Address)',
+            'LP0C_DQ6': 'LPDDR0C_DQ0[6] (Data bit 6)',
+        },
+        'signals_per_subchannel': [
+            'CLK_P/N - Clock pair',
+            'CA[6:0] - Command/Address (7 bits)',
+            'CS[3:0] - Chip Select (4 bits)',
+            'DMI0, DMI1 - Data Mask Inversion',
+            'DQ0[7:0], DQ1[7:0] - Data bytes',
+            'DQS0_P/N, DQS1_P/N - Data Strobe',
+            'WCK0_P/N, WCK1_P/N - Write Clock',
+        ],
+    },
+
+    # =========================================================================
+    # Step 5: Cross-Reference with PCB Schematic
+    # =========================================================================
+    'step5_pcb_reference': {
+        'title': 'Cross-Reference PCB Schematic',
+        'pcb_documents': {
+            'Y62P_SOCAMM': {
+                'pcb': 'PCB 3928.03',
+                'description': 'LPDDR5 SOCAMM - 694 Pin Socket, 16-layer',
+                'dies': 'U1 (SC 0,1), U2 (SC 2,3), U3 (SC 4,5), U4 (SC 6,7)',
+                'signal_prefix': 'LPDDR0A/0B/0C/0D, LPDDR1A/1B/1C/1D',
+            },
+            'Y63N_SOCAMM2': {
+                'pcb': 'PCB 3957.02',
+                'description': 'LPDDR5 315 BALL SOCAMM2 - 16-layer, Rev B',
+                'dies': 'U1 (SC 0,1), U2 (SC 2,3), U3 (SC 4,5), U4 (SC 6,7)',
+                'signal_prefix': 'LPDDR0A-0H (U1-U4)',
+            },
+            'Y6CP_SOCAMM2': {
+                'pcb': 'PCB 3957.02',
+                'description': 'LPDDR5 315 BALL SOCAMM2 - 16-layer, Rev B',
+                'dies': 'U1 (SC 0,1), U2 (SC 2,3), U3 (SC 4,5), U4 (SC 6,7)',
+                'signal_prefix': 'LPDDR0A-0H (U1-U4)',
+            },
+        },
+        'example_pin_mapping_u4': {
+            'CA[0]': 'F16', 'CA[1]': 'F18', 'CA[2]': 'C15', 'CA[3]': 'C17',
+            'CA[4]': 'B18', 'CA[5]': 'A16', 'CA[6]': 'A15',
+            'WCK0_P': 'M19', 'WCK0_N': 'N19',
+        },
+    },
+
+    # =========================================================================
+    # Step 6: Determine Root Cause and Action
+    # =========================================================================
+    'step6_rca_action': {
+        'title': 'Determine Root Cause and Action',
+        'decision_tree': {
+            'multiple_signals_same_die': {
+                'conclusion': 'Die/solder issue',
+                'action': 'De-pop/Reball for component evaluation',
+                'example': 'LP1C_CA3 + LP1C_WCLK0_N both fail → U4 issue',
+            },
+            'same_signal_multiple_dies': {
+                'conclusion': 'System/PCB routing issue',
+                'action': 'Check PCB signal integrity, power rails',
+                'example': 'CA3 fails on U1, U2, U3, U4 → system issue',
+            },
+            'single_dq_line_consistent': {
+                'conclusion': 'Die bump or via defect',
+                'action': 'pFA request for IV curve + thermal imaging',
+                'example': 'DQ6 fails consistently across retests',
+            },
+            'intermittent_failures': {
+                'conclusion': 'Marginal connectivity',
+                'action': 'Visual inspection + 5X retest, check gold plate',
+                'example': '1/5 pass, 4/5 fail with different SBIN',
+            },
+        },
+        'failure_type_recommendations': {
+            'CONT': 'De-pop/Reball → evaluate solder joints under microscope',
+            'SPD': 'Check EEPROM, resistor network → may need re-program',
+            'DQ_single': 'pFA with probe points: Die bump → PCB via → Socket',
+            'DQ_multi': 'Check signal routing on PCB, power integrity',
+            'NO_BOOT': 'Run HMFN 5X first, check VI for contamination',
+        },
+    },
+
+    # =========================================================================
+    # Key Learnings from Case Studies
+    # =========================================================================
+    'key_learnings': [
+        'No Boot = No Summary: ENG No Boot failures do not generate mtsums records',
+        'Use mfm +failcrawler: Provides per-address DQ/ROW/COL detail that mtsums lacks',
+        'Trace signals to common die: Multiple signals on same die = component issue',
+        'HMFN Pass + HMB1 Fail: Stress-related marginal defect, likely timing/power',
+        'Gold plate contamination: Common in SOCAMM - always check VI first',
+        'DRAMFAIL=NO: System classification, not necessarily DRAM defect',
+        'HAST is special case: Requires eFA team approval, not standard procedure',
+    ],
+
+    # =========================================================================
+    # Commands Quick Reference
+    # =========================================================================
+    'commands_quick_ref': {
+        'chronology': 'mhist <MSN> -sbin',
+        'production_fail': 'frpt -xf <SUM> -mod_id=/<MSN>/ +# +module',
+        'eng_test_detail': 'tdat <ENG_SUMMARY>',
+        'failcrawler_detail': 'mfm <MSN> -step=hmb1 +failcrawler',
+        'basic_mtsums': 'mtsums <MSN> -step=hmb1 +quiet +csv -format=MSN,FID,ULOC,FAILCRAWLER',
+    },
 }
 
 # =============================================================================
