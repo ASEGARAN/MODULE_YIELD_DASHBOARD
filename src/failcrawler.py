@@ -411,17 +411,19 @@ def calculate_failcrawler_wow_changes(
         else:
             continue
 
+        absolute_change = current_val - previous_val
         changes.append({
             'failcrawler': fc_col,
             'current_value': round(current_val, 1),
             'previous_value': round(previous_val, 1),
             'change_pct': round(change_pct, 1),
+            'absolute_change': round(absolute_change, 1),
             'current_ww': int(current_ww),
             'previous_ww': int(previous_ww)
         })
 
-    # Sort by change % descending (biggest increases first)
-    changes.sort(key=lambda x: x['change_pct'], reverse=True)
+    # Sort by absolute change descending (biggest impact first, not just highest %)
+    changes.sort(key=lambda x: x['absolute_change'], reverse=True)
 
     return changes
 
@@ -676,6 +678,7 @@ def create_top_movers_html(
     changes: list[dict],
     step: str,
     threshold: float = 25.0,
+    min_absolute_change: float = 10.0,
     dark_mode: bool = False
 ) -> str:
     """
@@ -685,13 +688,22 @@ def create_top_movers_html(
         changes: List from calculate_failcrawler_wow_changes
         step: Test step name
         threshold: Minimum % increase to show (default 25% matches yellow alert)
+        min_absolute_change: Minimum absolute cDPM increase to show (default 10 cDPM)
+                            Filters out noise like 0→4 which is +100% but low impact
         dark_mode: Theme setting
 
     Returns:
         HTML string for Top Movers section, or empty if no significant movers
     """
-    # Filter to only increases above threshold
-    movers = [c for c in changes if c['change_pct'] >= threshold]
+    # Filter to only increases above BOTH thresholds:
+    # 1. Percentage threshold (e.g., >= 25%)
+    # 2. Absolute change threshold (e.g., >= 10 cDPM)
+    # This filters out noise like 0→4 (100% but only +4 cDPM)
+    movers = [
+        c for c in changes
+        if c['change_pct'] >= threshold
+        and c.get('absolute_change', 0) >= min_absolute_change
+    ]
 
     if not movers:
         return ''
@@ -728,7 +740,7 @@ def create_top_movers_html(
     <div style="background-color: {bg_color}; border-left: 4px solid {border_color};
                 border-radius: 4px; padding: 10px 14px; margin-bottom: 12px;">
         <div style="font-size: 12px; font-weight: bold; color: {text_color}; margin-bottom: 8px;">
-            🔥 {step} Top Movers (>{threshold:.0f}% WoW increase)
+            🔥 {step} Top Movers (≥{threshold:.0f}% WoW & ≥{min_absolute_change:.0f} cDPM increase)
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 4px;">
             {''.join(mover_tags)}
