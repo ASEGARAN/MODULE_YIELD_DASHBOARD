@@ -77,6 +77,42 @@ DEBUG_FLOWS = {
         }
     },
 
+    ('Mod-Sys', 'SYS_ODD_BURST_BIT'): {
+        'rca_type': 'BIOS',
+        'expected_recovery': 100,
+        'primary_checks': ['MACHINE_ID', 'ULOC', 'TEST_VERSION'],
+        'secondary_checks': ['SITE', 'FABLOT', 'BANK'],
+        'description': 'Odd-burst timing margin failure - BIOS recoverable',
+        'validation_criteria': {
+            'hmfn_correlation': 'HMFN Pass → SLT Fail = stress-induced marginal defect',
+            'uloc_clustering': 'U4 dominant (50%), U2 immunity (0%) = signal path length issue',
+            'channel_mapping': 'U3/U4 = Channel 1 (longer trace paths)',
+            'fablot_clustering': 'NO clustering expected (not silicon)',
+            'bank_distribution': 'Random across all 16 banks = NOT array-specific',
+            'thermal_pattern': 'HMB1 Pass → QMON Fail = thermal stress trigger',
+        },
+        'y6cp_topology': {
+            'architecture': '16 banks in 2×8 layout, ASEL_BANK_SHIFT=17',
+            'bank_decoding': 'bank = (row >> 17) & 0xF',
+            'package_mapping': 'U1/U2=Channel 0, U3/U4=Channel 1',
+            'die_stacking': '16 stacked dies per package (D0-D15)',
+        },
+        'analysis_findings': {
+            'sample_size': '7 MSNs analyzed (WW16-18 data)',
+            'uloc_distribution': {'U1': '29%', 'U2': '0%', 'U3': '21%', 'U4': '50%'},
+            'bank_spread': 'Even distribution: Upper/Lower 46%/54%, Left/Right 51%/49%',
+            'conclusion': 'Timing/signal integrity issue on odd burst cycles, NOT memory defect',
+        },
+        'key_learnings': [
+            'Single DQ line affected per failure (not multi-bit)',
+            'Random row addresses across failures',
+            'U4 susceptibility = longest signal path from controller',
+            'U2 immunity = shortest path, better signal integrity',
+            'All 16 banks affected = NOT wordline/bitline defect',
+            'BIOS timing margin adjustment should recover 100%',
+        ],
+    },
+
     # =========================================================================
     # DQ failures - could be BIOS or DRAM depending on pattern
     # =========================================================================
