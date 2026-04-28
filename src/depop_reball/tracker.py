@@ -139,7 +139,10 @@ def create_attempts_from_pivot(pivot_df: pd.DataFrame) -> pd.DataFrame:
     for idx, row in pivot_df.iterrows():
         msn = str(row['MSN']).strip()
         product = str(row['Product']).strip() if pd.notna(row['Product']) else 'Unknown'
-        unit = str(row['Unit']).strip() if pd.notna(row['Unit']) else 'Unknown'
+        unit_raw = str(row['Unit']).strip() if pd.notna(row['Unit']) else 'Unknown'
+        # Map "Unit 1" -> "ULOC1", "Unit 2" -> "ULOC2", etc.
+        uloc_map = {'Unit 1': 'ULOC1', 'Unit 2': 'ULOC2', 'Unit 3': 'ULOC3', 'Unit 4': 'ULOC4'}
+        uloc = uloc_map.get(unit_raw, unit_raw)
         status = row['Status']
         workweek = row['Workweek']
         remark = str(row['Remark']) if pd.notna(row['Remark']) else ''
@@ -159,10 +162,10 @@ def create_attempts_from_pivot(pivot_df: pd.DataFrame) -> pd.DataFrame:
             failure_reason = 'damage'
 
         attempts.append({
-            'attempt_id': f"{msn}_{unit}_{workweek}",
+            'attempt_id': f"{msn}_{uloc}_{workweek}",
             'jira_key': None,  # To be linked if available
             'msn': msn,
-            'component_uloc': unit,
+            'component_uloc': uloc,
             'product': product,
             'workweek': workweek,
             'attempt_date': None,

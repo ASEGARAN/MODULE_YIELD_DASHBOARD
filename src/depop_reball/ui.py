@@ -49,13 +49,14 @@ def render_depop_reball_tab():
     """Main render function for the De-pop & Re-ball Tracker tab."""
 
     st.markdown("""
-    <div style="background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
-                padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <h2 style="color: #ffffff; margin: 0;">
-            🔧 SOCAMM2 LPDRAMM De-pop & Re-ball Tracker
+    <div style="background: linear-gradient(90deg, #1e3a5f 0%, #2d5a87 100%);
+                padding: 20px; border-radius: 10px; margin-bottom: 20px;
+                border: 1px solid #4a90d9; box-shadow: 0 4px 12px rgba(74, 144, 217, 0.3);">
+        <h2 style="color: #ffffff; margin: 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+            🔩 SOCAMM2 LPDRAMM De-pop & Re-ball Tracker
         </h2>
-        <p style="color: #b0b0b0; margin: 5px 0 0 0;">
-            Track request lifecycle, execution outcomes, and HOLD/GO decisions
+        <p style="color: #d0e8ff; margin: 5px 0 0 0; font-size: 14px;">
+            Track request lifecycle, execution outcomes, and HOLD/GO decisions | Target: 80% component functional after re-ball
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -366,47 +367,58 @@ def render_failure_pareto(attempts_df: pd.DataFrame):
 
 
 def render_unit_position_analysis(attempts_df: pd.DataFrame):
-    """Render unit position (U1-U4) analysis."""
+    """Render ULOC position (ULOC1-ULOC4) success rate analysis."""
 
     if 'component_uloc' not in attempts_df.columns:
-        st.info("No unit position data available")
+        st.info("No ULOC position data available")
         return
 
-    # Group by unit position
-    unit_metrics = attempts_df.groupby('component_uloc').agg(
+    # Filter to only ULOC1-ULOC4
+    valid_ulocs = ['ULOC1', 'ULOC2', 'ULOC3', 'ULOC4']
+    uloc_df = attempts_df[attempts_df['component_uloc'].isin(valid_ulocs)].copy()
+
+    if uloc_df.empty:
+        st.info("No ULOC1-ULOC4 data available")
+        return
+
+    # Group by ULOC position
+    uloc_metrics = uloc_df.groupby('component_uloc').agg(
         total=('attempt_id', 'count'),
         passed=('component_functional_after_reball', 'sum'),
     ).reset_index()
 
-    unit_metrics['success_rate'] = unit_metrics['passed'] / unit_metrics['total'] * 100
+    uloc_metrics['success_rate'] = uloc_metrics['passed'] / uloc_metrics['total'] * 100
 
-    # Sort by unit name
-    unit_metrics = unit_metrics.sort_values('component_uloc')
+    # Sort in ULOC1, ULOC2, ULOC3, ULOC4 order
+    uloc_order = {uloc: i for i, uloc in enumerate(valid_ulocs)}
+    uloc_metrics['sort_order'] = uloc_metrics['component_uloc'].map(uloc_order)
+    uloc_metrics = uloc_metrics.sort_values('sort_order')
 
     fig = go.Figure()
 
     fig.add_trace(go.Bar(
-        x=unit_metrics['component_uloc'],
-        y=unit_metrics['success_rate'],
+        x=uloc_metrics['component_uloc'],
+        y=uloc_metrics['success_rate'],
         marker_color=[
             COLORS['pass'] if r >= 80 else COLORS['fail'] if r < 60 else COLORS['damage']
-            for r in unit_metrics['success_rate']
+            for r in uloc_metrics['success_rate']
         ],
-        text=[f"{r:.0f}%" for r in unit_metrics['success_rate']],
+        text=[f"{r:.0f}%" for r in uloc_metrics['success_rate']],
         textposition='auto',
         hovertemplate='%{x}<br>Success Rate: %{y:.1f}%<br>Total: %{customdata}<extra></extra>',
-        customdata=unit_metrics['total'],
+        customdata=uloc_metrics['total'],
     ))
 
     fig.add_hline(y=80, line_dash="dash", line_color=COLORS['target'])
 
     fig.update_layout(
-        title="Success Rate by Unit Position",
-        xaxis_title="Unit Position",
+        title="Success Rate by ULOC Position",
+        xaxis_title="ULOC Position",
         yaxis_title="Success Rate (%)",
         yaxis_range=[0, 100],
         height=300,
         margin=dict(l=40, r=40, t=60, b=40),
+        xaxis=dict(categoryorder='array', categoryarray=valid_ulocs),
     )
 
     st.plotly_chart(fig, use_container_width=True)

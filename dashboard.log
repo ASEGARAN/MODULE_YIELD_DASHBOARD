@@ -22552,3 +22552,230 @@ tornado.websocket.WebSocketClosedError
 
 2026-04-27 02:40:00,473 - src.sanity_check - INFO - Fetching sanity check data...
 2026-04-27 02:40:29,241 - src.sanity_check - INFO - Fetched 85317 sanity check records
+2026-04-27 19:14:46,301 - src.failcrawler - INFO - Using cached FAILCRAWLER data from cache/failcrawler_c45807829dab.csv
+2026-04-27 19:14:46,319 - src.failcrawler - INFO - Fetching MSN_STATUS correlation data...
+2026-04-27 19:14:57,463 - src.failcrawler - INFO - Fetched 88 MSN_STATUS correlation records
+2026-04-27 19:14:57,470 - src.failcrawler - INFO - Fetching FID-level data for unique module counts...
+2026-04-27 19:15:09,635 - src.failcrawler - INFO - Fetched 31735 records for unique module/FID counting
+2026-04-27 19:15:09,677 - src.failcrawler - INFO - Fetching total UIN (module + component) per step/workweek...
+2026-04-27 19:15:19,924 - src.failcrawler - INFO - Fetched UIN for 20 step/workweek combinations
+2026-04-27 19:15:19,924 - src.failcrawler - INFO - Fetching cDPM data for HMB1...
+2026-04-27 19:15:30,176 - src.failcrawler - INFO - Fetched 76 cDPM records for HMB1
+2026-04-27 19:15:30,176 - src.failcrawler - INFO - Fetching cDPM data for QMON...
+2026-04-27 19:15:39,810 - src.failcrawler - INFO - Fetched 59 cDPM records for QMON
+2026-04-27 19:15:39,811 - src.failcrawler - INFO - Total cDPM records: 135
+2026-04-27 19:15:39,811 - src.failcrawler - INFO - Fetching MDPM data for HMB1...
+2026-04-27 19:15:49,718 - src.failcrawler - INFO - Fetched 76 MDPM records for HMB1
+2026-04-27 19:15:49,718 - src.failcrawler - INFO - Fetching MDPM data for QMON...
+2026-04-27 19:16:00,984 - src.failcrawler - INFO - Fetched 59 MDPM records for QMON
+2026-04-27 19:16:00,985 - src.failcrawler - INFO - Total MDPM records: 135
+2026-04-27 19:16:00,985 - src.failcrawler - INFO - Fetching FCFM decode quality for HMB1...
+2026-04-27 19:16:10,866 - src.failcrawler - INFO - Fetched 133 FCFM records for HMB1
+2026-04-27 19:16:10,867 - src.failcrawler - INFO - Fetching FCFM decode quality for QMON...
+2026-04-27 19:16:20,869 - src.failcrawler - INFO - Fetched 102 FCFM records for QMON
+2026-04-27 19:16:20,870 - src.failcrawler - INFO - Total FCFM records: 235
+2026-04-27 19:16:20,870 - src.failcrawler - INFO - Fetching RCA correlation data for 1 DIDs, 2 steps, 10 weeks...
+2026-04-27 19:16:31,712 - src.failcrawler - INFO - Fetched 1039 RCA correlation records
+2026-04-27 19:16:31,713 - src.failcrawler - INFO - Fetching RCA volume data for normalization...
+2026-04-27 19:16:42,740 - src.failcrawler - INFO - Fetched 9242 RCA volume records
+2026-04-27 19:23:31,013 - src.sanity_check - INFO - Fetching sanity check data (failcrawler query)...
+2026-04-27 19:23:53,238 - src.sanity_check - INFO - Fetched 119166 failcrawler records
+2026-04-27 19:23:53,238 - src.sanity_check - INFO - Fetching FID attributes (WAFER, PROBE_REV, BURN_*, RETICLE_WAVE_ID)...
+2026-04-27 19:24:05,111 - src.sanity_check - INFO - Fetched 22983 FID attribute records
+2026-04-27 19:24:05,240 - src.sanity_check - INFO - Merged FID attributes: ['WAFER', 'PROBE_REV', 'BURN_MAJOR_VERSION', 'BURN_MACHINE_CONFIG', 'RETICLE_WAVE_ID']
+2026-04-27 19:24:05,240 - src.sanity_check - INFO - Total sanity check records: 119166
+2026-04-27 19:31:09,236 - __main__ - INFO - [PDF Export] Selected tab: Pareto Analysis, key: pareto
+2026-04-27 19:31:09,236 - __main__ - INFO - ============================================================
+2026-04-27 19:31:09,237 - __main__ - INFO - FETCH DATA STARTED (PARALLEL, cache=ON)
+2026-04-27 19:31:09,237 - __main__ - INFO - Filters: {'form_factors': ['SOCAMM2'], 'test_steps': ['HMB1', 'QMON'], 'design_ids': ['Y6CP'], 'facility': 'all', 'start_ww': '202607', 'end_ww': '202616', 'densities': None, 'speeds': None}
+2026-04-27 19:31:09,240 - __main__ - INFO - Workweeks to fetch: ['202607', '202608', '202609', '202610', '202611', '202612', '202613', '202614', '202615', '202616']
+2026-04-27 19:31:09,242 - __main__ - INFO - Total frpt calls to make: 20 (running in parallel)
+2026-04-27 19:31:09,245 - src.frpt_runner - INFO - Running 20 commands in parallel with 8 workers
+2026-04-27 19:31:17,232 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202609
+2026-04-27 19:31:17,241 - src.frpt_runner - INFO - [1/20] Completed: HMB1/SOCAMM2/WW202609 - success=True
+2026-04-27 19:31:19,314 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202614
+2026-04-27 19:31:19,317 - src.frpt_runner - INFO - [2/20] Completed: HMB1/SOCAMM2/WW202614 - success=True
+2026-04-27 19:31:25,391 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202612
+2026-04-27 19:31:25,400 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202611
+2026-04-27 19:31:25,420 - src.frpt_runner - INFO - [3/20] Completed: HMB1/SOCAMM2/WW202612 - success=True
+2026-04-27 19:31:25,421 - src.frpt_runner - INFO - [4/20] Completed: HMB1/SOCAMM2/WW202611 - success=True
+2026-04-27 19:31:25,630 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202607
+2026-04-27 19:31:25,632 - src.frpt_runner - INFO - [5/20] Completed: HMB1/SOCAMM2/WW202607 - success=True
+2026-04-27 19:31:26,531 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202615
+2026-04-27 19:31:26,535 - src.frpt_runner - INFO - [6/20] Completed: HMB1/SOCAMM2/WW202615 - success=True
+2026-04-27 19:31:28,413 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202610
+2026-04-27 19:31:28,414 - src.frpt_runner - INFO - [7/20] Completed: HMB1/SOCAMM2/WW202610 - success=True
+2026-04-27 19:31:31,683 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202609
+2026-04-27 19:31:31,691 - src.frpt_runner - INFO - [8/20] Completed: QMON/SOCAMM2/WW202609 - success=True
+2026-04-27 19:31:33,208 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202616
+2026-04-27 19:31:33,212 - src.frpt_runner - INFO - [9/20] Completed: HMB1/SOCAMM2/WW202616 - success=True
+2026-04-27 19:31:33,301 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202608
+2026-04-27 19:31:33,302 - src.frpt_runner - INFO - [10/20] Completed: HMB1/SOCAMM2/WW202608 - success=True
+2026-04-27 19:31:33,464 - src.cache - INFO - Cached result for HMB1/SOCAMM2/WW202613
+2026-04-27 19:31:33,470 - src.frpt_runner - INFO - [11/20] Completed: HMB1/SOCAMM2/WW202613 - success=True
+2026-04-27 19:31:36,369 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202607
+2026-04-27 19:31:36,385 - src.frpt_runner - INFO - [12/20] Completed: QMON/SOCAMM2/WW202607 - success=True
+2026-04-27 19:31:39,933 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202615
+2026-04-27 19:31:39,959 - src.frpt_runner - INFO - [13/20] Completed: QMON/SOCAMM2/WW202615 - success=True
+2026-04-27 19:31:41,022 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202611
+2026-04-27 19:31:41,024 - src.frpt_runner - INFO - [14/20] Completed: QMON/SOCAMM2/WW202611 - success=True
+2026-04-27 19:31:41,887 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202610
+2026-04-27 19:31:41,892 - src.frpt_runner - INFO - [15/20] Completed: QMON/SOCAMM2/WW202610 - success=True
+2026-04-27 19:31:41,897 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202608
+2026-04-27 19:31:41,929 - src.frpt_runner - INFO - [16/20] Completed: QMON/SOCAMM2/WW202608 - success=True
+2026-04-27 19:31:43,893 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202616
+2026-04-27 19:31:43,898 - src.frpt_runner - INFO - [17/20] Completed: QMON/SOCAMM2/WW202616 - success=True
+2026-04-27 19:31:52,814 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202614
+2026-04-27 19:31:52,823 - src.frpt_runner - INFO - [18/20] Completed: QMON/SOCAMM2/WW202614 - success=True
+2026-04-27 19:31:53,639 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202612
+2026-04-27 19:31:53,651 - src.frpt_runner - INFO - [19/20] Completed: QMON/SOCAMM2/WW202612 - success=True
+2026-04-27 19:31:54,496 - src.cache - INFO - Cached result for QMON/SOCAMM2/WW202613
+2026-04-27 19:31:54,498 - src.frpt_runner - INFO - [20/20] Completed: QMON/SOCAMM2/WW202613 - success=True
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202609 success=True stdout_len=2834
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202609
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202614 success=True stdout_len=4171
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202614
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202612 success=True stdout_len=2991
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202612
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202611 success=True stdout_len=3005
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202611
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202607 success=True stdout_len=2998
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202607
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202615 success=True stdout_len=4031
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202615
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202610 success=True stdout_len=2998
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202610
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: QMON/WW202609 success=True stdout_len=2358
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202609
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202616 success=True stdout_len=4045
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202616
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202608 success=True stdout_len=3047
+2026-04-27 19:31:54,510 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202608
+2026-04-27 19:31:54,510 - __main__ - INFO - Processing result: HMB1/WW202613 success=True stdout_len=4115
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for HMB1/SOCAMM2/WW202613
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202607 success=True stdout_len=3124
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202607
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202615 success=True stdout_len=4143
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202615
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202611 success=True stdout_len=2998
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202611
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202610 success=True stdout_len=3047
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202610
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202608 success=True stdout_len=3019
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202608
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202616 success=True stdout_len=4059
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202616
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202614 success=True stdout_len=4031
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202614
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202612 success=True stdout_len=2984
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202612
+2026-04-27 19:31:54,511 - __main__ - INFO - Processing result: QMON/WW202613 success=True stdout_len=4038
+2026-04-27 19:31:54,511 - __main__ - INFO - Added result for QMON/SOCAMM2/WW202613
+2026-04-27 19:31:54,511 - __main__ - INFO - Fetch complete. Results collected: 20, Errors: 0
+2026-04-27 19:31:54,512 - __main__ - INFO - Result 0 [HMB1/SOCAMM2]: 2834 bytes, 7 pipes, 1 data lines with pipe
+2026-04-27 19:31:54,512 - __main__ - INFO -   Sample line: 202609_Y6CP_SOCAMM2_7500MTPS_192GB_HMB1      644      528      523      516    98.66 |    98.66     1.34
+2026-04-27 19:31:54,512 - __main__ - INFO - Result 1 [HMB1/SOCAMM2]: 4171 bytes, 8 pipes, 2 data lines with pipe
+2026-04-27 19:31:54,512 - __main__ - INFO -   Sample line: 202614_Y6CP_SOCAMM2_7500MTPS_192GB_HMB1     5954     4803     5011     4938    98.54 |    92.22     5.19     2.59
+2026-04-27 19:31:54,512 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,512 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,514 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,514 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,514 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,516 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-27 19:31:54,516 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,516 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,518 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,518 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,518 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,519 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,519 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,519 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,542 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,542 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,542 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,544 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-27 19:31:54,549 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,555 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,573 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,573 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,573 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=3, bin_cols=['Bin_1_GOOD', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,575 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,575 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,575 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,577 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-27 19:31:54,577 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,577 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,579 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,580 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,581 - src.frpt_parser - INFO - Parser [HMB1]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,583 - src.frpt_parser - INFO - parse_multiple: HMB1/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-27 19:31:54,584 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,584 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,587 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,589 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,590 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,592 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-27 19:31:54,592 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,593 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,595 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,595 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,595 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,597 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,597 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,597 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,599 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,599 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,599 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,601 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-27 19:31:54,601 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,602 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,603 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-27 19:31:54,608 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,609 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=4, lines_without_pipe=7, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,614 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 1 rows, BINs=[]
+2026-04-27 19:31:54,615 - src.frpt_parser - INFO - Parsed bin headers: ['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,615 - src.frpt_parser - INFO - Parser [QMON]: lines_with_pipe=5, lines_without_pipe=14, bin_cols=['Bin_1_GOOD', 'Bin_2_RETEST', 'Bin_3_FUNC-FAI']
+2026-04-27 19:31:54,616 - src.frpt_parser - INFO - parse_multiple: QMON/SOCAMM2 -> 2 rows, BINs=[]
+2026-04-27 19:31:54,621 - src.frpt_parser - INFO - parse_multiple: Combined 20 DataFrames -> 28 rows, BINs=[]
+2026-04-27 19:31:54,621 - __main__ - INFO - Parsed DataFrame: 28 rows, columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_2_RETEST']
+2026-04-27 19:31:54,622 - __main__ - INFO - BIN columns after parsing: ['Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST']
+2026-04-27 19:31:54,972 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_2_RETEST']
+2026-04-27 19:31:54,972 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST']
+2026-04-27 19:31:54,999 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_3_FUNC-FAI  Bin_2_RETEST
+0       98.66            1.34           NaN
+1       92.22            2.59          5.19
+2       92.75            5.80          1.45
+3       94.75            2.29          2.97
+4       94.20            2.02          3.79
+2026-04-27 19:31:55,010 - __main__ - INFO - Bin chart: Total non-zero bin values=79
+2026-04-27 19:44:14,609 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_2_RETEST']
+2026-04-27 19:44:14,610 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST']
+2026-04-27 19:44:14,613 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_3_FUNC-FAI  Bin_2_RETEST
+0       98.66            1.34           NaN
+1       92.22            2.59          5.19
+2       92.75            5.80          1.45
+3       94.75            2.29          2.97
+4       94.20            2.02          3.79
+2026-04-27 19:44:14,622 - __main__ - INFO - Bin chart: Total non-zero bin values=79
+2026-04-27 19:51:33,424 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_2_RETEST']
+2026-04-27 19:51:33,424 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST']
+2026-04-27 19:51:33,428 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_3_FUNC-FAI  Bin_2_RETEST
+0       98.66            1.34           NaN
+1       92.22            2.59          5.19
+2       92.75            5.80          1.45
+3       94.75            2.29          2.97
+4       94.20            2.02          3.79
+2026-04-27 19:51:33,429 - __main__ - INFO - Bin chart: Total non-zero bin values=79
+2026-04-27 19:51:59,692 - __main__ - INFO - Bin chart: Found columns=['MYQUICK', 'UIN', 'UPASS', 'YIELD%', 'Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'step', 'workweek', 'design_id', 'form_factor', 'density', 'speed', 'Bin_2_RETEST']
+2026-04-27 19:51:59,693 - __main__ - INFO - Bin chart: BIN columns found=['Bin_1_GOOD', 'Bin_3_FUNC-FAI', 'Bin_2_RETEST']
+2026-04-27 19:51:59,696 - __main__ - INFO - Bin chart: Sample bin data:
+   Bin_1_GOOD  Bin_3_FUNC-FAI  Bin_2_RETEST
+0       98.66            1.34           NaN
+1       92.22            2.59          5.19
+2       92.75            5.80          1.45
+3       94.75            2.29          2.97
+4       94.20            2.02          3.79
+2026-04-27 19:51:59,697 - __main__ - INFO - Bin chart: Total non-zero bin values=79
