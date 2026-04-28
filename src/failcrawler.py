@@ -682,47 +682,84 @@ def create_top_movers_html(
     dark_mode: bool = False
 ) -> str:
     """
-    Create HTML for Top Movers section showing FAILCRAWLERs with significant increases.
+    Create HTML for Top Movers section with trend summary.
+
+    Always shows a trend summary (↗ increasing, ↘ decreasing, → stable).
+    Shows Top Movers if any meet thresholds, otherwise shows "All stable" message.
 
     Args:
         changes: List from calculate_failcrawler_wow_changes
         step: Test step name
         threshold: Minimum % increase to show (default 25% matches yellow alert)
         min_absolute_change: Minimum absolute cDPM increase to show (default 10 cDPM)
-                            Filters out noise like 0→4 which is +100% but low impact
         dark_mode: Theme setting
 
     Returns:
-        HTML string for Top Movers section, or empty if no significant movers
+        HTML string for trend summary and Top Movers section
     """
-    # Filter to only increases above BOTH thresholds:
-    # 1. Percentage threshold (e.g., >= 25%)
-    # 2. Absolute change threshold (e.g., >= 10 cDPM)
-    # This filters out noise like 0→4 (100% but only +4 cDPM)
+    if not changes:
+        return ''
+
+    bg_color = '#2d2d2d' if dark_mode else '#f8f9fa'
+    text_color = '#ffffff' if dark_mode else '#1a1a1a'
+    muted_color = '#aaaaaa' if dark_mode else '#666666'
+
+    # Calculate trend summary
+    increasing = [c for c in changes if c['change_pct'] > 5]  # >5% = increasing
+    decreasing = [c for c in changes if c['change_pct'] < -5]  # <-5% = decreasing
+    stable = [c for c in changes if -5 <= c['change_pct'] <= 5]  # -5% to +5% = stable
+
+    # Filter significant movers (meet BOTH thresholds)
     movers = [
         c for c in changes
         if c['change_pct'] >= threshold
         and c.get('absolute_change', 0) >= min_absolute_change
     ]
 
-    if not movers:
-        return ''
+    # Build trend summary line
+    trend_parts = []
+    if increasing:
+        trend_parts.append(f"<span style='color: #E74C3C;'>↗ {len(increasing)} increasing</span>")
+    if decreasing:
+        trend_parts.append(f"<span style='color: #27AE60;'>↘ {len(decreasing)} decreasing</span>")
+    if stable:
+        trend_parts.append(f"<span style='color: #9E9E9E;'>→ {len(stable)} stable</span>")
+    trend_summary = " &nbsp;│&nbsp; ".join(trend_parts) if trend_parts else "No data"
 
-    bg_color = '#2d2d2d' if dark_mode else '#fff8f0'
-    text_color = '#ffffff' if dark_mode else '#1a1a1a'
+    # If no significant movers, show stable message
+    if not movers:
+        html = f'''
+        <div style="background-color: {bg_color}; border-left: 4px solid #27AE60;
+                    border-radius: 4px; padding: 10px 14px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span style="font-size: 12px; font-weight: bold; color: {text_color};">
+                        ✅ {step} All Stable
+                    </span>
+                    <span style="font-size: 11px; color: {muted_color}; margin-left: 8px;">
+                        No changes ≥{min_absolute_change:.0f} cDPM
+                    </span>
+                </div>
+                <div style="font-size: 11px;">
+                    {trend_summary}
+                </div>
+            </div>
+        </div>
+        '''
+        return html
+
+    # Has significant movers - show them with trend summary
     border_color = '#E74C3C' if any(m['change_pct'] >= 50 for m in movers) else '#F39C12'
 
     # Build mover tags
     mover_tags = []
     for m in movers:
-        # Color based on severity
         if m['change_pct'] >= 50:
             tag_color = '#E74C3C'  # Red for >50%
         else:
             tag_color = '#F39C12'  # Yellow for 25-50%
 
         fc_color = FAILCRAWLER_COLORS.get(m['failcrawler'], '#888888')
-        # Show actual cDPM values alongside percentage for user clarity
         prev_val = m.get('previous_value', 0)
         curr_val = m.get('current_value', 0)
         mover_tags.append(
@@ -737,10 +774,15 @@ def create_top_movers_html(
         )
 
     html = f'''
-    <div style="background-color: {bg_color}; border-left: 4px solid {border_color};
+    <div style="background-color: {'#2d2d2d' if dark_mode else '#fff8f0'}; border-left: 4px solid {border_color};
                 border-radius: 4px; padding: 10px 14px; margin-bottom: 12px;">
-        <div style="font-size: 12px; font-weight: bold; color: {text_color}; margin-bottom: 8px;">
-            🔥 {step} Top Movers (≥{threshold:.0f}% WoW & ≥{min_absolute_change:.0f} cDPM increase)
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: bold; color: {text_color};">
+                🔥 {step} Top Movers ({len(movers)})
+            </span>
+            <div style="font-size: 11px;">
+                {trend_summary}
+            </div>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 4px;">
             {''.join(mover_tags)}
