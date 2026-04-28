@@ -3902,27 +3902,63 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
         if st.session_state.failcrawler_last_fetch_time:
             st.caption(f"📅 Last fetched: {st.session_state.failcrawler_last_fetch_time}")
 
-        # DID filter for viewing per-DID or cumulative
+        # Filters for DID, Speed, Density
         # Filter out NaN values before sorting
         available_dids = [d for d in fc_df['DESIGN_ID'].unique().tolist()
                           if d is not None and isinstance(d, str)] if 'DESIGN_ID' in fc_df.columns else []
-        did_options = ["All (Cumulative)"] + sorted(available_dids)
+        available_speeds = [s for s in fc_df['MODULE_SPEED'].unique().tolist()
+                           if s is not None and isinstance(s, str)] if 'MODULE_SPEED' in fc_df.columns else []
+        available_densities = [d for d in fc_df['MODULE_DENSITY'].unique().tolist()
+                              if d is not None and isinstance(d, str)] if 'MODULE_DENSITY' in fc_df.columns else []
 
-        selected_did_view = st.selectbox(
-            "View by Design ID",
-            options=did_options,
-            index=0,
-            key="fc_did_filter",
-            help="View cumulative data or filter to a specific Design ID"
-        )
+        did_options = ["All"] + sorted(available_dids)
+        speed_options = ["All"] + sorted(available_speeds)
+        density_options = ["All"] + sorted(available_densities)
 
-        # Determine the design_id to pass to processing
-        if selected_did_view == "All (Cumulative)":
-            filter_design_id = None
-            design_id_label = "All DIDs"
-        else:
-            filter_design_id = selected_did_view
-            design_id_label = selected_did_view
+        # Use columns for compact filter layout
+        filter_col1, filter_col2, filter_col3 = st.columns(3)
+
+        with filter_col1:
+            selected_did_view = st.selectbox(
+                "Design ID",
+                options=did_options,
+                index=0,
+                key="fc_did_filter",
+                help="Filter by Design ID"
+            )
+
+        with filter_col2:
+            selected_speed_view = st.selectbox(
+                "Speed",
+                options=speed_options,
+                index=0,
+                key="fc_speed_filter",
+                help="Filter by Module Speed"
+            )
+
+        with filter_col3:
+            selected_density_view = st.selectbox(
+                "Density",
+                options=density_options,
+                index=0,
+                key="fc_density_filter",
+                help="Filter by Module Density"
+            )
+
+        # Determine filter values to pass to processing
+        filter_design_id = None if selected_did_view == "All" else selected_did_view
+        filter_speed = None if selected_speed_view == "All" else selected_speed_view
+        filter_density = None if selected_density_view == "All" else selected_density_view
+
+        # Build label for display
+        filter_parts = []
+        if filter_design_id:
+            filter_parts.append(filter_design_id)
+        if filter_density:
+            filter_parts.append(filter_density)
+        if filter_speed:
+            filter_parts.append(filter_speed)
+        design_id_label = " | ".join(filter_parts) if filter_parts else "All"
 
         # Display charts for each selected step
         import streamlit.components.v1 as components
@@ -3973,8 +4009,13 @@ def render_failcrawler_subtab(filters: dict[str, Any]) -> None:
                 if summary_html:
                     components.html(summary_html, height=170, scrolling=False)
 
-            # Show Top Movers (FAILCRAWLERs with >25% WoW increase) - filtered by selected DID
-            fc_changes = calculate_failcrawler_wow_changes(fc_df, step, design_id=filter_design_id)
+            # Show Top Movers (FAILCRAWLERs with >25% WoW increase) - filtered by DID/Speed/Density
+            fc_changes = calculate_failcrawler_wow_changes(
+                fc_df, step,
+                design_id=filter_design_id,
+                speed=filter_speed,
+                density=filter_density
+            )
             if fc_changes:
                 top_movers_html = create_top_movers_html(fc_changes, step, threshold=25.0, dark_mode=False)
                 if top_movers_html:

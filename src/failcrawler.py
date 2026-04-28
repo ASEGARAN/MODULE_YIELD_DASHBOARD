@@ -339,18 +339,22 @@ def create_alert_summary_html(excursions: list[dict], dark_mode: bool = False) -
 def calculate_failcrawler_wow_changes(
     fcdpm_df: pd.DataFrame,
     step: str,
-    design_id: str = None
+    design_id: str = None,
+    speed: str = None,
+    density: str = None
 ) -> list[dict]:
     """
     Calculate WoW changes for each FAILCRAWLER category.
 
-    Calculates per step, optionally filtered by design_id.
-    When design_id is None (All DIDs), sums cDPM across all DIDs for each workweek.
+    Calculates per step, optionally filtered by design_id, speed, and density.
+    When filters are None, sums cDPM across all values for each workweek.
 
     Args:
         fcdpm_df: FAILCRAWLER DPM data (wide format with FC columns)
         step: Test step to filter
         design_id: Optional DESIGN_ID to filter (None = all DIDs summed)
+        speed: Optional MODULE_SPEED to filter (None = all speeds summed)
+        density: Optional MODULE_DENSITY to filter (None = all densities summed)
 
     Returns:
         List of dictionaries with FAILCRAWLER name, current/previous values, and change %
@@ -373,6 +377,18 @@ def calculate_failcrawler_wow_changes(
         if step_df.empty:
             return []
 
+    # Filter by MODULE_SPEED if specified
+    if speed and 'MODULE_SPEED' in step_df.columns:
+        step_df = step_df[step_df['MODULE_SPEED'] == speed].copy()
+        if step_df.empty:
+            return []
+
+    # Filter by MODULE_DENSITY if specified
+    if density and 'MODULE_DENSITY' in step_df.columns:
+        step_df = step_df[step_df['MODULE_DENSITY'] == density].copy()
+        if step_df.empty:
+            return []
+
     # Get sorted workweeks
     workweeks = sorted(step_df['MFG_WORKWEEK'].unique())
     if len(workweeks) < 2:
@@ -385,7 +401,7 @@ def calculate_failcrawler_wow_changes(
     metadata_cols = ['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'FCFM', 'QUERY_STEP',
                      'UIN', 'UFAIL', 'UPASS', 'ALL', 'ALL(DPM)', 'UNKNOWN',
                      'MOD_CUSTOM_TEST_FLOW', 'MSN_STATUS', 'VERIFIED', 'FID_STATUS',
-                     'MUIN', 'MUFAIL']
+                     'MUIN', 'MUFAIL', 'MODULE_SPEED', 'MODULE_DENSITY']
     fc_cols = [col for col in step_df.columns if col not in metadata_cols]
 
     # Calculate WoW change for each FAILCRAWLER
@@ -725,39 +741,38 @@ def create_top_movers_html(
         and c.get('absolute_change', 0) >= min_absolute_change
     ]
 
-    # Helper to format category with all items
-    def format_category(items, color, arrow, label, show_values=True):
+    # Helper to format category - show top 2 with values, then "+N more"
+    def format_category(items, color, arrow, label, show_details=True):
         if not items:
             return None
-        # Show top 2 with values, then list remaining names
+
+        count = len(items)
+
+        # For flat/stable - just show count, no details needed
+        if not show_details:
+            return f"<span style='color: {color};'>{arrow} {count} {label}</span>"
+
+        # For up/down - show top 2 with cDPM values
         examples = []
         for item in items[:2]:
             fc_name = item['failcrawler']
-            if show_values:
-                prev = item.get('previous_value', 0)
-                curr = item.get('current_value', 0)
-                examples.append(f"{fc_name} {prev:.0f}→{curr:.0f}")
-            else:
-                examples.append(fc_name)
-
-        # Add remaining items as names only
-        if len(items) > 2:
-            remaining_names = [item['failcrawler'] for item in items[2:]]
-            examples.extend(remaining_names)
+            prev = item.get('previous_value', 0)
+            curr = item.get('current_value', 0)
+            examples.append(f"{fc_name} {prev:.0f}→{curr:.0f} cDPM")
 
         example_str = ", ".join(examples)
+        if count > 2:
+            example_str += f", +{count - 2} more"
 
-        return f"<span style='color: {color};'>{arrow} {len(items)} {label}</span> <span style='color: #888; font-size: 10px;'>({example_str})</span>"
+        return f"<span style='color: {color};'>{arrow} {count} {label}</span> <span style='color: #888; font-size: 10px;'>({example_str})</span>"
 
-    # Build trend summary line with examples
+    # Build trend summary line - only show UP (problems) and STABLE (consistent)
     trend_parts = []
     if increasing:
         trend_parts.append(format_category(increasing, '#E74C3C', '↗', 'up'))
-    if decreasing:
-        trend_parts.append(format_category(decreasing, '#27AE60', '↘', 'down'))
     if stable:
-        trend_parts.append(format_category(stable, '#9E9E9E', '→', 'flat', show_values=False))
-    trend_summary = " &nbsp;│&nbsp; ".join(trend_parts) if trend_parts else "No data"
+        trend_parts.append(format_category(stable, '#9E9E9E', '→', 'stable', show_details=False))
+    trend_summary = " &nbsp;│&nbsp; ".join(trend_parts) if trend_parts else "All stable"
 
     # If no significant movers, show stable message
     if not movers:
@@ -1048,7 +1063,7 @@ def fetch_fcdpm_data(
             design_ids=design_ids,
             workweeks=workweeks,
             metric_flags=['+fidag', '+fc'],
-            format_cols=['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'FCFM']
+            format_cols=['STEPTYPE', 'DESIGN_ID', 'STEP', 'MFG_WORKWEEK', 'MODULE_SPEED', 'MODULE_DENSITY', 'FCFM']
         )
 
         logger.info(f"Fetching FCDPM data for {step}...")
@@ -2288,20 +2303,14 @@ def process_failcrawler_data(df: pd.DataFrame, step: str, design_id: str = None)
     volume_series = pivot_dpm['UIN']
     pivot_dpm = pivot_dpm.drop(columns=['UIN'])
 
-    # Identify main FAILCRAWLERs (those in TOP_FAILCRAWLERS list)
-    main_fcs = [fc for fc in TOP_FAILCRAWLERS if fc != 'Other' and fc in pivot_dpm.columns]
-    other_fcs = [fc for fc in pivot_dpm.columns if fc not in main_fcs and fc not in ['UNKNOWN']]
-
-    # Group minor FAILCRAWLERs into Other
-    if other_fcs:
-        pivot_dpm['Other'] = pivot_dpm[other_fcs].sum(axis=1)
-        # Drop the individual other columns
-        pivot_dpm = pivot_dpm.drop(columns=other_fcs)
+    # Show ALL FAILCRAWLERs (no "Other" grouping)
+    # Sort by total DPM contribution (highest first) for better visualization
+    all_fcs = [fc for fc in pivot_dpm.columns if fc not in ['UNKNOWN']]
+    fc_totals = {fc: pivot_dpm[fc].sum() for fc in all_fcs}
+    all_fcs_sorted = sorted(all_fcs, key=lambda x: fc_totals.get(x, 0), reverse=True)
 
     # Calculate total DPM
-    dpm_cols = [fc for fc in main_fcs if fc in pivot_dpm.columns]
-    if 'Other' in pivot_dpm.columns:
-        dpm_cols.append('Other')
+    dpm_cols = [fc for fc in all_fcs_sorted if fc in pivot_dpm.columns]
     total_dpm = pivot_dpm[dpm_cols].sum(axis=1)
 
     # Calculate 4-week rolling average
@@ -2315,7 +2324,7 @@ def process_failcrawler_data(df: pd.DataFrame, step: str, design_id: str = None)
         'total_dpm': total_dpm,
         'rolling_avg': rolling_avg,
         'volume': volume_series,
-        'main_fcs': [fc for fc in main_fcs if fc in pivot_dpm.columns] + (['Other'] if other_fcs else [])
+        'main_fcs': all_fcs_sorted  # All FAILCRAWLERs, sorted by DPM contribution
     }
 
 
