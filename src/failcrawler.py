@@ -705,9 +705,9 @@ def create_top_movers_html(
     muted_color = '#aaaaaa' if dark_mode else '#666666'
 
     # Calculate trend summary
-    increasing = [c for c in changes if c['change_pct'] > 5]  # >5% = increasing
-    decreasing = [c for c in changes if c['change_pct'] < -5]  # <-5% = decreasing
-    stable = [c for c in changes if -5 <= c['change_pct'] <= 5]  # -5% to +5% = stable
+    increasing = sorted([c for c in changes if c['change_pct'] > 5], key=lambda x: x['change_pct'], reverse=True)
+    decreasing = sorted([c for c in changes if c['change_pct'] < -5], key=lambda x: x['change_pct'])
+    stable = [c for c in changes if -5 <= c['change_pct'] <= 5]
 
     # Filter significant movers (meet BOTH thresholds)
     movers = [
@@ -716,14 +716,37 @@ def create_top_movers_html(
         and c.get('absolute_change', 0) >= min_absolute_change
     ]
 
-    # Build trend summary line
+    # Helper to format category with top examples
+    def format_category(items, color, arrow, label, show_pct=True):
+        if not items:
+            return None
+        # Show top 2 examples with percentage
+        examples = []
+        for item in items[:2]:
+            fc_name = item['failcrawler']
+            # Shorten long names
+            if len(fc_name) > 15:
+                fc_name = fc_name[:12] + '...'
+            if show_pct:
+                pct = item['change_pct']
+                examples.append(f"{fc_name} {pct:+.0f}%")
+            else:
+                examples.append(fc_name)
+
+        example_str = ", ".join(examples)
+        if len(items) > 2:
+            example_str += f", +{len(items) - 2}"
+
+        return f"<span style='color: {color};'>{arrow} {len(items)} {label}</span> <span style='color: #888; font-size: 10px;'>({example_str})</span>"
+
+    # Build trend summary line with examples
     trend_parts = []
     if increasing:
-        trend_parts.append(f"<span style='color: #E74C3C;'>↗ {len(increasing)} increasing</span>")
+        trend_parts.append(format_category(increasing, '#E74C3C', '↗', 'up'))
     if decreasing:
-        trend_parts.append(f"<span style='color: #27AE60;'>↘ {len(decreasing)} decreasing</span>")
+        trend_parts.append(format_category(decreasing, '#27AE60', '↘', 'down'))
     if stable:
-        trend_parts.append(f"<span style='color: #9E9E9E;'>→ {len(stable)} stable</span>")
+        trend_parts.append(format_category(stable, '#9E9E9E', '→', 'flat', show_pct=False))
     trend_summary = " &nbsp;│&nbsp; ".join(trend_parts) if trend_parts else "No data"
 
     # If no significant movers, show stable message
