@@ -704,10 +704,19 @@ def create_top_movers_html(
     text_color = '#ffffff' if dark_mode else '#1a1a1a'
     muted_color = '#aaaaaa' if dark_mode else '#666666'
 
-    # Calculate trend summary
-    increasing = sorted([c for c in changes if c['change_pct'] > 5], key=lambda x: x['change_pct'], reverse=True)
-    decreasing = sorted([c for c in changes if c['change_pct'] < -5], key=lambda x: x['change_pct'])
-    stable = [c for c in changes if -5 <= c['change_pct'] <= 5]
+    # Calculate trend summary - only count changes with meaningful absolute impact
+    # Use half the min_absolute_change threshold for trend summary (more inclusive but still filters noise)
+    trend_threshold = min_absolute_change / 2  # 5 cDPM default
+    increasing = sorted(
+        [c for c in changes if c['change_pct'] > 5 and abs(c.get('absolute_change', 0)) >= trend_threshold],
+        key=lambda x: x['change_pct'], reverse=True
+    )
+    decreasing = sorted(
+        [c for c in changes if c['change_pct'] < -5 and abs(c.get('absolute_change', 0)) >= trend_threshold],
+        key=lambda x: x['change_pct']
+    )
+    # Stable = everything else (low change OR low absolute impact)
+    stable = [c for c in changes if c not in increasing and c not in decreasing]
 
     # Filter significant movers (meet BOTH thresholds)
     movers = [
@@ -716,26 +725,27 @@ def create_top_movers_html(
         and c.get('absolute_change', 0) >= min_absolute_change
     ]
 
-    # Helper to format category with top examples
-    def format_category(items, color, arrow, label, show_pct=True):
+    # Helper to format category with all items
+    def format_category(items, color, arrow, label, show_values=True):
         if not items:
             return None
-        # Show top 2 examples with percentage
+        # Show top 2 with values, then list remaining names
         examples = []
         for item in items[:2]:
             fc_name = item['failcrawler']
-            # Shorten long names
-            if len(fc_name) > 15:
-                fc_name = fc_name[:12] + '...'
-            if show_pct:
-                pct = item['change_pct']
-                examples.append(f"{fc_name} {pct:+.0f}%")
+            if show_values:
+                prev = item.get('previous_value', 0)
+                curr = item.get('current_value', 0)
+                examples.append(f"{fc_name} {prev:.0f}→{curr:.0f}")
             else:
                 examples.append(fc_name)
 
-        example_str = ", ".join(examples)
+        # Add remaining items as names only
         if len(items) > 2:
-            example_str += f", +{len(items) - 2}"
+            remaining_names = [item['failcrawler'] for item in items[2:]]
+            examples.extend(remaining_names)
+
+        example_str = ", ".join(examples)
 
         return f"<span style='color: {color};'>{arrow} {len(items)} {label}</span> <span style='color: #888; font-size: 10px;'>({example_str})</span>"
 
@@ -746,7 +756,7 @@ def create_top_movers_html(
     if decreasing:
         trend_parts.append(format_category(decreasing, '#27AE60', '↘', 'down'))
     if stable:
-        trend_parts.append(format_category(stable, '#9E9E9E', '→', 'flat', show_pct=False))
+        trend_parts.append(format_category(stable, '#9E9E9E', '→', 'flat', show_values=False))
     trend_summary = " &nbsp;│&nbsp; ".join(trend_parts) if trend_parts else "No data"
 
     # If no significant movers, show stable message
@@ -757,10 +767,10 @@ def create_top_movers_html(
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <span style="font-size: 12px; font-weight: bold; color: {text_color};">
-                        ✅ {step} All Stable
+                        ✅ {step}
                     </span>
                     <span style="font-size: 11px; color: {muted_color}; margin-left: 8px;">
-                        No changes ≥{min_absolute_change:.0f} cDPM
+                        No major spikes
                     </span>
                 </div>
                 <div style="font-size: 11px;">
